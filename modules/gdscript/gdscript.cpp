@@ -458,8 +458,11 @@ bool GDScript::_update_exports(bool *r_err, bool p_recursive_call) {
 			member_default_values_cache.clear();
 
 			for (int i = 0; i < c->variables.size(); i++) {
-				if (c->variables[i]._export.type == Variant::NIL)
-					continue;
+				if (c->variables[i]._export.type == Variant::NIL) {
+					if (!(c->variables[i]._export.usage & PROPERTY_USAGE_NIL_IS_VARIANT)) {
+						continue;
+					}
+				}
 
 				members_cache.push_back(c->variables[i]._export);
 				member_default_values_cache[c->variables[i].identifier] = c->variables[i].default_value;
