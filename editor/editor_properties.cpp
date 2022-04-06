@@ -590,11 +590,26 @@ public:
 	Vector<String> names;
 	Vector<String> tooltips;
 	int hovered_index;
+	Rect2 collapse_rect;
+	bool is_collapsed = true;
+	bool horizontal = false;
+
+	int _get_row_count() const {
+		if (horizontal) {
+			return 2;
+		}
+
+		return is_collapsed ? 2 : 4;
+	}
+
+	int _get_col_count() const {
+		return horizontal ? 16 : 8;
+	}
 
 	virtual Size2 get_minimum_size() const override {
 		Ref<Font> font = get_theme_font("font", "Label");
 		int font_size = get_theme_font_size("font_size", "Label");
-		return Vector2(0, font->get_height(font_size) * 2);
+		return Vector2(0, (font->get_height(font_size) - 4) * _get_row_count() + 8);
 	}
 
 	virtual String get_tooltip(const Point2 &p_pos) const override {
@@ -605,33 +620,45 @@ public:
 		}
 		return String();
 	}
+
 	void _gui_input(const Ref<InputEvent> &p_ev) {
 		const Ref<InputEventMouseMotion> mm = p_ev;
 
 		if (mm.is_valid()) {
+			int new_hovered_index = -1;
 			for (int i = 0; i < flag_rects.size(); i++) {
 				if (flag_rects[i].has_point(mm->get_position())) {
 					// Used to highlight the hovered flag in the layers grid.
-					hovered_index = i;
-					update();
+					new_hovered_index = i;
 					break;
 				}
+			}
+
+			if (new_hovered_index != hovered_index) {
+				hovered_index = new_hovered_index;
+				update();
 			}
 		}
 
 		const Ref<InputEventMouseButton> mb = p_ev;
 
-		if (mb.is_valid() && mb->get_button_index() == MOUSE_BUTTON_LEFT && mb->is_pressed() && hovered_index >= 0) {
-			// Toggle the flag.
-			// We base our choice on the hovered flag, so that it always matches the hovered flag.
-			if (value & (1 << hovered_index)) {
-				value &= ~(1 << hovered_index);
-			} else {
-				value |= (1 << hovered_index);
+		if (mb.is_valid() && mb->get_button_index() == MOUSE_BUTTON_LEFT && mb->is_pressed()) {
+			if (hovered_index >= 0) {
+				// Toggle the flag.
+				// We base our choice on the hovered flag, so that it always matches the hovered flag.
+				if (value & (1 << hovered_index)) {
+					value &= ~(1 << hovered_index);
+				} else {
+					value |= (1 << hovered_index);
+				}
+
+				emit_signal("flag_changed", value);
+				update();
 			}
 
-			emit_signal("flag_changed", value);
-			update();
+			if (collapse_rect.has_point(mb->get_position())) {
+				toggle_collapsed();
+			}
 		}
 	}
 
@@ -642,25 +669,19 @@ public:
 				rect.size = get_size();
 				flag_rects.clear();
 
-				const int bsize = (rect.size.height * 80 / 100) / 2;
-				const int h = bsize * 2 + 1;
-				const int vofs = (rect.size.height - h) / 2;
+				const int bsize = (rect.size.height - 8) / _get_row_count() - 1;
 
 				Color color = get_theme_color("highlight_color", "Editor");
-				for (int i = 0; i < 2; i++) {
-					Point2 ofs(4, vofs);
-					if (i == 1) {
-						ofs.y += bsize + 1;
-					}
+				for (int i = 0; i < _get_row_count(); i++) {
+					Point2 ofs(4, 4 + i * (bsize + 1));
+					ofs.y += i / 2;
 
 					ofs += rect.position;
-					for (int j = 0; j < 10; j++) {
+					for (int j = 0; j < _get_col_count(); j++) {
 						Point2 o = ofs + Point2(j * (bsize + 1), 0);
-						if (j >= 5) {
-							o.x += 1;
-						}
+						o.x += j / 8;
 
-						const int idx = i * 10 + j;
+						const int idx = i * _get_col_count() + j;
 						const bool on = value & (1 << idx);
 						Rect2 rect2 = Rect2(o, Size2(bsize, bsize));
 
@@ -674,6 +695,22 @@ public:
 						flag_rects.push_back(rect2);
 					}
 				}
+
+				if (!horizontal) {
+					Ref<Texture2D> arrow;
+					if (is_collapsed) {
+						arrow = get_theme_icon("GuiTreeArrowDown", "EditorIcons");
+					} else {
+						arrow = get_theme_icon("GuiTreeArrowUp", "EditorIcons");
+					}
+
+					collapse_rect.set_position(Vector2(4 + (bsize + 1) * _get_col_count() + 4, 4));
+					collapse_rect.set_size(arrow->get_size());
+
+					if (arrow.is_valid()) {
+						draw_texture(arrow, collapse_rect.get_position());
+					}
+				}
 			} break;
 			case NOTIFICATION_MOUSE_EXIT: {
 				hovered_index = -1;
@@ -682,6 +719,12 @@ public:
 			default:
 				break;
 		}
+	}
+
+	void toggle_collapsed() {
+		is_collapsed = !is_collapsed;
+		minimum_size_changed();
+		update();
 	}
 
 	void set_flag(uint32_t p_flag) {
@@ -734,7 +777,7 @@ void EditorPropertyLayers::setup(LayerType p_layer_type) {
 
 	Vector<String> names;
 	Vector<String> tooltips;
-	for (int i = 0; i < 20; i++) {
+	for (int i = 0; i < 32; i++) {
 		String name;
 
 		if (ProjectSettings::get_singleton()->has_setting(basename + vformat("/layer_%d", i))) {
@@ -755,8 +798,8 @@ void EditorPropertyLayers::setup(LayerType p_layer_type) {
 
 void EditorPropertyLayers::_button_pressed() {
 	layers->clear();
-	for (int i = 0; i < 20; i++) {
-		if (i == 5 || i == 10 || i == 15) {
+	for (int i = 0; i < 32; i++) {
+		if (i == 8 || i == 16 || i == 24) {
 			layers->add_separator();
 		}
 		layers->add_check_item(grid->names[i], i);
@@ -786,17 +829,22 @@ void EditorPropertyLayers::_bind_methods() {
 }
 
 EditorPropertyLayers::EditorPropertyLayers() {
-	HBoxContainer *hb = memnew(HBoxContainer);
-	add_child(hb);
-	grid = memnew(EditorPropertyLayersGrid);
-	grid->connect("flag_changed", callable_mp(this, &EditorPropertyLayers::_grid_changed));
-	grid->set_h_size_flags(SIZE_EXPAND_FILL);
-	hb->add_child(grid);
 	button = memnew(Button);
 	button->set_toggle_mode(true);
 	button->set_text("...");
+	button->set_h_size_flags(Control::SIZE_SHRINK_END);
 	button->connect("pressed", callable_mp(this, &EditorPropertyLayers::_button_pressed));
-	hb->add_child(button);
+	add_child(button);
+	set_label_reference(button);
+	set_draw_top_bg(false);
+
+	HBoxContainer *hb = memnew(HBoxContainer);
+	add_child(hb);
+	grid = memnew(EditorPropertyLayersGrid);
+	grid->horizontal = bool(EDITOR_GET("interface/inspector/horizontal_layer_editing"));
+	grid->connect("flag_changed", callable_mp(this, &EditorPropertyLayers::_grid_changed));
+	grid->set_h_size_flags(SIZE_EXPAND_FILL);
+	hb->add_child(grid);
 	set_bottom_editor(hb);
 	layers = memnew(PopupMenu);
 	add_child(layers);
