@@ -39,12 +39,14 @@
 #include "core/io/file_access.h"
 #include "core/io/file_access_encrypted.h"
 #include "core/os/os.h"
+#include "core/templates/vset.h"
 #include "gdscript_analyzer.h"
 #include "gdscript_cache.h"
 #include "gdscript_compiler.h"
 #include "gdscript_parser.h"
 #include "gdscript_rpc_callable.h"
 #include "gdscript_warning.h"
+#include "gdscript_when_callable.h"
 
 #ifdef TESTS_ENABLED
 #include "tests/gdscript_test_runner.h"
@@ -183,6 +185,9 @@ GDScriptInstance *GDScript::_create_instance(const Variant **p_args, int p_argco
 			ERR_FAIL_V_MSG(nullptr, "Error constructing a GDScriptInstance.");
 		}
 	}
+
+	instance->_connect_when_declarations(true, false);
+
 	//@TODO make thread safe
 	return instance;
 }
@@ -1315,6 +1320,25 @@ void GDScript::_get_dependencies(RBSet<GDScript *> &p_dependencies, const GDScri
 		}
 	}
 
+	for (GDScript::WhenDeclaration &when_decl : when_declarations) {
+		if (when_decl.get_signal != nullptr) {
+			for (const Variant &V : when_decl.get_signal->constants) {
+				GDScript *scr = _get_gdscript_from_variant(V);
+				if (scr != nullptr && scr != p_except) {
+					scr->_get_dependencies(p_dependencies, p_except);
+				}
+			}
+		}
+		if (when_decl.body != nullptr) {
+			for (const Variant &V : when_decl.body->constants) {
+				GDScript *scr = _get_gdscript_from_variant(V);
+				if (scr != nullptr && scr != p_except) {
+					scr->_get_dependencies(p_dependencies, p_except);
+				}
+			}
+		}
+	}
+
 	if (implicit_initializer) {
 		for (const Variant &V : implicit_initializer->constants) {
 			GDScript *scr = _get_gdscript_from_variant(V);
@@ -1448,6 +1472,12 @@ void GDScript::clear(GDScript::ClearData *p_clear_data) {
 		E.value.data_type.script_type_ref = Ref<Script>();
 	}
 
+	for (GDScript::WhenDeclaration &when_decl : when_declarations) {
+		clear_data->functions.insert(when_decl.get_signal);
+		clear_data->functions.insert(when_decl.body);
+	}
+	when_declarations.clear();
+
 	if (implicit_initializer) {
 		clear_data->functions.insert(implicit_initializer);
 		implicit_initializer = nullptr;
@@ -1521,6 +1551,165 @@ GDScript::~GDScript() {
 //////////////////////////////
 //         INSTANCE         //
 //////////////////////////////
+
+Signal GDScriptInstance::_evaluate_when_signal(const GDScript::WhenDeclaration &p_when_decl) {
+	Callable::CallError err;
+	Variant when_expr_result = p_when_decl.get_signal->call(this, nullptr, 0, err);
+	if (err.error != Callable::CallError::CALL_OK) {
+		ERR_PRINT("Error evaluating when expression: " + Variant::get_call_error_text(owner, p_when_decl.get_signal->get_name(), nullptr, 0, err) + ".");
+	}
+	Signal when_signal = when_expr_result;
+	if (when_expr_result.get_type() != Variant::SIGNAL) {
+		String message = "Expected Signal in when declaration, got '" + Variant::get_type_name(when_expr_result.get_type()) + "'.";
+		if (when_expr_result.get_type() == Variant::NIL) {
+			message += " Annotate with @onready if signal expression depends on the scene tree.";
+		}
+		int decl_line = 0;
+#ifdef TOOLS_ENABLED
+		decl_line = p_when_decl.start_line;
+#endif
+		if (EngineDebugger::is_active()) {
+			GDScriptLanguage::get_singleton()->debug_break_parse(p_when_decl.file_path, decl_line, message);
+		}
+		_err_print_error(String(p_when_decl.body->get_name()).utf8(), p_when_decl.file_path.utf8(), decl_line, message, false, ERR_HANDLER_SCRIPT);
+	} else if (when_signal.get_object_id().is_null() || when_signal.get_name() == StringName()) { // Signal::is_null() does not evaluate if its valid, is that incorrect??
+		String message = "Invalid Signal in when declaration. Annotate with @onready if signal expression depends on the scene tree.";
+		int decl_line = 0;
+#ifdef TOOLS_ENABLED
+		decl_line = p_when_decl.start_line;
+#endif
+		if (EngineDebugger::is_active()) {
+			GDScriptLanguage::get_singleton()->debug_break_parse(p_when_decl.file_path, decl_line, message);
+		}
+		_err_print_error(String(p_when_decl.body->get_name()).utf8(), p_when_decl.file_path.utf8(), decl_line, message, false, ERR_HANDLER_SCRIPT);
+	} else {
+		return when_signal;
+	}
+	return Signal();
+}
+
+void GDScriptInstance::_connect_when_declarations(bool p_for_init, bool p_for_ready) {
+	ERR_FAIL_NULL(owner);
+
+	if (!(p_for_init && script->has_oninit_when_decls) && !(p_for_ready && script->has_onready_when_decls)) {
+		return;
+	}
+
+	Vector<GDScript *> script_stack;
+	for (GDScript *sptr = script.ptr(); sptr; sptr = sptr->_base) {
+		script_stack.insert(0, sptr);
+	}
+
+	for (int32_t i = 0; i < script_stack.size(); i++) {
+		GDScript *sptr = script_stack[i];
+		for (int32_t j = 0; j < sptr->when_declarations.size(); j++) {
+			GDScript::WhenDeclaration when_decl = sptr->when_declarations[j];
+			if ((when_decl.onready && p_for_ready) || (!when_decl.onready && p_for_init)) {
+				Signal when_signal = _evaluate_when_signal(when_decl);
+				if (!when_signal.is_null()) {
+					Callable when_callable = Callable(memnew(GDScriptWhenCallable(owner, when_decl.body, when_decl.drop_args, i, j)));
+					when_signal.connect(when_callable, when_decl.connect_flags);
+				}
+			}
+		}
+	}
+}
+
+void GDScriptInstance::_disconnect_when_declarations(bool p_for_init, bool p_for_ready) {
+	ERR_FAIL_NULL(owner);
+
+	if (!(p_for_init && script->has_oninit_when_decls) && !(p_for_ready && script->has_onready_when_decls)) {
+		return;
+	}
+
+	Vector<GDScript *> script_stack;
+	for (GDScript *sptr = script.ptr(); sptr; sptr = sptr->_base) {
+		script_stack.insert(0, sptr);
+	}
+
+	VSet<Callable> when_callables;
+	for (int32_t i = 0; i < script_stack.size(); i++) {
+		GDScript *sptr = script_stack[i];
+		for (int32_t j = 0; j < sptr->when_declarations.size(); j++) {
+			GDScript::WhenDeclaration when_decl = sptr->when_declarations[j];
+			if ((when_decl.onready && p_for_ready) || (!when_decl.onready && p_for_init)) {
+				when_callables.insert(Callable(memnew(GDScriptWhenCallable(owner, when_decl.body, when_decl.drop_args, i, j))));
+			}
+		}
+	}
+
+	if (when_callables.is_empty()) {
+		return;
+	}
+
+	List<Object::Connection> connections;
+	owner->get_signals_connected_to_this(&connections);
+	for (Object::Connection &c : connections) {
+		if (when_callables.has(c.callable)) {
+			c.signal.disconnect(c.callable);
+		}
+	}
+}
+
+void GDScriptInstance::_refresh_when_declarations(bool p_for_init, bool p_for_ready) {
+	ERR_FAIL_NULL(owner);
+
+	if (!(p_for_init && script->has_oninit_when_decls) && !(p_for_ready && script->has_onready_when_decls)) {
+		return;
+	}
+
+	Vector<GDScript *> script_stack;
+	for (GDScript *sptr = script.ptr(); sptr; sptr = sptr->_base) {
+		script_stack.insert(0, sptr);
+	}
+
+	VMap<Callable, Object::Connection> when_connections;
+	for (int32_t i = 0; i < script_stack.size(); i++) {
+		GDScript *sptr = script_stack[i];
+		for (int32_t j = 0; j < sptr->when_declarations.size(); j++) {
+			GDScript::WhenDeclaration when_decl = sptr->when_declarations[j];
+			if ((when_decl.onready && p_for_ready) || (!when_decl.onready && p_for_init)) {
+				Signal when_signal = _evaluate_when_signal(when_decl);
+				if (!when_signal.is_null()) {
+					Object::Connection c;
+					c.signal = when_signal;
+					c.callable = Callable(memnew(GDScriptWhenCallable(owner, when_decl.body, when_decl.drop_args, i, j)));
+					c.flags = when_decl.connect_flags;
+					when_connections.insert(c.callable, c);
+				}
+			}
+		}
+	}
+
+	if (when_connections.is_empty()) {
+		return;
+	}
+
+	List<Object::Connection> connections;
+	owner->get_signals_connected_to_this(&connections);
+	// Deal with connections already present.
+	for (Object::Connection &c : connections) {
+		if (c.callable.is_custom()) {
+			int idx = when_connections.find(c.callable);
+			if (idx >= 0) {
+				Object::Connection &when_conn = when_connections.getv(idx);
+				if (c.signal == when_conn.signal) {
+					// Connection already exists, ignore it.
+					when_connections.erase(c.callable);
+				} else {
+					// Different signal, disconnect it.
+					c.signal.disconnect(c.callable);
+				}
+			}
+		}
+	}
+
+	// Now the rest just need to be connected.
+	for (int i = 0; i < when_connections.size(); i++) {
+		Object::Connection &c = when_connections.getv(i);
+		c.signal.connect(c.callable, c.flags);
+	}
+}
 
 bool GDScriptInstance::set(const StringName &p_name, const Variant &p_value) {
 	//member
@@ -1819,6 +2008,13 @@ Variant GDScriptInstance::callp(const StringName &p_method, const Variant **p_ar
 			sptr = sptr->_base;
 		}
 
+		// This happens before "_ready" is called (because i dont want to add a check before every script call) but the initializer one is called after "_init".
+		// I think its ok because _ready and _init represent different things
+		//   - init is a constructor, it needs to run before anything happens
+		//   - _ready is more of a letting you know, a notification, a signal, letting you know everything is set up correctly
+		_refresh_when_declarations(false, true);
+		is_ready = true;
+
 		// Reset this back for the regular call.
 		sptr = script.ptr();
 	}
@@ -1921,6 +2117,8 @@ GDScriptInstance::GDScriptInstance() {
 }
 
 GDScriptInstance::~GDScriptInstance() {
+	_disconnect_when_declarations(true, true);
+
 	MutexLock lock(GDScriptLanguage::get_singleton()->mutex);
 
 	while (SelfList<GDScriptFunctionState> *E = pending_func_states.first()) {
@@ -2058,6 +2256,18 @@ void GDScriptLanguage::finish() {
 			}
 			for (KeyValue<StringName, GDScript::MemberInfo> &E : scr->member_indices) {
 				E.value.data_type.script_type_ref = Ref<Script>();
+			}
+
+			for (GDScript::WhenDeclaration &when_decl : scr->when_declarations) {
+				for (int i = 0; i < when_decl.get_signal->argument_types.size(); i++) {
+					when_decl.get_signal->argument_types.write[i].script_type_ref = Ref<Script>();
+				}
+				when_decl.get_signal->return_type.script_type_ref = Ref<Script>();
+
+				for (int i = 0; i < when_decl.body->argument_types.size(); i++) {
+					when_decl.body->argument_types.write[i].script_type_ref = Ref<Script>();
+				}
+				when_decl.body->return_type.script_type_ref = Ref<Script>();
 			}
 
 			// Clear backup for scripts that could slip out of the cyclic reference
@@ -2377,6 +2587,7 @@ void GDScriptLanguage::get_reserved_words(List<String> *p_words) const {
 		"preload",
 		"signal",
 		"super",
+		"when",
 		// var
 		"const",
 		"enum",

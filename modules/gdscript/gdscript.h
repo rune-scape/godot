@@ -79,6 +79,20 @@ class GDScript : public Script {
 		}
 	};
 
+	bool has_oninit_when_decls;
+	bool has_onready_when_decls;
+	struct WhenDeclaration {
+		GDScriptFunction *get_signal;
+		GDScriptFunction *body;
+		uint32_t connect_flags;
+		bool onready;
+		bool drop_args;
+		String file_path;
+#ifdef TOOLS_ENABLED
+		int start_line;
+#endif
+	};
+
 	friend class GDScriptInstance;
 	friend class GDScriptFunction;
 	friend class GDScriptAnalyzer;
@@ -97,6 +111,7 @@ class GDScript : public Script {
 	HashMap<StringName, MemberInfo> member_indices; //members are just indices to the instantiated script.
 	HashMap<StringName, Ref<GDScript>> subclasses;
 	HashMap<StringName, Vector<StringName>> _signals;
+	Vector<WhenDeclaration> when_declarations;
 	Dictionary rpc_config;
 
 #ifdef TOOLS_ENABLED
@@ -301,8 +316,14 @@ class GDScriptInstance : public ScriptInstance {
 #endif
 	Vector<Variant> members;
 	bool base_ref_counted;
+	bool is_ready = false; // Needed for hot script reloading When declarations
 
 	SelfList<GDScriptFunctionState>::List pending_func_states;
+
+	Signal _evaluate_when_signal(const GDScript::WhenDeclaration &p_when_decl);
+	void _connect_when_declarations(bool p_for_init, bool p_for_ready);
+	void _disconnect_when_declarations(bool p_for_init, bool p_for_ready);
+	void _refresh_when_declarations(bool p_for_init, bool p_for_ready);
 
 public:
 	virtual Object *get_owner() { return owner; }
