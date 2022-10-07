@@ -998,6 +998,13 @@ void GDScriptAnalyzer::resolve_class_member(GDScriptParser::ClassNode *p_class, 
 				}
 				resolve_function_signature(member.function, p_source);
 				break;
+			case GDScriptParser::ClassNode::Member::WHEN:
+				for (GDScriptParser::AnnotationNode *&E : member.when->annotations) {
+					resolve_annotation(E);
+					E->apply(parser, member.when);
+				}
+				resolve_when_signature(member.when);
+				break;
 			case GDScriptParser::ClassNode::Member::ENUM_VALUE: {
 				member.enum_value.identifier->set_datatype(resolving_datatype);
 
@@ -1181,6 +1188,13 @@ void GDScriptAnalyzer::resolve_class_body(GDScriptParser::ClassNode *p_class, co
 				E->apply(parser, member.function);
 			}
 			resolve_function_body(member.function);
+		} else if (member.type == GDScriptParser::ClassNode::Member::WHEN) {
+			// Apply annotations.
+			for (GDScriptParser::AnnotationNode *&E : member.when->annotations) {
+				resolve_annotation(E);
+				E->apply(parser, member.when);
+			}
+			resolve_when_body(member.when);
 		} else if (member.type == GDScriptParser::ClassNode::Member::VARIABLE && member.variable->property != GDScriptParser::VariableNode::PROP_NONE) {
 			if (member.variable->property == GDScriptParser::VariableNode::PROP_INLINE) {
 				if (member.variable->getter != nullptr) {
@@ -1391,6 +1405,7 @@ void GDScriptAnalyzer::resolve_node(GDScriptParser::Node *p_node, bool p_is_root
 		case GDScriptParser::Node::FUNCTION:
 		case GDScriptParser::Node::PASS:
 		case GDScriptParser::Node::SIGNAL:
+		case GDScriptParser::Node::WHEN:
 			// Nothing to do.
 			break;
 	}
@@ -1637,6 +1652,155 @@ void GDScriptAnalyzer::resolve_function_body(GDScriptParser::FunctionNode *p_fun
 #ifdef DEBUG_ENABLED
 	parser->ignored_warnings = previously_ignored_warnings;
 #endif
+	parser->current_function = previous_function;
+}
+
+void GDScriptAnalyzer::resolve_when_signature(GDScriptParser::WhenNode *p_when) {
+	if (p_when->resolved_signature) {
+		return;
+	}
+	p_when->resolved_signature = true;
+
+	reduce_expression(p_when->expression, true);
+	resolve_function_signature(p_when->function);
+
+	GDScriptParser::FunctionNode *previous_function = parser->current_function;
+	parser->current_function = p_when->function;
+
+	if (p_when->function->return_type && p_when->function->return_type->get_datatype().is_set()) {
+		push_error(R"(Parser bug, return type sould not be set on a when declaration.)", p_when->function->return_type);
+	}
+
+	GDScriptParser::DataType expr_datatype = p_when->expression->get_datatype();
+	if (expr_datatype.is_hard_type() && !expr_datatype.is_variant()) {
+		Vector<GDScriptParser::ExpressionNode *> signal_exprs;
+
+		if (p_when->expression->type == GDScriptParser::Node::ARRAY) {
+			GDScriptParser::ArrayNode *arr_node = static_cast<GDScriptParser::ArrayNode *>(p_when->expression);
+			signal_exprs = arr_node->elements;
+		} else {
+			signal_exprs.push_back(p_when->expression);
+		}
+
+		for (GDScriptParser::ExpressionNode *expr : signal_exprs) {
+			GDScriptParser::DataType signal_datatype = expr->get_datatype();
+			if (!signal_datatype.is_hard_type() || signal_datatype.is_variant()) {
+				continue;
+			}
+
+			if (signal_datatype.kind != GDScriptParser::DataType::BUILTIN || signal_datatype.builtin_type != Variant::SIGNAL) {
+				push_error(R"(Expression in when declaration must be a signal or array of signals.)", expr);
+				continue;
+			}
+
+			MethodInfo signal_info = signal_datatype.method_info;
+			Vector<GDScriptParser::ParameterNode *> body_params = p_when->function->parameters;
+			if (p_when->has_parameters && signal_info.name != "") { // I don't know if this is correct, but signal_info.id hasnt been set
+				bool is_valid = body_params.size() == signal_info.arguments.size();
+				bool is_safe = true;
+
+				Vector<GDScriptParser::DataType> parameters_types;
+				for (int i = 0; i < signal_info.arguments.size(); ++i) {
+					GDScriptParser::DataType sig_param_type = type_from_property(signal_info.arguments[i]);
+					parameters_types.push_back(sig_param_type);
+					if (i >= body_params.size()) {
+						continue;
+					}
+					GDScriptParser::DataType body_param_type = body_params[i]->get_datatype();
+
+					// this is very incorrect
+					is_safe &= body_param_type == sig_param_type;
+					/*if (body_param_type != sig_param_type) {
+						if (!body_param_type.is_set() || body_param_type.is_variant()) {
+							is_safe = false;
+						} else {
+							if (!sig_param_type.is_variant()) {
+								bool is_valid_cast = false;
+								if (op_type.kind == GDScriptParser::DataType::ENUM && cast_type.kind == GDScriptParser::DataType::ENUM) {
+									// Enum types are compatible between each other, so it's a safe cast.
+									is_valid_cast = true;
+								} else if (op_type.kind == GDScriptParser::DataType::BUILTIN && op_type.builtin_type == Variant::INT && cast_type.kind == GDScriptParser::DataType::ENUM) {
+									// Convertint int to enum is always valid.
+									is_valid_cast = true;
+								} else if (op_type.kind == GDScriptParser::DataType::BUILTIN && cast_type.kind == GDScriptParser::DataType::BUILTIN) {
+									is_valid_cast = Variant::can_convert(op_type.builtin_type, cast_type.builtin_type);
+								} else if (op_type.kind != GDScriptParser::DataType::BUILTIN && cast_type.kind != GDScriptParser::DataType::BUILTIN) {
+									is_valid_cast = is_type_compatible(cast_type, op_type) || is_type_compatible(op_type, cast_type);
+								}
+
+								if (!is_valid_cast) {
+									is_valid = false;
+									aaa"save to list and spit out in signature";
+									push_error(vformat(R"(Invalid cast. Cannot convert from "%s" to "%s".)", op_type.to_string(), cast_type.to_string()), p_cast->cast_type);
+								}
+							}
+						}
+#ifdef DEBUG_ENABLED
+						if (p_cast->operand->get_datatype().is_variant()) {
+							parser->push_warning(p_cast, GDScriptWarning::UNSAFE_CAST, cast_type.to_string());
+							mark_node_unsafe(p_cast);
+						}
+#endif
+					}*/
+				}
+
+				if (!is_valid || !is_safe) {
+					// Compute parent signature as a string to show in the error message.
+					String signal_signature = String(signal_info.name) + "(";
+
+					for (int i = 0; i < parameters_types.size(); ++i) {
+						const GDScriptParser::DataType par_type = parameters_types[i];
+						if (i > 0) {
+							signal_signature += ", ";
+						}
+						//StringName param_name = signal_info.arguments[i].name;
+						//if (param_name == "") {
+						//	signal_signature += param_name + ": ";
+						//}
+						String parameter = par_type.to_string();
+						if (parameter == "null") {
+							parameter = "Variant";
+						}
+						signal_signature += parameter;
+					}
+					signal_signature += ")";
+					if (!is_valid) {
+						push_error("The function signature is not compatable with the signal: '" + signal_signature + "'", p_when->function);
+					} else if (!is_safe) {
+#ifdef DEBUG_ENABLED
+						parser->push_warning(p_when->function, GDScriptWarning::UNSAFE_CONNECTION, signal_signature);
+						mark_node_unsafe(p_when->function);
+#endif // DEBUG_ENABLED
+					}
+				}
+			}
+		}
+	}
+
+	parser->current_function = previous_function;
+}
+
+void GDScriptAnalyzer::resolve_when_body(GDScriptParser::WhenNode *p_when) {
+	if (p_when->resolved_body) {
+		return;
+	}
+	p_when->resolved_body = true;
+
+	resolve_function_signature(p_when->get_signal_function);
+	resolve_function_body(p_when->get_signal_function);
+
+	GDScriptParser::FunctionNode *previous_function = parser->current_function;
+	parser->current_function = p_when->function;
+
+	resolve_function_body(p_when->function);
+
+	GDScriptParser::DataType return_type = p_when->function->body->get_datatype();
+#ifdef DEBUG_ENABLED
+	if (return_type.is_set()) {
+		parser->push_warning(p_when->function->body, GDScriptWarning::RETURN_VALUE_DISCARDED, p_when->function->identifier->name);
+	}
+#endif // DEBUG_ENABLED
+
 	parser->current_function = previous_function;
 }
 
@@ -2276,6 +2440,7 @@ void GDScriptAnalyzer::reduce_expression(GDScriptParser::ExpressionNode *p_expre
 		case GDScriptParser::Node::SUITE:
 		case GDScriptParser::Node::TYPE:
 		case GDScriptParser::Node::VARIABLE:
+		case GDScriptParser::Node::WHEN:
 		case GDScriptParser::Node::WHILE:
 			ERR_FAIL_MSG("Reaching unreachable case");
 	}
