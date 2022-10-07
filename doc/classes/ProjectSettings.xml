@@ -498,6 +498,9 @@
 		<member name="debug/gdscript/warnings/unsafe_cast" type="int" setter="" getter="" default="0">
 			When set to [code]warn[/code] or [code]error[/code], produces a warning or an error respectively when performing an unsafe cast.
 		</member>
+		<member name="debug/gdscript/warnings/unsafe_connection" type="int" setter="" getter="" default="1">
+			When set to [code]warn[/code] or [code]error[/code], produces a warning or an error respectively when connecting a signal whose signature may not be compatible with the specified function.
+		</member>
 		<member name="debug/gdscript/warnings/unsafe_method_access" type="int" setter="" getter="" default="0">
 			When set to [code]warn[/code] or [code]error[/code], produces a warning or an error respectively when calling a method whose presence is not guaranteed at compile-time in the class.
 		</member>

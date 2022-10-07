@@ -81,7 +81,9 @@ GDScriptParser::GDScriptParser() {
 	// TODO: Should this be static?
 	register_annotation(MethodInfo("@tool"), AnnotationInfo::SCRIPT, &GDScriptParser::tool_annotation);
 	register_annotation(MethodInfo("@icon", PropertyInfo(Variant::STRING, "icon_path")), AnnotationInfo::SCRIPT, &GDScriptParser::icon_annotation);
-	register_annotation(MethodInfo("@onready"), AnnotationInfo::VARIABLE, &GDScriptParser::onready_annotation);
+	register_annotation(MethodInfo("@onready"), AnnotationInfo::VARIABLE | AnnotationInfo::WHEN, &GDScriptParser::onready_annotation);
+	register_annotation(MethodInfo("@deferred"), AnnotationInfo::WHEN, &GDScriptParser::when_decl_annotation<Object::ConnectFlags::CONNECT_DEFERRED>);
+	register_annotation(MethodInfo("@oneshot"), AnnotationInfo::WHEN, &GDScriptParser::when_decl_annotation<Object::ConnectFlags::CONNECT_ONE_SHOT>);
 	// Export annotations.
 	register_annotation(MethodInfo("@export"), AnnotationInfo::VARIABLE, &GDScriptParser::export_annotations<PROPERTY_HINT_NONE, Variant::NIL>);
 	register_annotation(MethodInfo("@export_enum", PropertyInfo(Variant::STRING, "names")), AnnotationInfo::VARIABLE, &GDScriptParser::export_annotations<PROPERTY_HINT_ENUM, Variant::NIL>, varray(), true);
@@ -107,7 +109,7 @@ GDScriptParser::GDScriptParser() {
 	register_annotation(MethodInfo("@export_group", PropertyInfo(Variant::STRING, "name"), PropertyInfo(Variant::STRING, "prefix")), AnnotationInfo::STANDALONE, &GDScriptParser::export_group_annotations<PROPERTY_USAGE_GROUP>, varray(""));
 	register_annotation(MethodInfo("@export_subgroup", PropertyInfo(Variant::STRING, "name"), PropertyInfo(Variant::STRING, "prefix")), AnnotationInfo::STANDALONE, &GDScriptParser::export_group_annotations<PROPERTY_USAGE_SUBGROUP>, varray(""));
 	// Warning annotations.
-	register_annotation(MethodInfo("@warning_ignore", PropertyInfo(Variant::STRING, "warning")), AnnotationInfo::CLASS | AnnotationInfo::VARIABLE | AnnotationInfo::SIGNAL | AnnotationInfo::CONSTANT | AnnotationInfo::FUNCTION | AnnotationInfo::STATEMENT, &GDScriptParser::warning_annotations, varray(), true);
+	register_annotation(MethodInfo("@warning_ignore", PropertyInfo(Variant::STRING, "warning")), AnnotationInfo::CLASS | AnnotationInfo::VARIABLE | AnnotationInfo::SIGNAL | AnnotationInfo::WHEN | AnnotationInfo::CONSTANT | AnnotationInfo::FUNCTION | AnnotationInfo::STATEMENT, &GDScriptParser::warning_annotations, varray(), true);
 	// Networking.
 	register_annotation(MethodInfo("@rpc", PropertyInfo(Variant::STRING, "mode"), PropertyInfo(Variant::STRING, "sync"), PropertyInfo(Variant::STRING, "transfer_mode"), PropertyInfo(Variant::INT, "transfer_channel")), AnnotationInfo::FUNCTION, &GDScriptParser::rpc_annotation, varray("authority", "call_remote", "unreliable", 0), true);
 
@@ -810,6 +812,9 @@ void GDScriptParser::parse_class_body(bool p_is_multiline) {
 			case GDScriptTokenizer::Token::SIGNAL:
 				parse_class_member(&GDScriptParser::parse_signal, AnnotationInfo::SIGNAL, "signal");
 				break;
+			case GDScriptTokenizer::Token::WHEN:
+				parse_class_member(&GDScriptParser::parse_when, AnnotationInfo::WHEN, "when declaration");
+				break;
 			case GDScriptTokenizer::Token::STATIC:
 			case GDScriptTokenizer::Token::FUNC:
 				parse_class_member(&GDScriptParser::parse_function, AnnotationInfo::FUNCTION, "function");
@@ -1174,16 +1179,7 @@ GDScriptParser::ParameterNode *GDScriptParser::parse_parameter() {
 	return parameter;
 }
 
-GDScriptParser::SignalNode *GDScriptParser::parse_signal() {
-	SignalNode *signal = alloc_node<SignalNode>();
-
-	if (!consume(GDScriptTokenizer::Token::IDENTIFIER, R"(Expected signal name after "signal".)")) {
-		complete_extents(signal);
-		return nullptr;
-	}
-
-	signal->identifier = parse_identifier();
-
+bool GDScriptParser::parse_signal_parameters(Vector<ParameterNode *> &p_parameters, HashMap<StringName, int> &p_parameters_indices) {
 	if (check(GDScriptTokenizer::Token::PARENTHESIS_OPEN)) {
 		push_multiline(true);
 		advance();
@@ -1201,22 +1197,141 @@ GDScriptParser::SignalNode *GDScriptParser::parse_signal() {
 			if (parameter->initializer != nullptr) {
 				push_error(R"(Signal parameters cannot have a default value.)");
 			}
-			if (signal->parameters_indices.has(parameter->identifier->name)) {
+			if (p_parameters_indices.has(parameter->identifier->name)) {
 				push_error(vformat(R"(Parameter with name "%s" was already declared for this signal.)", parameter->identifier->name));
 			} else {
-				signal->parameters_indices[parameter->identifier->name] = signal->parameters.size();
-				signal->parameters.push_back(parameter);
+				p_parameters_indices[parameter->identifier->name] = p_parameters.size();
+				p_parameters.push_back(parameter);
 			}
 		} while (match(GDScriptTokenizer::Token::COMMA) && !is_at_end());
 
 		pop_multiline();
 		consume(GDScriptTokenizer::Token::PARENTHESIS_CLOSE, R"*(Expected closing ")" after signal parameters.)*");
+		return true;
 	}
+	return false;
+}
+
+GDScriptParser::SignalNode *GDScriptParser::parse_signal() {
+	SignalNode *signal = alloc_node<SignalNode>();
+
+	if (!consume(GDScriptTokenizer::Token::IDENTIFIER, R"(Expected signal name after "signal".)")) {
+		complete_extents(signal);
+		return nullptr;
+	}
+
+	signal->identifier = parse_identifier();
+
+	parse_signal_parameters(signal->parameters, signal->parameters_indices);
 
 	complete_extents(signal);
 	end_statement("signal declaration");
 
 	return signal;
+}
+
+GDScriptParser::WhenNode *GDScriptParser::parse_when() {
+	WhenNode *when = alloc_node<WhenNode>();
+
+	// Always unnamed
+	when->identifier = alloc_node<IdentifierNode>();
+	complete_extents(when->identifier);
+
+	String when_name;
+
+	FunctionNode *get_signal_func = alloc_node<FunctionNode>();
+	get_signal_func->identifier = alloc_node<IdentifierNode>();
+	complete_extents(get_signal_func->identifier);
+
+	FunctionNode *previous_function = current_function;
+	current_function = get_signal_func;
+
+	SuiteNode *get_signal_body = alloc_node<SuiteNode>();
+	{
+		get_signal_body->parent_block = current_suite;
+		get_signal_body->parent_function = current_function;
+		current_suite = get_signal_body;
+
+		ReturnNode *signal_return = alloc_node<ReturnNode>();
+
+		ExpressionNode *initial_grouping_expr = nullptr;
+		if (match(GDScriptTokenizer::Token::BRACKET_OPEN)) {
+			push_multiline(true);
+			when->expression = parse_array(nullptr, false);
+		} else {
+			if (match(GDScriptTokenizer::Token::PARENTHESIS_OPEN)) {
+				push_multiline(true);
+				initial_grouping_expr = parse_grouping(nullptr, false);
+			}
+			when->expression = parse_precedence(Precedence::PREC_ATTRIBUTE, false, false, initial_grouping_expr);
+		}
+
+		if (when->expression == nullptr) {
+			if (initial_grouping_expr != nullptr) {
+				when->expression = initial_grouping_expr;
+			} else {
+				push_error(R"(Expected expression after "when". You may need to start with a grouping expression: 'when (expression).signal:')");
+				complete_extents(signal_return);
+				complete_extents(get_signal_body);
+				complete_extents(get_signal_func);
+				complete_extents(when);
+				return nullptr;
+			}
+		}
+		complete_extents(signal_return);
+		signal_return->return_value = when->expression;
+
+#ifdef DEBUG_ENABLED
+		{
+			TreePrinter printer;
+			printer.print_expression(when->expression);
+			when_name = vformat("@when(%s)", String(printer.printed));
+		}
+#else
+		when_name = "@when";
+#endif // DEBUG_ENABLED
+		get_signal_func->identifier->name = when_name + ".get_signal";
+
+		get_signal_body->has_return = true;
+		get_signal_body->statements.push_back(signal_return);
+	}
+	complete_extents(get_signal_body);
+
+	get_signal_func->body = get_signal_body;
+	complete_extents(get_signal_func);
+	current_suite = get_signal_body->parent_block;
+	when->get_signal_function = get_signal_func;
+
+	current_function = previous_function;
+
+	FunctionNode *function = alloc_node<FunctionNode>();
+	function->identifier = alloc_node<IdentifierNode>();
+	complete_extents(function->identifier);
+	function->identifier->name = when_name;
+
+	previous_function = current_function;
+	current_function = function;
+
+	SuiteNode *body = alloc_node<SuiteNode>();
+	SuiteNode *previous_suite = current_suite;
+	current_suite = body;
+
+	when->has_parameters = parse_signal_parameters(function->parameters, function->parameters_indices);
+	for (ParameterNode *parameter : function->parameters) {
+		body->add_local(parameter, function);
+	}
+
+	consume(GDScriptTokenizer::Token::COLON, R"(Expected ":" after when declaration. You may need to start with a grouping expression: 'when (expression).signal:')");
+
+	current_suite = previous_suite;
+	function->body = parse_suite("when declaration", body);
+	when->function = function;
+
+	current_function = previous_function;
+	complete_extents(function);
+	complete_extents(when);
+
+	return when;
 }
 
 GDScriptParser::EnumNode *GDScriptParser::parse_enum() {
@@ -2164,38 +2279,41 @@ GDScriptParser::WhileNode *GDScriptParser::parse_while() {
 	return n_while;
 }
 
-GDScriptParser::ExpressionNode *GDScriptParser::parse_precedence(Precedence p_precedence, bool p_can_assign, bool p_stop_on_assign) {
-	// Switch multiline mode on for grouping tokens.
-	// Do this early to avoid the tokenizer generating whitespace tokens.
-	switch (current.type) {
-		case GDScriptTokenizer::Token::PARENTHESIS_OPEN:
-		case GDScriptTokenizer::Token::BRACE_OPEN:
-		case GDScriptTokenizer::Token::BRACKET_OPEN:
-			push_multiline(true);
-			break;
-		default:
-			break; // Nothing to do.
-	}
-
-	// Completion can appear whenever an expression is expected.
-	make_completion_context(COMPLETION_IDENTIFIER, nullptr);
-
+GDScriptParser::ExpressionNode *GDScriptParser::parse_precedence(Precedence p_precedence, bool p_can_assign, bool p_stop_on_assign, ExpressionNode *previous_operand) {
 	GDScriptTokenizer::Token token = current;
-	GDScriptTokenizer::Token::Type token_type = token.type;
-	if (token.is_identifier()) {
-		// Allow keywords that can be treated as identifiers.
-		token_type = GDScriptTokenizer::Token::IDENTIFIER;
+
+	if (previous_operand == nullptr) {
+		// Switch multiline mode on for grouping tokens.
+		// Do this early to avoid the tokenizer generating whitespace tokens.
+		switch (current.type) {
+			case GDScriptTokenizer::Token::PARENTHESIS_OPEN:
+			case GDScriptTokenizer::Token::BRACE_OPEN:
+			case GDScriptTokenizer::Token::BRACKET_OPEN:
+				push_multiline(true);
+				break;
+			default:
+				break; // Nothing to do.
+		}
+
+		// Completion can appear whenever an expression is expected.
+		make_completion_context(COMPLETION_IDENTIFIER, nullptr);
+
+		GDScriptTokenizer::Token::Type token_type = token.type;
+		if (token.is_identifier()) {
+			// Allow keywords that can be treated as identifiers.
+			token_type = GDScriptTokenizer::Token::IDENTIFIER;
+		}
+		ParseFunction prefix_rule = get_rule(token_type)->prefix;
+
+		if (prefix_rule == nullptr) {
+			// Expected expression. Let the caller give the proper error message.
+			return nullptr;
+		}
+
+		advance(); // Only consume the token if there's a valid rule.
+
+		previous_operand = (this->*prefix_rule)(nullptr, p_can_assign);
 	}
-	ParseFunction prefix_rule = get_rule(token_type)->prefix;
-
-	if (prefix_rule == nullptr) {
-		// Expected expression. Let the caller give the proper error message.
-		return nullptr;
-	}
-
-	advance(); // Only consume the token if there's a valid rule.
-
-	ExpressionNode *previous_operand = (this->*prefix_rule)(nullptr, p_can_assign);
 
 	while (p_precedence <= get_rule(current.type)->precedence) {
 		if (previous_operand == nullptr || (p_stop_on_assign && current.type == GDScriptTokenizer::Token::EQUAL) || (previous_operand->type == Node::LAMBDA && lambda_ended)) {
@@ -3565,6 +3683,7 @@ GDScriptParser::ParseRule *GDScriptParser::get_rule(GDScriptTokenizer::Token::Ty
 		{ nullptr,                                          nullptr,                                        PREC_NONE }, // TRAIT,
 		{ nullptr,                                          nullptr,                                        PREC_NONE }, // VAR,
 		{ nullptr,                                          nullptr,                                        PREC_NONE }, // VOID,
+		{ nullptr,											nullptr,                                        PREC_NONE }, // WHEN,
 		{ &GDScriptParser::parse_yield,                     nullptr,                                        PREC_NONE }, // YIELD,
 		// Punctuation
 		{ &GDScriptParser::parse_array,                  	&GDScriptParser::parse_subscript,            	PREC_SUBSCRIPT }, // BRACKET_OPEN,
@@ -3691,19 +3810,28 @@ bool GDScriptParser::icon_annotation(const AnnotationNode *p_annotation, Node *p
 }
 
 bool GDScriptParser::onready_annotation(const AnnotationNode *p_annotation, Node *p_node) {
-	ERR_FAIL_COND_V_MSG(p_node->type != Node::VARIABLE, false, R"("@onready" annotation can only be applied to class variables.)");
-
 	if (current_class && !ClassDB::is_parent_class(current_class->get_datatype().native_type, SNAME("Node"))) {
 		push_error(R"("@onready" can only be used in classes that inherit "Node".)", p_annotation);
 	}
 
-	VariableNode *variable = static_cast<VariableNode *>(p_node);
-	if (variable->onready) {
-		push_error(R"("@onready" annotation can only be used once per variable.)");
-		return false;
+	if (p_node->type == Node::VARIABLE) {
+		VariableNode *variable = static_cast<VariableNode *>(p_node);
+		if (variable->onready) {
+			push_error(R"("@onready" annotation can only be used once per variable.)");
+			return false;
+		}
+		variable->onready = true;
+		current_class->onready_used = true;
+	} else if (p_node->type == Node::WHEN) {
+		WhenNode *when = static_cast<WhenNode *>(p_node);
+		if (when->onready) {
+			push_error(R"("@onready" annotation can only be used once per when declaration.)", p_annotation);
+			return false;
+		}
+		when->onready = true;
+	} else {
+		ERR_FAIL_V_MSG(false, R"("@onready" annotation can only be applied to class variables and when declarations.)");
 	}
-	variable->onready = true;
-	current_class->onready_used = true;
 	return true;
 }
 
@@ -4064,6 +4192,19 @@ bool GDScriptParser::rpc_annotation(const AnnotationNode *p_annotation, Node *p_
 		}
 	}
 	function->rpc_config = rpc_config;
+	return true;
+}
+
+template <uint32_t t_connect_flags>
+bool GDScriptParser::when_decl_annotation(const AnnotationNode *p_annotation, Node *p_node) {
+	ERR_FAIL_COND_V_MSG(p_node->type != Node::WHEN, false, vformat(R"("%s" annotation can only be applied to when statements.)", p_annotation->name));
+
+	WhenNode *when = static_cast<WhenNode *>(p_node);
+	if (when->connect_flags & t_connect_flags) {
+		push_error(vformat(R"("%s" annotation can only be used once per when statement.)", p_annotation->name), p_annotation);
+		return false;
+	}
+	when->connect_flags |= t_connect_flags;
 	return true;
 }
 
@@ -4503,6 +4644,9 @@ void GDScriptParser::TreePrinter::print_class(ClassNode *p_class) {
 			case ClassNode::Member::SIGNAL:
 				print_signal(m.signal);
 				break;
+			case ClassNode::Member::WHEN:
+				print_when(m.when);
+				break;
 			case ClassNode::Member::FUNCTION:
 				print_function(m.function);
 				break;
@@ -4873,6 +5017,28 @@ void GDScriptParser::TreePrinter::print_signal(SignalNode *p_signal) {
 		print_parameter(p_signal->parameters[i]);
 	}
 	push_line(" )");
+}
+
+void GDScriptParser::TreePrinter::print_when(WhenNode *p_when) {
+	for (const AnnotationNode *E : p_when->annotations) {
+		print_annotation(E);
+	}
+	push_text("When ");
+	print_expression(p_when->expression);
+	if (p_when->has_parameters) {
+		push_text("( ");
+		for (int i = 0; i < p_when->function->parameters.size(); i++) {
+			if (i > 0) {
+				push_text(" , ");
+			}
+			print_parameter(p_when->function->parameters[i]);
+		}
+		push_text(" )");
+	}
+	push_line(" :");
+	increase_indent();
+	print_suite(p_when->function->body);
+	decrease_indent();
 }
 
 void GDScriptParser::TreePrinter::print_subscript(SubscriptNode *p_subscript) {

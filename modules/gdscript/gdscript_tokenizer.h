@@ -127,6 +127,7 @@ public:
 			TRAIT,
 			VAR,
 			VOID,
+			WHEN,
 			YIELD,
 			// Punctuation
 			BRACKET_OPEN,
