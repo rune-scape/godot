@@ -41,6 +41,8 @@ class GDScriptCompiler {
 	const GDScriptParser *parser = nullptr;
 	HashSet<GDScript *> parsed_classes;
 	HashSet<GDScript *> parsing_classes;
+	HashSet<GDScript *> compiling_classes;
+	HashSet<GDScript *> compiled_classes;
 	GDScript *main_script = nullptr;
 
 	struct CodeGen {
