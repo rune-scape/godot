@@ -283,6 +283,7 @@
 			<return type="void" />
 			<description>
 				Mark the following when declaration to be connected with [constant Object.CONNECT_DEFERRED] flag.
+				[b]Note:[/b] Cannot be used on a when-notified declaration.
 				[codeblock]
 				@deferred
 				when body_entered: monitoring = false
@@ -607,6 +608,7 @@
 			<return type="void" />
 			<description>
 				Mark the following when declaration to be connected with [constant Object.CONNECT_ONE_SHOT] flag.
+				[b]Note:[/b] Cannot be used on a when-notified declaration.
 				[codeblock]
 				@oneshot
 				when pressed: print("once")
@@ -621,6 +623,7 @@
 				@onready var character_name: Label = $Label
 				[/codeblock]
 				Can also be used to mark a when declaration as evaluated and connected only on [Node]'s ready state change.
+				[b]Note:[/b] Cannot be used on a when-notified declaration.
 				[codeblock]
 				@onready
 				when $Button.pressed: print("Hello, world!")

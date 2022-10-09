@@ -335,7 +335,11 @@ Dictionary GDScriptSyntaxHighlighter::_get_line_syntax_highlighting_impl(int p_l
 
 			String word = str.substr(j, to - j);
 			Color col;
-			if (global_functions.has(word)) {
+			if (in_when_declaration && prev_text == "when" && word == "notified") {
+				in_when_declaration = false;
+				in_keyword = true;
+				col = keyword_color;
+			} else if (global_functions.has(word)) {
 				// "assert" and "preload" are reserved, so highlight even if not followed by a bracket.
 				if (word == GDScriptTokenizer::get_token_name(GDScriptTokenizer::Token::ASSERT) || word == GDScriptTokenizer::get_token_name(GDScriptTokenizer::Token::PRELOAD)) {
 					col = global_function_color;
