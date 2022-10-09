@@ -1340,6 +1340,9 @@ void GDScript::_collect_dependencies(RBSet<GDScript *> &p_dependencies, const GD
 		_collect_function_dependencies(when_decl.get_signal, p_dependencies, p_except);
 		_collect_function_dependencies(when_decl.body, p_dependencies, p_except);   
 	}
+	for (GDScript::WhenNotifiedDeclaration &when_decl : when_notified_declarations) {
+		_collect_function_dependencies(when_decl.body, p_dependencies, p_except);   
+	}
 
 	if (implicit_initializer) {
 		_collect_function_dependencies(implicit_initializer, p_dependencies, p_except);
@@ -1552,6 +1555,10 @@ void GDScript::clear(ClearData *p_clear_data) {
 		clear_data->functions.insert(when_decl.body);
 	}
 	when_declarations.clear();
+	for (GDScript::WhenNotifiedDeclaration &when_decl : when_notified_declarations) {
+		clear_data->functions.insert(when_decl.body);
+	}
+	when_notified_declarations.clear();
 
 	if (implicit_initializer) {
 		clear_data->functions.insert(implicit_initializer);
@@ -2066,6 +2073,19 @@ void GDScriptInstance::notification(int p_notification) {
 	Variant value = p_notification;
 	const Variant *args[1] = { &value };
 
+	{
+		HashMap<int, Vector<GDScriptFunction *>>::Iterator E = script->when_notified_map.find(p_notification);
+		if (E) {
+			for (GDScriptFunction *fn : E->value) {
+				Callable::CallError err;
+				fn->call(this, nullptr, 0, err);
+				if (err.error != Callable::CallError::CALL_OK) {
+					//print error about notification call
+				}
+			}
+		}
+	}
+
 	GDScript *sptr = script.ptr();
 	while (sptr) {
 		HashMap<StringName, GDScriptFunction *>::Iterator E = sptr->member_functions.find(GDScriptLanguage::get_singleton()->strings._notification);
@@ -2294,6 +2314,12 @@ void GDScriptLanguage::finish() {
 				}
 				when_decl.get_signal->return_type.script_type_ref = Ref<Script>();
 
+				for (int i = 0; i < when_decl.body->argument_types.size(); i++) {
+					when_decl.body->argument_types.write[i].script_type_ref = Ref<Script>();
+				}
+				when_decl.body->return_type.script_type_ref = Ref<Script>();
+			}
+			for (GDScript::WhenNotifiedDeclaration &when_decl : scr->when_notified_declarations) {
 				for (int i = 0; i < when_decl.body->argument_types.size(); i++) {
 					when_decl.body->argument_types.write[i].script_type_ref = Ref<Script>();
 				}

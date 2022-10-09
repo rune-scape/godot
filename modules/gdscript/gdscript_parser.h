@@ -1249,6 +1249,12 @@ public:
 		bool onready = false;
 		bool has_parameters = false;
 
+		bool is_notification = false;
+		HashSet<int> notifications;
+#ifdef DEBUG_ENABLED
+		Vector<String> notification_names;
+#endif // DEBUG_ENABLED
+
 		bool resolved_signature = false;
 		bool resolved_body = false;
 #ifdef TOOLS_ENABLED

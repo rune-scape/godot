@@ -2555,6 +2555,9 @@ Error GDScriptCompiler::_populate_class_members(GDScript *p_script, const GDScri
 		memdelete(when_decl.get_signal);
 		memdelete(when_decl.body);
 	}
+	for (GDScript::WhenNotifiedDeclaration &when_notif_decl : p_script->when_notified_declarations) {
+		memdelete(when_notif_decl.body);
+	}
 
 	if (p_script->implicit_initializer) {
 		memdelete(p_script->implicit_initializer);
@@ -2575,6 +2578,8 @@ Error GDScriptCompiler::_populate_class_members(GDScript *p_script, const GDScri
 	p_script->has_oninit_when_decls = false;
 	p_script->has_onready_when_decls = false;
 	p_script->when_declarations.clear();
+	p_script->when_notified_declarations.clear();
+	p_script->when_notified_map.clear();
 	p_script->initializer = nullptr;
 	p_script->implicit_initializer = nullptr;
 	p_script->implicit_ready = nullptr;
@@ -2804,6 +2809,18 @@ Error GDScriptCompiler::_populate_class_members(GDScript *p_script, const GDScri
 }
 
 Error GDScriptCompiler::_compile_class(GDScript *p_script, const GDScriptParser::ClassNode *p_class, bool p_keep_state) {
+	if (compiled_classes.has(p_script)) {
+		return OK;
+	}
+
+	if (compiling_classes.has(p_script)) {
+		String class_name = p_class->identifier ? String(p_class->identifier->name) : p_class->fqcn;
+		_set_error(vformat(R"(Cyclic class reference for "%s".)", class_name), p_class);
+		return ERR_PARSE_ERROR;
+	}
+
+	compiling_classes.insert(p_script);
+
 	// Compile member functions, getters, and setters.
 	for (int i = 0; i < p_class->members.size(); i++) {
 		const GDScriptParser::ClassNode::Member &member = p_class->members[i];
@@ -2814,7 +2831,7 @@ Error GDScriptCompiler::_compile_class(GDScript *p_script, const GDScriptParser:
 			if (err) {
 				return err;
 			}
-		} else if (member.type == member.WHEN) {
+		} else if (member.type == member.WHEN && !member.when->is_notification) {
 			const GDScriptParser::WhenNode *when = member.when;
 			Error err = OK;
 			GDScriptFunction *get_signal_fn = _parse_function(err, p_script, p_class, when->get_signal_function, false, true);
@@ -2841,6 +2858,24 @@ Error GDScriptCompiler::_compile_class(GDScript *p_script, const GDScriptParser:
 			}
 
 			p_script->when_declarations.push_back(when_decl);
+		} else if (member.type == member.WHEN && member.when->is_notification) {
+			const GDScriptParser::WhenNode *when = member.when;
+			Error err = OK;
+			GDScriptFunction *body = _parse_function(err, p_script, p_class, when->function, false, true);
+			if (err) {
+				return err;
+			}
+
+			GDScript::WhenNotifiedDeclaration when_decl{
+				when->notifications,
+				body
+			};
+
+			p_script->when_notified_declarations.push_back(when_decl);
+
+			for (int notification : when_decl.notifications) {
+				p_script->when_notified_map[notification].push_back(when_decl.body);
+			}
 		} else if (member.type == member.VARIABLE) {
 			const GDScriptParser::VariableNode *variable = member.variable;
 			if (variable->property == GDScriptParser::VariableNode::PROP_INLINE) {
@@ -2954,8 +2989,39 @@ Error GDScriptCompiler::_compile_class(GDScript *p_script, const GDScriptParser:
 		has_static_data = has_static_data || inner_class->has_static_data;
 	}
 
+	if (p_script->_base) {
+		// Compile base if it isn't already compiling.
+		Error err = OK;
+		if (!p_script->_base->is_valid()) {
+			if (main_script->has_class(p_script->_base)) {
+				err = _populate_class_members(p_script->_base, p_class->base_type.class_type, p_keep_state);
+				if (err) {
+					return err;
+				}
+				err = _compile_class(p_script->_base, p_class->base_type.class_type, p_keep_state);
+				if (err) {
+					return err;
+				}
+			} else {
+				Ref<GDScript> cached_gds = GDScriptCache::get_full_script(p_script->_base->path, err);
+				ERR_FAIL_COND_V(err != OK, err);
+				ERR_FAIL_COND_V(cached_gds.ptr() != p_script->_base, ERR_BUG);
+			}
+		}
+
+		ERR_FAIL_COND_V(!p_script->_base->is_valid(), ERR_BUG);
+
+		HashMap<int, Vector<GDScriptFunction *>> new_when_notified_map = p_script->_base->when_notified_map;
+		for (KeyValue<int, Vector<GDScriptFunction *>> &KV : p_script->when_notified_map) {
+			new_when_notified_map[KV.key].append_array(KV.value);
+		}
+		p_script->when_notified_map = new_when_notified_map;
+	}
+
 	p_script->_init_rpc_methods_properties();
 
+	compiling_classes.erase(p_script);
+	compiled_classes.insert(p_script);
 	p_script->valid = true;
 	return OK;
 }
@@ -3069,6 +3135,9 @@ GDScriptCompiler::ScriptLambdaInfo GDScriptCompiler::_get_script_lambda_replacem
 
 	for (GDScript::WhenDeclaration &when_decl : p_script->when_declarations) {
 		info.other_function_infos.push_back(_get_function_replacement_info(when_decl.get_signal));
+		info.other_function_infos.push_back(_get_function_replacement_info(when_decl.body));
+	}
+	for (GDScript::WhenNotifiedDeclaration &when_decl : p_script->when_notified_declarations) {
 		info.other_function_infos.push_back(_get_function_replacement_info(when_decl.body));
 	}
 
