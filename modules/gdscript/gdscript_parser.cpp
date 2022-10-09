@@ -1239,89 +1239,122 @@ GDScriptParser::WhenNode *GDScriptParser::parse_when() {
 
 	String when_name;
 
-	FunctionNode *get_signal_func = alloc_node<FunctionNode>();
-	get_signal_func->identifier = alloc_node<IdentifierNode>();
-	complete_extents(get_signal_func->identifier);
-
-	FunctionNode *previous_function = current_function;
-	current_function = get_signal_func;
-
-	SuiteNode *get_signal_body = alloc_node<SuiteNode>();
-	{
-		get_signal_body->parent_block = current_suite;
-		get_signal_body->parent_function = current_function;
-		current_suite = get_signal_body;
-
-		ReturnNode *signal_return = alloc_node<ReturnNode>();
-
-		ExpressionNode *initial_grouping_expr = nullptr;
-		if (match(GDScriptTokenizer::Token::BRACKET_OPEN)) {
-			push_multiline(true);
-			when->expression = parse_array(nullptr, false);
-		} else {
-			if (match(GDScriptTokenizer::Token::PARENTHESIS_OPEN)) {
-				push_multiline(true);
-				initial_grouping_expr = parse_grouping(nullptr, false);
-			}
-			when->expression = parse_precedence(Precedence::PREC_ATTRIBUTE, false, false, initial_grouping_expr);
-		}
-
+	if (current.is_identifier() && current.get_identifier() == "notified") {
+		advance();
+		when->is_notification = true;
+		when->expression = parse_expression(false);
 		if (when->expression == nullptr) {
-			if (initial_grouping_expr != nullptr) {
-				when->expression = initial_grouping_expr;
-			} else {
-				push_error(R"(Expected expression after "when". You may need to start with a grouping expression: 'when (expression).signal:')");
-				complete_extents(signal_return);
-				complete_extents(get_signal_body);
-				complete_extents(get_signal_func);
-				complete_extents(when);
-				return nullptr;
-			}
+			push_error(R"(Expected int or array after "notified".)");
+			complete_extents(when);
+			return nullptr;
 		}
-		complete_extents(signal_return);
-		signal_return->return_value = when->expression;
 
 #ifdef DEBUG_ENABLED
 		{
 			TreePrinter printer;
 			printer.print_expression(when->expression);
-			when_name = vformat("@when(%s)", String(printer.printed));
+			when_name = vformat("@when-notified(%s)", String(printer.printed));
+
+			if (when->expression->type == Node::ARRAY) {
+				ArrayNode *array_node = static_cast<ArrayNode *>(when->expression);
+				for (ExpressionNode *expr : array_node->elements) {
+					printer.printed = StringBuilder();
+					printer.print_expression(expr);
+					when->notification_names.push_back(printer.printed);
+				}
+			}
 		}
 #else
-		when_name = "@when";
+		when_name = "@when-notified";
 #endif // DEBUG_ENABLED
-		get_signal_func->identifier->name = when_name + ".get_signal";
+	} else {
+		FunctionNode *get_signal_func = alloc_node<FunctionNode>();
+		get_signal_func->identifier = alloc_node<IdentifierNode>();
+		complete_extents(get_signal_func->identifier);
 
-		get_signal_body->has_return = true;
-		get_signal_body->statements.push_back(signal_return);
+		FunctionNode *previous_function = current_function;
+		current_function = get_signal_func;
+
+		SuiteNode *get_signal_body = alloc_node<SuiteNode>();
+		{
+			get_signal_body->parent_block = current_suite;
+			get_signal_body->parent_function = current_function;
+			current_suite = get_signal_body;
+
+			ReturnNode *signal_return = alloc_node<ReturnNode>();
+
+			ExpressionNode *initial_grouping_expr = nullptr;
+			if (match(GDScriptTokenizer::Token::BRACKET_OPEN)) {
+				push_multiline(true);
+				when->expression = parse_array(nullptr, false);
+			} else {
+				if (match(GDScriptTokenizer::Token::PARENTHESIS_OPEN)) {
+					push_multiline(true);
+					initial_grouping_expr = parse_grouping(nullptr, false);
+				}
+				when->expression = parse_precedence(Precedence::PREC_ATTRIBUTE, false, false, initial_grouping_expr);
+			}
+
+			if (when->expression == nullptr) {
+				if (initial_grouping_expr != nullptr) {
+					when->expression = initial_grouping_expr;
+				} else {
+					push_error(R"(Expected expression after "when". You may need to start with a grouping expression: 'when (expression).signal:')");
+					complete_extents(signal_return);
+					complete_extents(get_signal_body);
+					complete_extents(get_signal_func);
+					complete_extents(when);
+					return nullptr;
+				}
+			}
+			complete_extents(signal_return);
+			signal_return->return_value = when->expression;
+
+#ifdef DEBUG_ENABLED
+			{
+				TreePrinter printer;
+				printer.print_expression(when->expression);
+				when_name = vformat("@when(%s)", String(printer.printed));
+			}
+#else
+			when_name = "@when";
+#endif // DEBUG_ENABLED
+			get_signal_func->identifier->name = when_name + ".get_signal";
+
+			get_signal_body->has_return = true;
+			get_signal_body->statements.push_back(signal_return);
+		}
+		complete_extents(get_signal_body);
+
+		get_signal_func->body = get_signal_body;
+		complete_extents(get_signal_func);
+		current_suite = get_signal_body->parent_block;
+		when->get_signal_function = get_signal_func;
+
+		current_function = previous_function;
 	}
-	complete_extents(get_signal_body);
-
-	get_signal_func->body = get_signal_body;
-	complete_extents(get_signal_func);
-	current_suite = get_signal_body->parent_block;
-	when->get_signal_function = get_signal_func;
-
-	current_function = previous_function;
 
 	FunctionNode *function = alloc_node<FunctionNode>();
 	function->identifier = alloc_node<IdentifierNode>();
 	complete_extents(function->identifier);
 	function->identifier->name = when_name;
 
-	previous_function = current_function;
+	FunctionNode *previous_function = current_function;
 	current_function = function;
 
 	SuiteNode *body = alloc_node<SuiteNode>();
 	SuiteNode *previous_suite = current_suite;
 	current_suite = body;
 
-	when->has_parameters = parse_signal_parameters(function->parameters, function->parameters_indices);
-	for (ParameterNode *parameter : function->parameters) {
-		body->add_local(parameter, function);
+	if (when->is_notification) {
+		consume(GDScriptTokenizer::Token::COLON, R"(Expected ":" after when-notified declaration.)");
+	} else {
+		when->has_parameters = parse_signal_parameters(function->parameters, function->parameters_indices);
+		for (ParameterNode *parameter : function->parameters) {
+			body->add_local(parameter, function);
+		}
+		consume(GDScriptTokenizer::Token::COLON, R"(Expected ":" after when declaration. You may need to start with a grouping expression: 'when (expression).signal:')");
 	}
-
-	consume(GDScriptTokenizer::Token::COLON, R"(Expected ":" after when declaration. You may need to start with a grouping expression: 'when (expression).signal:')");
 
 	current_suite = previous_suite;
 	function->body = parse_suite("when declaration", body);
@@ -3824,6 +3857,10 @@ bool GDScriptParser::onready_annotation(const AnnotationNode *p_annotation, Node
 		current_class->onready_used = true;
 	} else if (p_node->type == Node::WHEN) {
 		WhenNode *when = static_cast<WhenNode *>(p_node);
+		if (when->is_notification) {
+			push_error(R"("@onready" annotation cannot be applied to when-notified declarations.)", p_annotation);
+			return false;
+		}
 		if (when->onready) {
 			push_error(R"("@onready" annotation can only be used once per when declaration.)", p_annotation);
 			return false;
@@ -4200,6 +4237,10 @@ bool GDScriptParser::when_decl_annotation(const AnnotationNode *p_annotation, No
 	ERR_FAIL_COND_V_MSG(p_node->type != Node::WHEN, false, vformat(R"("%s" annotation can only be applied to when statements.)", p_annotation->name));
 
 	WhenNode *when = static_cast<WhenNode *>(p_node);
+	if (when->is_notification) {
+		push_error(vformat(R"("%s" annotation cannot be applied to when-notified declarations.)", p_annotation->name), p_annotation);
+		return false;
+	}
 	if (when->connect_flags & t_connect_flags) {
 		push_error(vformat(R"("%s" annotation can only be used once per when statement.)", p_annotation->name), p_annotation);
 		return false;
@@ -5024,6 +5065,9 @@ void GDScriptParser::TreePrinter::print_when(WhenNode *p_when) {
 		print_annotation(E);
 	}
 	push_text("When ");
+	if (p_when->is_notification) {
+		push_text("Notified ");
+	}
 	print_expression(p_when->expression);
 	if (p_when->has_parameters) {
 		push_text("( ");
