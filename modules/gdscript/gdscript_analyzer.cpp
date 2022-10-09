@@ -1656,6 +1656,11 @@ void GDScriptAnalyzer::resolve_function_body(GDScriptParser::FunctionNode *p_fun
 }
 
 void GDScriptAnalyzer::resolve_when_signature(GDScriptParser::WhenNode *p_when) {
+	if (p_when->is_notification) {
+		resolve_when_notified_signature(p_when);
+		return;
+	}
+
 	if (p_when->resolved_signature) {
 		return;
 	}
@@ -1764,6 +1769,11 @@ void GDScriptAnalyzer::resolve_when_signature(GDScriptParser::WhenNode *p_when) 
 }
 
 void GDScriptAnalyzer::resolve_when_body(GDScriptParser::WhenNode *p_when) {
+	if (p_when->is_notification) {
+		resolve_when_notified_body(p_when);
+		return;
+	}
+
 	if (p_when->resolved_body) {
 		return;
 	}
@@ -1771,6 +1781,70 @@ void GDScriptAnalyzer::resolve_when_body(GDScriptParser::WhenNode *p_when) {
 
 	resolve_function_signature(p_when->get_signal_function);
 	resolve_function_body(p_when->get_signal_function);
+
+	GDScriptParser::FunctionNode *previous_function = parser->current_function;
+	parser->current_function = p_when->function;
+
+	resolve_function_body(p_when->function);
+
+	GDScriptParser::DataType return_type = p_when->function->body->get_datatype();
+#ifdef DEBUG_ENABLED
+	if (return_type.is_set()) {
+		parser->push_warning(p_when->function->body, GDScriptWarning::RETURN_VALUE_DISCARDED, p_when->function->identifier->name);
+	}
+#endif // DEBUG_ENABLED
+
+	parser->current_function = previous_function;
+}
+
+void GDScriptAnalyzer::resolve_when_notified_signature(GDScriptParser::WhenNode *p_when) {
+	ERR_FAIL_COND(!p_when->is_notification);
+
+	if (p_when->resolved_signature) {
+		return;
+	}
+	p_when->resolved_signature = true;
+
+	reduce_expression(p_when->expression, true);
+	resolve_function_signature(p_when->function);
+
+	Vector<GDScriptParser::ExpressionNode *> notification_expressions{ p_when->expression };
+	if (p_when->expression->type == GDScriptParser::Node::ARRAY) {
+		GDScriptParser::ArrayNode *array_node = static_cast<GDScriptParser::ArrayNode *>(p_when->expression);
+		notification_expressions = array_node->elements;
+	}
+
+	for (int i = 0; i < notification_expressions.size(); i++) {
+		GDScriptParser::ExpressionNode *expr = notification_expressions[i];
+		reduce_expression(expr, true);
+		if (!expr->is_constant) {
+			push_error("Expression in when-notified declaration must be a constant.", expr);
+			continue;
+		}
+		if (expr->reduced_value.get_type() != Variant::INT) {
+			push_error("Expression in when-notified declaration must be an int.", expr);
+			continue;
+		}
+		int notification = expr->reduced_value;
+		if (p_when->notifications.has(notification)) {
+#ifdef DEBUG_ENABLED
+			push_error(vformat("'%s' already specifed in when-notified declaration.", p_when->notification_names[i]), expr);
+#else
+			push_error("Notification already specifed in when-notified declaration.", expr);
+#endif // DEBUG_ENABLED
+			continue;
+		}
+		p_when->notifications.insert(notification);
+	}
+}
+
+void GDScriptAnalyzer::resolve_when_notified_body(GDScriptParser::WhenNode *p_when) {
+	ERR_FAIL_COND(!p_when->is_notification);
+
+	if (p_when->resolved_body) {
+		return;
+	}
+	p_when->resolved_body = true;
 
 	GDScriptParser::FunctionNode *previous_function = parser->current_function;
 	parser->current_function = p_when->function;

@@ -69,6 +69,8 @@ class GDScriptAnalyzer {
 	void resolve_function_body(GDScriptParser::FunctionNode *p_function, bool p_is_lambda = false);
 	void resolve_when_signature(GDScriptParser::WhenNode *p_when);
 	void resolve_when_body(GDScriptParser::WhenNode *p_when);
+	void resolve_when_notified_signature(GDScriptParser::WhenNode *p_when);
+	void resolve_when_notified_body(GDScriptParser::WhenNode *p_when);
 	void resolve_node(GDScriptParser::Node *p_node, bool p_is_root = true);
 	void resolve_suite(GDScriptParser::SuiteNode *p_suite);
 	void resolve_assignable(GDScriptParser::AssignableNode *p_assignable, const char *p_kind);

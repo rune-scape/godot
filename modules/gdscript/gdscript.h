@@ -92,6 +92,10 @@ class GDScript : public Script {
 		int start_line;
 #endif
 	};
+	struct WhenNotifiedDeclaration {
+		HashSet<int> notifications;
+		GDScriptFunction *body;
+	};
 
 	friend class GDScriptInstance;
 	friend class GDScriptFunction;
@@ -112,6 +116,8 @@ class GDScript : public Script {
 	HashMap<StringName, Ref<GDScript>> subclasses;
 	HashMap<StringName, Vector<StringName>> _signals;
 	Vector<WhenDeclaration> when_declarations;
+	Vector<WhenNotifiedDeclaration> when_notified_declarations;
+	HashMap<int, Vector<GDScriptFunction *>> when_notified_map;
 	Dictionary rpc_config;
 
 #ifdef TOOLS_ENABLED

@@ -2155,10 +2155,28 @@ GDScriptFunction *GDScriptCompiler::_parse_function(Error &r_error, GDScript *p_
 	GDScriptFunction *gd_function = codegen.generator->write_end();
 
 	if (is_initializer) {
+		if (p_script->initializer != nullptr) {
+			r_error = ERR_COMPILATION_FAILED;
+			ERR_PRINT("Compiler Bug: initializer already written.");
+			memdelete(codegen.generator);
+			return nullptr;
+		}
 		p_script->initializer = gd_function;
 	} else if (is_implicit_initializer) {
+		if (p_script->implicit_initializer != nullptr) {
+			r_error = ERR_COMPILATION_FAILED;
+			ERR_PRINT("Compiler Bug: implicit_initializer already written.");
+			memdelete(codegen.generator);
+			return nullptr;
+		}
 		p_script->implicit_initializer = gd_function;
 	} else if (is_implicit_ready) {
+		if (p_script->implicit_ready != nullptr) {
+			r_error = ERR_COMPILATION_FAILED;
+			ERR_PRINT("Compiler Bug: implicit_ready already written.");
+			memdelete(codegen.generator);
+			return nullptr;
+		}
 		p_script->implicit_ready = gd_function;
 	}
 
@@ -2178,6 +2196,12 @@ GDScriptFunction *GDScriptCompiler::_parse_function(Error &r_error, GDScript *p_
 	}
 
 	if (!is_implicit_initializer && !is_implicit_ready && !p_for_lambda) {
+		if (p_script->member_functions.has(func_name)) {
+			r_error = ERR_COMPILATION_FAILED;
+			ERR_PRINT(vformat("Compiler Bug: func '%s' already written.", func_name));
+			memdelete(codegen.generator);
+			return nullptr;
+		}
 		p_script->member_functions[func_name] = gd_function;
 	}
 
@@ -2268,6 +2292,9 @@ Error GDScriptCompiler::_populate_class_members(GDScript *p_script, const GDScri
 		memdelete(when_decl.get_signal);
 		memdelete(when_decl.body);
 	}
+	for (GDScript::WhenNotifiedDeclaration &when_notif_decl : p_script->when_notified_declarations) {
+		memdelete(when_notif_decl.body);
+	}
 
 	if (p_script->implicit_initializer) {
 		memdelete(p_script->implicit_initializer);
@@ -2282,6 +2309,8 @@ Error GDScriptCompiler::_populate_class_members(GDScript *p_script, const GDScri
 	p_script->has_oninit_when_decls = false;
 	p_script->has_onready_when_decls = false;
 	p_script->when_declarations.clear();
+	p_script->when_notified_declarations.clear();
+	p_script->when_notified_map.clear();
 	p_script->initializer = nullptr;
 	p_script->implicit_initializer = nullptr;
 	p_script->implicit_ready = nullptr;
@@ -2543,6 +2572,18 @@ Error GDScriptCompiler::_populate_class_members(GDScript *p_script, const GDScri
 }
 
 Error GDScriptCompiler::_compile_class(GDScript *p_script, const GDScriptParser::ClassNode *p_class, bool p_keep_state) {
+	if (compiled_classes.has(p_script)) {
+		return OK;
+	}
+
+	if (compiling_classes.has(p_script)) {
+		String class_name = p_class->identifier ? String(p_class->identifier->name) : p_class->fqcn;
+		_set_error(vformat(R"(Cyclic class reference for "%s".)", class_name), p_class);
+		return ERR_PARSE_ERROR;
+	}
+
+	compiling_classes.insert(p_script);
+
 	// Compile member functions, getters, and setters.
 	for (int i = 0; i < p_class->members.size(); i++) {
 		const GDScriptParser::ClassNode::Member &member = p_class->members[i];
@@ -2553,7 +2594,7 @@ Error GDScriptCompiler::_compile_class(GDScript *p_script, const GDScriptParser:
 			if (err) {
 				return err;
 			}
-		} else if (member.type == member.WHEN) {
+		} else if (member.type == member.WHEN && !member.when->is_notification) {
 			const GDScriptParser::WhenNode *when = member.when;
 			Error err = OK;
 			GDScriptFunction *get_signal_fn = _parse_function(err, p_script, p_class, when->get_signal_function, false, true);
@@ -2582,6 +2623,24 @@ Error GDScriptCompiler::_compile_class(GDScript *p_script, const GDScriptParser:
 			}
 
 			p_script->when_declarations.push_back(when_decl);
+		} else if (member.type == member.WHEN && member.when->is_notification) {
+			const GDScriptParser::WhenNode *when = member.when;
+			Error err = OK;
+			GDScriptFunction *body = _parse_function(err, p_script, p_class, when->function, false, true);
+			if (err) {
+				return err;
+			}
+
+			GDScript::WhenNotifiedDeclaration when_decl{
+				when->notifications,
+				body
+			};
+
+			p_script->when_notified_declarations.push_back(when_decl);
+
+			for (int notification : when_decl.notifications) {
+				p_script->when_notified_map[notification].push_back(when_decl.body);
+			}
 		} else if (member.type == member.VARIABLE) {
 			const GDScriptParser::VariableNode *variable = member.variable;
 			if (variable->property == GDScriptParser::VariableNode::PROP_INLINE) {
@@ -2691,8 +2750,30 @@ Error GDScriptCompiler::_compile_class(GDScript *p_script, const GDScriptParser:
 		}
 	}
 
+	if (p_script->_base) {
+		if (parsed_classes.has(p_script->_base)) {
+			Error err = _compile_class(p_script->_base, p_class->base_type.class_type, p_keep_state);
+			if (err) {
+				return err;
+			}
+		}
+
+		if (!p_script->_base->is_valid()) {
+			_set_error("Could not finish compiling base class.", nullptr);
+			return ERR_COMPILATION_FAILED;
+		}
+
+		HashMap<int, Vector<GDScriptFunction *>> new_when_notified_map = p_script->_base->when_notified_map;
+		for (KeyValue<int, Vector<GDScriptFunction *>> &KV : p_script->when_notified_map) {
+			new_when_notified_map[KV.key].append_array(KV.value);
+		}
+		p_script->when_notified_map = new_when_notified_map;
+	}
+
 	p_script->_init_rpc_methods_properties();
 
+	compiling_classes.erase(p_script);
+	compiled_classes.insert(p_script);
 	p_script->valid = true;
 	return OK;
 }
