@@ -638,6 +638,35 @@ void GDScriptParser::parse_program() {
 	clear_unused_annotations();
 }
 
+GDScriptParser::ClassNode *GDScriptParser::find_class(const String &p_qualified_name) {
+	String qn = p_qualified_name;
+	String first = qn.get_slice("::", 0);
+	GDScriptParser::ClassNode *result = nullptr;
+	if (first.is_empty() || first == script_path || (head->identifier && first == head->identifier->name)) {
+		result = head;
+	} else if (head->has_member(first)) {
+		GDScriptParser::ClassNode::Member member = head->get_member(first);
+		if (member.type == GDScriptParser::ClassNode::Member::CLASS) {
+			result = member.m_class;
+		}
+	}
+
+	while (result != nullptr && qn.contains("::")) {
+		qn = qn.get_slice("::", 1);
+		String current_name = qn.get_slice("::", 0);
+		GDScriptParser::ClassNode *next = nullptr;
+		if (result->has_member(current_name)) {
+			GDScriptParser::ClassNode::Member member = result->get_member(current_name);
+			if (member.type == GDScriptParser::ClassNode::Member::CLASS) {
+				next = member.m_class;
+			}
+		}
+		result = next;
+	}
+
+	return result;
+}
+
 GDScriptParser::ClassNode *GDScriptParser::parse_class() {
 	ClassNode *n_class = alloc_node<ClassNode>();
 
@@ -2229,7 +2258,7 @@ GDScriptParser::IdentifierNode *GDScriptParser::parse_identifier() {
 
 GDScriptParser::ExpressionNode *GDScriptParser::parse_identifier(ExpressionNode *p_previous_operand, bool p_can_assign) {
 	if (!previous.is_identifier()) {
-		ERR_FAIL_V_MSG(nullptr, "Parser bug: parsing literal node without literal token.");
+		ERR_FAIL_V_MSG(nullptr, "Parser bug: parsing identifier node without identifier token.");
 	}
 	IdentifierNode *identifier = alloc_node<IdentifierNode>();
 	complete_extents(identifier);

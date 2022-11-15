@@ -1558,29 +1558,30 @@ static bool _guess_expression_type(GDScriptParser::CompletionContext &p_context,
 												for (const KeyValue<StringName, ProjectSettings::AutoloadInfo> &E : ProjectSettings::get_singleton()->get_autoload_list()) {
 													String name = E.key;
 													if (name == which) {
-														String script = E.value.path;
+														String script_path = E.value.path;
 
-														if (!script.begins_with("res://")) {
-															script = "res://" + script;
+														if (!script_path.begins_with("res://")) {
+															script_path = "res://" + script_path;
 														}
 
-														if (!script.ends_with(".gd")) {
+														// TODO: improve gdscript path recognition for subclasses.
+														if (!script_path.ends_with(".gd")) {
 															// not a script, try find the script anyway,
 															// may have some success
-															script = script.get_basename() + ".gd";
+															script_path = script_path.get_basename() + ".gd";
 														}
 
-														if (FileAccess::exists(script)) {
+														if (FileAccess::exists(script_path)) {
 															Error err = OK;
-															Ref<GDScriptParserRef> parser = GDScriptCache::get_parser(script, GDScriptParserRef::INTERFACE_SOLVED, err);
+															Ref<GDScriptParserRef> parser_ref = GDScriptCache::get_parser(script_path, GDScript::Status::INTERFACE_SOLVED, err);
 															if (err == OK) {
 																r_type.type.type_source = GDScriptParser::DataType::ANNOTATED_EXPLICIT;
-																r_type.type.script_path = script;
-																r_type.type.class_type = parser->get_parser()->get_tree();
+																r_type.type.script_path = script_path;
+																r_type.type.class_type = parser_ref->get_parser()->get_tree();
 																r_type.type.is_constant = false;
 																r_type.type.kind = GDScriptParser::DataType::CLASS;
 																r_type.value = Variant();
-																p_context.dependent_parsers.push_back(parser);
+																p_context.dependent_parsers.push_back(parser_ref);
 																found = true;
 															}
 														}
@@ -1994,18 +1995,19 @@ static bool _guess_identifier_type(GDScriptParser::CompletionContext &p_context,
 
 	// Check global scripts.
 	if (ScriptServer::is_global_class(p_identifier)) {
-		String script = ScriptServer::get_global_class_path(p_identifier);
-		if (script.to_lower().ends_with(".gd")) {
+		String script_path = ScriptServer::get_global_class_path(p_identifier);
+		// TODO: improve gdscript path recognition for subclasses.
+		if (script_path.to_lower().ends_with(".gd")) {
 			Error err = OK;
-			Ref<GDScriptParserRef> parser = GDScriptCache::get_parser(script, GDScriptParserRef::INTERFACE_SOLVED, err);
+			Ref<GDScriptParserRef> parser = GDScriptCache::get_parser(script_path, GDScript::INTERFACE_SOLVED, err);
 			if (err == OK) {
 				r_type.type.type_source = GDScriptParser::DataType::ANNOTATED_EXPLICIT;
-				r_type.type.script_path = script;
+				r_type.type.script_path = script_path;
 				r_type.type.class_type = parser->get_parser()->get_tree();
 				r_type.type.is_constant = false;
 				r_type.type.kind = GDScriptParser::DataType::CLASS;
 				r_type.value = Variant();
-				p_context.dependent_parsers.push_back(parser);
+				p_context.root_script_ref = GDScriptCache::get_cached_script(script_path);
 				return true;
 			}
 		} else {
@@ -2860,7 +2862,7 @@ static void _find_call_arguments(GDScriptParser::CompletionContext &p_context, c
 
 			for (int i = 0; i < completion_context.current_argument; i++) {
 				GDScriptCompletionIdentifier ci;
-				if (!_guess_identifier_type_from_base(completion_context, base, type->type_chain[i]->name, ci)) {
+				if (!_guess_identifier_type_from_base(completion_context, base, type->subtypes[i]->name, ci)) {
 					found = false;
 					break;
 				}
@@ -3286,17 +3288,6 @@ static Error _lookup_symbol_from_base(const GDScriptParser::DataType &p_base, co
 
 	GDScriptParser::CompletionContext context = parser.get_completion_context();
 
-	if (context.current_class && context.current_class->extends.size() > 0) {
-		bool success = false;
-		ClassDB::get_integer_constant(context.current_class->extends[0], p_symbol, &success);
-		if (success) {
-			r_result.type = ScriptLanguage::LOOKUP_RESULT_CLASS_CONSTANT;
-			r_result.class_name = context.current_class->extends[0];
-			r_result.class_member = p_symbol;
-			return OK;
-		}
-	}
-
 	bool is_function = false;
 
 	switch (context.type) {
@@ -3358,6 +3349,7 @@ static Error _lookup_symbol_from_base(const GDScriptParser::DataType &p_base, co
 					const ProjectSettings::AutoloadInfo &autoload = ProjectSettings::get_singleton()->get_autoload(p_symbol);
 					if (autoload.is_singleton) {
 						String scr_path = autoload.path;
+						// TODO: improve gdscript path recognition for subclasses.
 						if (!scr_path.ends_with(".gd")) {
 							// Not a script, try find the script anyway,
 							// may have some success.

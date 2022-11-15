@@ -39,6 +39,7 @@
 #include "core/object/script_language.h"
 #include "core/templates/rb_set.h"
 #include "gdscript_function.h"
+#include "gdscript_parser_ref.h"
 
 class GDScriptNativeClass : public RefCounted {
 	GDCLASS(GDScriptNativeClass, RefCounted);
@@ -58,9 +59,14 @@ public:
 };
 
 class GDScript : public Script {
+public:
+	using Status = GDScriptParserRef::Status;
+
+private:
 	GDCLASS(GDScript, Script);
 	bool tool = false;
-	bool valid = false;
+	bool raising_status = false;
+	Status status = Status::EMPTY;
 
 	struct MemberInfo {
 		int index = 0;
@@ -173,7 +179,7 @@ protected:
 	static void _bind_methods();
 
 public:
-	virtual bool is_valid() const override { return valid; }
+	virtual bool is_valid() const override { return status == Status::COMPILED; }
 
 	bool inherits_script(const Ref<Script> &p_script) const override;
 
@@ -224,6 +230,8 @@ public:
 	}
 #endif // TOOLS_ENABLED
 
+	Status get_status() const { return status; }
+	Error raise_status(GDScript::Status p_status, bool p_keep_state = true);
 	virtual Error reload(bool p_keep_state = false) override;
 
 	virtual void set_path(const String &p_path, bool p_take_over = false) override;

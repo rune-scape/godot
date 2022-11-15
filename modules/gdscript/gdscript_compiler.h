@@ -38,9 +38,9 @@
 #include "gdscript_parser.h"
 
 class GDScriptCompiler {
+	friend class GDScript;
+
 	const GDScriptParser *parser = nullptr;
-	HashSet<GDScript *> parsed_classes;
-	HashSet<GDScript *> parsing_classes;
 	GDScript *main_script = nullptr;
 
 	struct CodeGen {
@@ -140,6 +140,7 @@ class GDScriptCompiler {
 
 public:
 	static void make_scripts(GDScript *p_script, const GDScriptParser::ClassNode *p_class, bool p_keep_state);
+	Error raise_status(const GDScriptParser *p_parser, GDScript *p_script, const GDScriptParser::ClassNode *p_class, GDScript::Status p_status, bool p_keep_state);
 	Error compile(const GDScriptParser *p_parser, GDScript *p_script, bool p_keep_state = false);
 
 	String get_error() const;

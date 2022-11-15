@@ -41,7 +41,7 @@
 #include "core/templates/rb_map.h"
 #include "core/templates/vector.h"
 #include "core/variant/variant.h"
-#include "gdscript_cache.h"
+#include "gdscript_parser_ref.h"
 #include "gdscript_tokenizer.h"
 
 #ifdef DEBUG_ENABLED
@@ -129,6 +129,7 @@ public:
 		Ref<Script> script_type;
 		String script_path;
 		ClassNode *class_type = nullptr;
+		Ref<GDScriptParserRef> parser_ref;
 
 		MethodInfo method_info; // For callable/signals.
 		HashMap<StringName, int64_t> enum_values; // For enums.
@@ -1428,6 +1429,8 @@ public:
 	Error parse(const String &p_source_code, const String &p_script_path, bool p_for_completion);
 	ClassNode *get_tree() const { return head; }
 	bool is_tool() const { return _is_tool; }
+	String get_script_path() const { return script_path; }
+	ClassNode *find_class(const String &p_qualified_name);
 	static Variant::Type get_builtin_type(const StringName &p_type);
 
 	CompletionContext get_completion_context() const { return completion_context; }

@@ -2159,17 +2159,15 @@ Error GDScriptCompiler::_parse_setter_getter(GDScript *p_script, const GDScriptP
 }
 
 Error GDScriptCompiler::_populate_class_members(GDScript *p_script, const GDScriptParser::ClassNode *p_class, bool p_keep_state) {
-	if (parsed_classes.has(p_script)) {
+	if (p_script->status >= GDScript::Status::_POPULATED) {
 		return OK;
 	}
-
-	if (parsing_classes.has(p_script)) {
+	if (p_script->status == GDScript::Status::_POPULATING) {
 		String class_name = p_class->identifier ? String(p_class->identifier->name) : p_class->fqcn;
 		_set_error(vformat(R"(Cyclic class reference for "%s".)", class_name), p_class);
 		return ERR_PARSE_ERROR;
 	}
-
-	parsing_classes.insert(p_script);
+	p_script->status = GDScript::Status::_POPULATING;
 
 #ifdef TOOLS_ENABLED
 	p_script->doc_functions.clear();
@@ -2240,21 +2238,13 @@ Error GDScriptCompiler::_populate_class_members(GDScript *p_script, const GDScri
 				if (err) {
 					return err;
 				}
-			} else if (!base->is_valid()) {
-				Error err = OK;
-				Ref<GDScript> base_root = GDScriptCache::get_full_script(base->path, err, p_script->path);
+			} else {
+				Error err = base->raise_status(GDScript::Status::_POPULATED, p_keep_state);
 				if (err) {
-					_set_error(vformat(R"(Could not compile base class "%s" from "%s": %s)", base->fully_qualified_name, base->path, error_names[err]), nullptr);
+					_set_error(vformat(R"(Could not compile base class "%s": %s)", base->fully_qualified_name, error_names[err]), nullptr);
 					return err;
 				}
-				if (base_root.is_valid()) {
-					base = Ref<GDScript>(base_root->find_class(base->fully_qualified_name));
-				}
-				if (base.is_null()) {
-					_set_error(vformat(R"(Could not find class "%s" in "%s".)", base->fully_qualified_name, base->path), nullptr);
-					return ERR_COMPILATION_FAILED;
-				}
-				ERR_FAIL_COND_V(!base->is_valid(), ERR_BUG);
+				ERR_FAIL_COND_V(base->status < GDScript::Status::_POPULATED, ERR_BUG);
 			}
 
 			p_script->base = base;
@@ -2430,8 +2420,7 @@ Error GDScriptCompiler::_populate_class_members(GDScript *p_script, const GDScri
 		}
 	}
 
-	parsed_classes.insert(p_script);
-	parsing_classes.erase(p_script);
+	p_script->status = GDScript::Status::_POPULATED;
 
 	// Populate sub-classes.
 	for (int i = 0; i < p_class->members.size(); i++) {
@@ -2445,7 +2434,7 @@ Error GDScriptCompiler::_populate_class_members(GDScript *p_script, const GDScri
 		GDScript *subclass_ptr = subclass.ptr();
 
 		// Subclass might still be parsing, just skip it
-		if (!parsing_classes.has(subclass_ptr)) {
+		if (subclass_ptr->status < GDScript::Status::_POPULATING) {
 			Error err = _populate_class_members(subclass_ptr, inner_class, p_keep_state);
 			if (err) {
 				return err;
@@ -2464,6 +2453,31 @@ Error GDScriptCompiler::_populate_class_members(GDScript *p_script, const GDScri
 }
 
 Error GDScriptCompiler::_compile_class(GDScript *p_script, const GDScriptParser::ClassNode *p_class, bool p_keep_state) {
+	if (p_script->status == GDScript::Status::COMPILED) {
+		return OK;
+	}
+	if (p_script->status == GDScript::Status::_COMPILING) {
+		_set_error(vformat(R"(Cyclic class reference for "%s".)", String(p_class->fqcn)), p_class);
+		return ERR_PARSE_ERROR;
+	}
+	if (p_script->status < GDScript::Status::_POPULATED) {
+		Error err = _populate_class_members(p_script, p_class, p_keep_state);
+		if (err) {
+			return err;
+		}
+	} else {
+		ERR_FAIL_COND_V(p_script->status != GDScript::Status::_POPULATED, ERR_BUG);
+	}
+	p_script->status = GDScript::Status::_COMPILING;
+
+	if (p_script->base.is_valid()) {
+		Error err = p_script->base->raise_status(GDScript::Status::COMPILED, p_keep_state);
+		if (err) {
+			_set_error(vformat(R"(Could not compile base class "%s": %s)", p_script->base->fully_qualified_name, error_names[err]), nullptr);
+			return err;
+		}
+	}
+
 	// Compile member functions, getters, and setters.
 	for (int i = 0; i < p_class->members.size(); i++) {
 		const GDScriptParser::ClassNode::Member &member = p_class->members[i];
@@ -2580,7 +2594,7 @@ Error GDScriptCompiler::_compile_class(GDScript *p_script, const GDScriptParser:
 
 	p_script->_init_rpc_methods_properties();
 
-	p_script->valid = true;
+	p_script->status = GDScript::Status::COMPILED;
 	return OK;
 }
 
@@ -2623,21 +2637,25 @@ void GDScriptCompiler::make_scripts(GDScript *p_script, const GDScriptParser::Cl
 	}
 }
 
-Error GDScriptCompiler::compile(const GDScriptParser *p_parser, GDScript *p_script, bool p_keep_state) {
+Error GDScriptCompiler::raise_status(const GDScriptParser *p_parser, GDScript *p_script, const GDScriptParser::ClassNode *p_class, GDScript::Status p_status, bool p_keep_state) {
+	ERR_FAIL_COND_V_MSG(p_status == GDScript::Status::_POPULATING, ERR_INVALID_PARAMETER, "Internal status!");
+	ERR_FAIL_COND_V_MSG(p_status == GDScript::Status::_COMPILING, ERR_INVALID_PARAMETER, "Internal status!");
+	ERR_FAIL_COND_V_MSG(p_script->status < GDScript::Status::ANALYZED, ERR_BUG, "Script must be analyzed first!");
+
+	if (p_status >= p_script->status) {
+		return OK;
+	}
+
 	err_line = -1;
 	err_column = -1;
 	error = "";
 	parser = p_parser;
 	main_script = p_script;
-	const GDScriptParser::ClassNode *root = parser->get_tree();
 
 	source = p_script->get_path();
 
-	// Create scripts for subclasses beforehand so they can be referenced
-	make_scripts(p_script, root, p_keep_state);
-
 	main_script->_owner = nullptr;
-	Error err = _populate_class_members(main_script, parser->get_tree(), p_keep_state);
+	Error err = _populate_class_members(main_script, p_class, p_keep_state);
 
 	if (err) {
 		return err;
@@ -2649,6 +2667,16 @@ Error GDScriptCompiler::compile(const GDScriptParser *p_parser, GDScript *p_scri
 	}
 
 	return GDScriptCache::finish_compiling(main_script->get_path());
+}
+
+Error GDScriptCompiler::compile(const GDScriptParser *p_parser, GDScript *p_script, bool p_keep_state) {
+	// Assume script is analyzed, for use outside of the raise_status functions.
+	p_script->status = GDScript::Status::ANALYZED;
+
+	// Create scripts for subclasses beforehand so they can be referenced
+	make_scripts(p_script, p_parser->get_tree(), p_keep_state);
+
+	return raise_status(p_parser, p_script, p_parser->get_tree(), GDScript::Status::COMPILED, p_keep_state);
 }
 
 String GDScriptCompiler::get_error() const {

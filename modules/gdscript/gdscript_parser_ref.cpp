@@ -1,5 +1,5 @@
 /*************************************************************************/
-/*  gdscript_cache.h                                                     */
+/*  gdscript_cache.cpp                                                   */
 /*************************************************************************/
 /*                       This file is part of:                           */
 /*                           GODOT ENGINE                                */
@@ -28,42 +28,49 @@
 /* SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.                */
 /*************************************************************************/
 
-#ifndef GDSCRIPT_CACHE_H
-#define GDSCRIPT_CACHE_H
+#include "gdscript_cache.h"
 
-#include "core/object/ref_counted.h"
-#include "core/os/mutex.h"
-#include "core/templates/hash_map.h"
-#include "core/templates/hash_set.h"
+#include "core/io/file_access.h"
+#include "core/templates/vector.h"
 #include "gdscript.h"
-#include "gdscript_parser_ref.h"
+#include "gdscript_analyzer.h"
+#include "gdscript_compiler.h"
+#include "gdscript_parser.h"
 
-class GDScriptCache {
-	HashMap<String, GDScriptParserRef *> parser_map;
-	// String key is full path.
-	HashMap<String, GDScriptParserRef *> parser_map;
-	HashMap<String, GDScript *> shallow_gdscript_cache;
-	HashMap<String, GDScript *> full_gdscript_cache;
-	HashMap<String, HashSet<String>> dependencies;
+bool GDScriptParserRef::is_valid() const {
+	return parser != nullptr;
+}
 
-	friend class GDScript;
-	friend class GDScriptParserRef;
+GDScript::Status GDScriptParserRef::get_status() const {
+	return root_script->get_status();
+}
 
-	static GDScriptCache *singleton;
+GDScriptParser *GDScriptParserRef::get_parser() const {
+	return parser;
+}
 
-	Mutex lock;
-	static void remove_script(const String &p_path);
+Error GDScriptParserRef::raise_status(GDScript::Status p_new_status, bool p_keep_state) {
+	ERR_FAIL_NULL_V(root_script, ERR_INVALID_DATA);
+	return root_script->raise_status(p_new_status, p_keep_state);
+}
 
-public:
-	static Ref<GDScriptParserRef> get_parser(const String &p_path, GDScriptParserRef::Status p_status, Error &r_error, const String &p_owner = String());
-	static Ref<GDScript> get_script(const String &p_path, GDScriptParserRef::Status p_status, Error &r_error, const String &p_owner = String(), bool p_update_from_disk = false);
-	static Ref<GDScript> get_shallow_script(const String &p_path, Error &r_error, const String &p_owner = String(), bool p_update_from_disk = false);
-	static Ref<GDScript> get_full_script(const String &p_path, Error &r_error, const String &p_owner = String(), bool p_update_from_disk = false);
-	static Ref<GDScript> get_cached_script(const String &p_path);
-	static Error finish_compiling(const String &p_owner);
+void GDScriptParserRef::clear() {
+	if (cleared) {
+		return;
+	}
+	cleared = true;
+	root_script = nullptr;
 
-	GDScriptCache();
-	~GDScriptCache();
-};
+	if (parser != nullptr) {
+		memdelete(parser);
+	}
 
-#endif // GDSCRIPT_CACHE_H
+	if (analyzer != nullptr) {
+		memdelete(analyzer);
+	}
+}
+
+GDScriptParserRef::~GDScriptParserRef() {
+	// TODO: needs cyclic-ref PR
+	clear();
+}
