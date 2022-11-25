@@ -116,33 +116,34 @@ GDScriptDataType GDScriptCompiler::_gdtype_from_datatype(const GDScriptParser::D
 			String root_name = p_datatype.class_type->fqcn.get_slice("::", 0);
 			bool is_local_class = !root_name.is_empty() && root_name == main_script->fully_qualified_name;
 
-			Ref<GDScript> script;
-			if (is_local_class) {
-				script = Ref<GDScript>(main_script);
-			} else {
-				Error err = OK;
-				script = GDScriptCache::get_shallow_script(p_datatype.script_path, err, p_owner->path);
-				if (err) {
-					_set_error(vformat(R"(Could not find script "%s": %s)", p_datatype.script_path, error_names[err]), nullptr);
-				}
-			}
-
-			if (script.is_valid()) {
-				script = Ref<GDScript>(script->find_class(p_datatype.class_type->fqcn));
-			}
-
+			Ref<GDScript> script = p_datatype.script_type;
 			if (script.is_null()) {
-				_set_error(vformat(R"(Could not find class "%s" in "%s".)", p_datatype.class_type->fqcn, p_datatype.script_path), nullptr);
-				return GDScriptDataType();
-			} else {
-				// Only hold a strong reference if the owner of the element qualified with this type is not local, to avoid cyclic references (leaks).
-				// TODO: Might lead to use after free if script_type is a subclass and is used after its parent is freed.
-				if (!is_local_class) {
-					result.script_type_ref = script;
+				if (is_local_class) {
+					script = Ref<GDScript>(main_script->find_class(p_datatype.class_type->fqcn));
+					if (script.is_null()) {
+						_set_error(vformat(R"(Could not find class "%s".)", p_datatype.class_type->fqcn.trim_prefix(root_name)), nullptr);
+						return GDScriptDataType();
+					}
+				} else {
+					Error err = OK;
+					script = GDScriptCache::get_shallow_script(p_datatype.script_path, err, p_owner->path);
+					if (err) {
+						_set_error(vformat(R"(Could not find script "%s": %s)", p_datatype.script_path, error_names[err]), nullptr);
+					}
 				}
-				result.script_type = script.ptr();
-				result.native_type = p_datatype.native_type;
+
+				if (script.is_null()) {
+					_set_error(vformat(R"(Could not find class "%s" in "%s".)", p_datatype.class_type->fqcn, p_datatype.script_path), nullptr);
+					return GDScriptDataType();
+				}
 			}
+
+			// Only hold a strong reference if the owner of the element qualified with this type is not local, to avoid cyclic references (leaks).
+			// TODO: Might lead to use after free if script_type is a subclass and is used after its parent is freed.
+			if (!is_local_class) {
+				result.script_type_ref = script;
+			}
+			result.script_type = script.ptr();
 		} break;
 		case GDScriptParser::DataType::ENUM:
 			result.has_type = true;
@@ -2272,17 +2273,11 @@ Error GDScriptCompiler::_populate_class_members(GDScript *p_script, const GDScri
 				}
 			} else if (!base->is_valid()) {
 				Error err = OK;
-				Ref<GDScript> base_root = GDScriptCache::get_full_script(base->path, err, p_script->path);
+				base = GDScriptCache::get_full_script(base->path, err, p_script->path);
+				ERR_FAIL_COND_V(base.is_null(), ERR_BUG);
 				if (err) {
 					_set_error(vformat(R"(Could not compile base class "%s" from "%s": %s)", base->fully_qualified_name, base->path, error_names[err]), nullptr);
 					return err;
-				}
-				if (base_root.is_valid()) {
-					base = Ref<GDScript>(base_root->find_class(base->fully_qualified_name));
-				}
-				if (base.is_null()) {
-					_set_error(vformat(R"(Could not find class "%s" in "%s".)", base->fully_qualified_name, base->path), nullptr);
-					return ERR_COMPILATION_FAILED;
 				}
 				ERR_FAIL_COND_V(!base->is_valid(), ERR_BUG);
 			}
@@ -2644,7 +2639,7 @@ void GDScriptCompiler::make_scripts(GDScript *p_script, const GDScriptParser::Cl
 		}
 
 		subclass->_owner = p_script;
-		subclass->path = p_script->path;
+		subclass->path = p_script->path + "::" + String(name);
 		p_script->subclasses.insert(name, subclass);
 
 		make_scripts(subclass.ptr(), inner_class, p_keep_state);

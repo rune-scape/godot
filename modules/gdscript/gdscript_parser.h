@@ -648,6 +648,7 @@ public:
 		Vector<StringName> extends; // List for indexing: extends A.B.C
 		DataType base_type;
 		String fqcn; // Fully-qualified class name. Identifies uniquely any class in the project.
+		String path; // Full class path.
 #ifdef TOOLS_ENABLED
 		String doc_description;
 		String doc_brief_description;
@@ -1428,7 +1429,9 @@ private:
 public:
 	Error parse(const String &p_source_code, const String &p_script_path, bool p_for_completion);
 	ClassNode *get_tree() const { return head; }
+	String get_source_code() const { return tokenizer.get_source_code(); }
 	bool is_tool() const { return _is_tool; }
+	ClassNode *find_class(const String &p_qualified_name);
 	static Variant::Type get_builtin_type(const StringName &p_type);
 
 	CompletionContext get_completion_context() const { return completion_context; }

@@ -537,6 +537,7 @@ void GDScriptParser::end_statement(const String &p_context) {
 void GDScriptParser::parse_program() {
 	head = alloc_node<ClassNode>();
 	head->fqcn = script_path;
+	head->path = script_path;
 	current_class = head;
 
 	// If we happen to parse an annotation before extends or class_name keywords, track it.
@@ -640,6 +641,34 @@ void GDScriptParser::parse_program() {
 	clear_unused_annotations();
 }
 
+GDScriptParser::ClassNode *GDScriptParser::find_class(const String &p_qualified_name) {
+	String first = p_qualified_name.get_slice("::", 0);
+	GDScriptParser::ClassNode *result = nullptr;
+	if (first.is_empty() || first == script_path || (head->identifier && first == head->identifier->name)) {
+		result = head;
+	} else if (head->has_member(first)) {
+		GDScriptParser::ClassNode::Member member = head->get_member(first);
+		if (member.type == GDScriptParser::ClassNode::Member::CLASS) {
+			result = member.m_class;
+		}
+	}
+
+	int name_count = p_qualified_name.get_slice_count("::");
+	for (int i = 1; result != nullptr && i < name_count; i++) {
+		String current_name = p_qualified_name.get_slice("::", i);
+		GDScriptParser::ClassNode *next = nullptr;
+		if (result->has_member(current_name)) {
+			GDScriptParser::ClassNode::Member member = result->get_member(current_name);
+			if (member.type == GDScriptParser::ClassNode::Member::CLASS) {
+				next = member.m_class;
+			}
+		}
+		result = next;
+	}
+
+	return result;
+}
+
 GDScriptParser::ClassNode *GDScriptParser::parse_class() {
 	ClassNode *n_class = alloc_node<ClassNode>();
 
@@ -650,13 +679,12 @@ GDScriptParser::ClassNode *GDScriptParser::parse_class() {
 	if (consume(GDScriptTokenizer::Token::IDENTIFIER, R"(Expected identifier for the class name after "class".)")) {
 		n_class->identifier = parse_identifier();
 		if (n_class->outer) {
-			String fqcn = n_class->outer->fqcn;
-			if (fqcn.is_empty()) {
-				fqcn = script_path;
-			}
-			n_class->fqcn = fqcn + "::" + n_class->identifier->name;
+			n_class->fqcn = n_class->outer->fqcn + "::" + n_class->identifier->name;
+			n_class->path = n_class->outer->path + "::" + n_class->identifier->name;
 		} else {
 			n_class->fqcn = n_class->identifier->name;
+			// This shouldn't actually be reachable, so no path?
+			n_class->path = "";
 		}
 	}
 

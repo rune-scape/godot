@@ -672,13 +672,11 @@ bool GDScript::_update_exports(bool *r_err, bool p_recursive_call, PlaceHolderSc
 
 			GDScriptParser::DataType base_type = parser.get_tree()->base_type;
 			if (base_type.kind == GDScriptParser::DataType::CLASS) {
+				String base_fqn = base_type.class_type->fqcn;
 				Ref<GDScript> bf = GDScriptCache::get_full_script(base_type.script_path, err, path);
 				if (err == OK) {
-					bf = Ref<GDScript>(bf->find_class(base_type.class_type->fqcn));
-					if (bf.is_valid()) {
-						base_cache = bf;
-						bf->inheriters_cache.insert(get_instance_id());
-					}
+					base_cache = bf;
+					bf->inheriters_cache.insert(get_instance_id());
 				}
 			}
 
@@ -1016,12 +1014,13 @@ Error GDScript::load_byte_code(const String &p_path) {
 }
 
 void GDScript::set_path(const String &p_path, bool p_take_over) {
-	String old_path = path;
-	if (is_root_script()) {
+	if (p_path != path) {
 		Script::set_path(p_path, p_take_over);
+		String old_path = path;
+		this->path = p_path;
+		GDScriptCache::move_script(old_path, p_path);
 	}
-	this->path = p_path;
-	GDScriptCache::move_script(old_path, p_path);
+
 	for (KeyValue<StringName, Ref<GDScript>> &kv : subclasses) {
 		kv.value->set_path(p_path, p_take_over);
 	}
@@ -2638,7 +2637,7 @@ bool ResourceFormatLoaderGDScript::handles_type(const String &p_type) const {
 }
 
 String ResourceFormatLoaderGDScript::get_resource_type(const String &p_path) const {
-	String el = p_path.get_extension().to_lower();
+	String el = p_path.get_slice("::", 0).get_extension().to_lower();
 	// TODO: Reintroduce binary and encrypted scripts.
 	if (el == "gd" /*|| el == "gdc" || el == "gde"*/) {
 		return "GDScript";

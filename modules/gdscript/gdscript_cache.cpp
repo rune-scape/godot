@@ -179,10 +179,16 @@ void GDScriptCache::remove_script(const String &p_path) {
 
 Ref<GDScriptParserRef> GDScriptCache::get_parser(const String &p_path, GDScriptParserRef::Status p_status, Error &r_error, const String &p_owner) {
 	MutexLock lock(singleton->mutex);
-	Ref<GDScriptParserRef> ref;
+
 	if (!p_owner.is_empty()) {
 		singleton->dependencies[p_owner].insert(p_path);
 	}
+
+	if (p_path.contains("::")) {
+		return get_parser(p_path.get_slice("::", 0), p_status, r_error, p_path);
+	}
+
+	Ref<GDScriptParserRef> ref;
 	if (singleton->parser_map.has(p_path)) {
 		ref = Ref<GDScriptParserRef>(singleton->parser_map[p_path]);
 		if (ref.is_null()) {
@@ -224,26 +230,43 @@ String GDScriptCache::get_source_code(const String &p_path) {
 	return source;
 }
 
-Ref<GDScript> GDScriptCache::get_shallow_script(const String &p_path, Error &r_error, const String &p_owner) {
+Ref<GDScript> GDScriptCache::get_shallow_script(const String &p_path, Error &r_error, const String &p_owner, bool p_update_from_disk) {
 	MutexLock lock(singleton->mutex);
+
 	if (!p_owner.is_empty()) {
 		singleton->dependencies[p_owner].insert(p_path);
 	}
-	if (singleton->full_gdscript_cache.has(p_path)) {
-		return singleton->full_gdscript_cache[p_path];
-	}
-	if (singleton->shallow_gdscript_cache.has(p_path)) {
-		return singleton->shallow_gdscript_cache[p_path];
-	}
 
 	Ref<GDScript> script;
-	script.instantiate();
-	script->set_path(p_path, true);
-	script->load_source_code(p_path);
+	if (singleton->full_gdscript_cache.has(p_path)) {
+		script = singleton->full_gdscript_cache[p_path];
+	} else if (singleton->shallow_gdscript_cache.has(p_path)) {
+		script = singleton->shallow_gdscript_cache[p_path];
+	} else if (p_path.contains("::")) {
+		String path_root = p_path.get_slice("::", 0);
+		script = get_shallow_script(path_root, r_error, p_path, p_update_from_disk);
+		p_update_from_disk = false; // Just got updated.
+		ERR_FAIL_COND_V(script.is_null(), Ref<GDScript>());
+		script = Ref<GDScript>(script->find_class(p_path));
+		if (script.is_null()) {
+			r_error = ERR_DOES_NOT_EXIST;
+		}
+	}
 
-	Ref<GDScriptParserRef> parser_ref = get_parser(p_path, GDScriptParserRef::PARSED, r_error);
-	if (r_error == OK) {
-		GDScriptCompiler::make_scripts(script.ptr(), parser_ref->get_parser()->get_tree(), true);
+	if (script.is_null()) {
+		script.instantiate();
+		script->set_path(p_path, true);
+		p_update_from_disk = true;
+	}
+
+	if (p_update_from_disk) {
+		Ref<GDScriptParserRef> parser_ref = get_parser(p_path, GDScriptParserRef::PARSED, r_error);
+		if (parser_ref.is_valid()) {
+			script->set_source_code(parser_ref->get_parser()->get_source_code());
+			if (r_error == OK) {
+				GDScriptCompiler::make_scripts(script.ptr(), parser_ref->get_parser()->get_tree(), true);
+			}
+		}
 	}
 
 	singleton->shallow_gdscript_cache[p_path] = script;
@@ -267,14 +290,7 @@ Ref<GDScript> GDScriptCache::get_full_script(const String &p_path, Error &r_erro
 	}
 
 	if (script.is_null()) {
-		script = get_shallow_script(p_path, r_error);
-		if (r_error) {
-			return script;
-		}
-	}
-
-	if (p_update_from_disk) {
-		r_error = script->load_source_code(p_path);
+		script = get_shallow_script(p_path, r_error, "", p_update_from_disk);
 	}
 
 	if (r_error) {
@@ -284,7 +300,7 @@ Ref<GDScript> GDScriptCache::get_full_script(const String &p_path, Error &r_erro
 	singleton->full_gdscript_cache[p_path] = script;
 	singleton->shallow_gdscript_cache.erase(p_path);
 
-	r_error = script->reload(true);
+	r_error = script->get_root_script()->reload(true);
 	if (r_error) {
 		singleton->shallow_gdscript_cache[p_path] = script;
 		singleton->full_gdscript_cache.erase(p_path);

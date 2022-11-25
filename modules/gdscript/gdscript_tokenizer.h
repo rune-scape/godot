@@ -260,6 +260,7 @@ public:
 	Token scan();
 
 	void set_source_code(const String &p_source_code);
+	String get_source_code() const { return source; }
 
 	int get_cursor_line() const;
 	int get_cursor_column() const;
