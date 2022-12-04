@@ -1,2 +1,2 @@
 GDTEST_ANALYZER_ERROR
-Cyclic inheritance.
+Could not resolve class "InnerA": Cyclic inheritance.

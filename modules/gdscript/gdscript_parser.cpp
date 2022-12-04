@@ -536,6 +536,31 @@ void GDScriptParser::end_statement(const String &p_context) {
 	}
 }
 
+void GDScriptParser::init_class_datatype(ClassNode *p_class) {
+	if (p_class->identifier) {
+		StringName class_name = p_class->identifier->name;
+		if (GDScriptParser::get_builtin_type(class_name) < Variant::VARIANT_MAX) {
+			push_error(vformat(R"(Class "%s" hides a built-in type.)", class_name), p_class->identifier);
+		} else if (ClassDB::class_exists(class_name) && ClassDB::is_class_exposed(class_name)) {
+			push_error(vformat(R"(Class "%s" hides a native class.)", class_name), p_class->identifier);
+		} else if (ScriptServer::is_global_class(class_name) && (ScriptServer::get_global_class_path(class_name) != script_path || p_class != head)) {
+			push_error(vformat(R"(Class "%s" hides a global script class.)", class_name), p_class->identifier);
+		} else if (ProjectSettings::get_singleton()->has_autoload(class_name) && ProjectSettings::get_singleton()->get_autoload(class_name).is_singleton) {
+			push_error(vformat(R"(Class "%s" hides an autoload singleton.)", class_name), p_class->identifier);
+		}
+	}
+
+	GDScriptParser::DataType class_type;
+	class_type.is_constant = true;
+	class_type.is_meta_type = true;
+	class_type.type_source = GDScriptParser::DataType::ANNOTATED_EXPLICIT;
+	class_type.kind = GDScriptParser::DataType::CLASS;
+	class_type.class_type = p_class;
+	class_type.script_path = script_path;
+	class_type.builtin_type = Variant::OBJECT;
+	p_class->set_datatype(class_type);
+}
+
 void GDScriptParser::parse_program() {
 	head = alloc_node<ClassNode>();
 	head->fqcn = script_path;
@@ -621,6 +646,7 @@ void GDScriptParser::parse_program() {
 		}
 	}
 
+	init_class_datatype(head);
 	parse_class_body(true);
 	complete_extents(head);
 
@@ -712,6 +738,8 @@ GDScriptParser::ClassNode *GDScriptParser::parse_class() {
 	if (match(GDScriptTokenizer::Token::EXTENDS)) {
 		parse_extends();
 	}
+
+	init_class_datatype(n_class);
 
 	consume(GDScriptTokenizer::Token::COLON, R"(Expected ":" after class declaration.)");
 

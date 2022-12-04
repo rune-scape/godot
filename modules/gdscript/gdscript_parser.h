@@ -1387,6 +1387,7 @@ private:
 
 	// Main blocks.
 	void parse_program();
+	void init_class_datatype(ClassNode *p_class);
 	ClassNode *parse_class();
 	void parse_class_name();
 	void parse_extends();
