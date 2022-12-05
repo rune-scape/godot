@@ -88,7 +88,7 @@ class GDScriptAnalyzer {
 	void reduce_dictionary(GDScriptParser::DictionaryNode *p_dictionary);
 	void reduce_get_node(GDScriptParser::GetNodeNode *p_get_node);
 	void reduce_identifier(GDScriptParser::IdentifierNode *p_identifier, bool can_be_builtin = false);
-	void reduce_identifier_from_base(GDScriptParser::IdentifierNode *p_identifier, GDScriptParser::DataType *p_base = nullptr);
+	void reduce_identifier_from_base(GDScriptParser::IdentifierNode *p_identifier, GDScriptParser::DataType *p_base = nullptr, bool p_is_static = false, HashSet<GDScriptParser::ClassNode *> *p_checked_bases = nullptr);
 	void reduce_lambda(GDScriptParser::LambdaNode *p_lambda);
 	void reduce_literal(GDScriptParser::LiteralNode *p_literal);
 	void reduce_preload(GDScriptParser::PreloadNode *p_preload);
