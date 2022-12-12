@@ -62,19 +62,11 @@ class Ref {
 			return;
 		}
 
-		unref();
-
-		reference = p_from.reference;
-		if (reference) {
-			reference->reference();
-		}
-	}
-
-	void ref_pointer(T *p_ref) {
-		ERR_FAIL_COND(!p_ref);
-
-		if (p_ref->init_ref()) {
-			reference = p_ref;
+		if (p_from.reference && p_from.reference->reference()) {
+			unref();
+			reference = p_from.reference;
+		} else {
+			unref();
 		}
 	}
 
@@ -85,6 +77,12 @@ public:
 	}
 	_FORCE_INLINE_ bool operator!=(const T *p_ptr) const {
 		return reference != p_ptr;
+	}
+	_FORCE_INLINE_ bool operator==(decltype(nullptr)) const {
+		return reference == nullptr;
+	}
+	_FORCE_INLINE_ bool operator!=(decltype(nullptr)) const {
+		return reference != nullptr;
 	}
 
 	_FORCE_INLINE_ bool operator<(const Ref<T> &p_r) const {
@@ -131,10 +129,6 @@ public:
 	template <class T_Other>
 	void operator=(const Ref<T_Other> &p_from) {
 		RefCounted *refb = const_cast<RefCounted *>(static_cast<const RefCounted *>(p_from.ptr()));
-		if (!refb) {
-			unref();
-			return;
-		}
 		Ref r;
 		r.reference = Object::cast_to<T>(refb);
 		ref(r);
@@ -143,21 +137,10 @@ public:
 
 	void operator=(const Variant &p_variant) {
 		Object *object = p_variant.get_validated_object();
-
-		if (object == reference) {
-			return;
-		}
-
-		unref();
-
-		if (!object) {
-			return;
-		}
-
-		T *r = Object::cast_to<T>(object);
-		if (r && r->reference()) {
-			reference = r;
-		}
+		Ref r;
+		r.reference = Object::cast_to<T>(object);
+		ref(r);
+		r.reference = nullptr;
 	}
 
 	template <class T_Other>
@@ -165,11 +148,13 @@ public:
 		if (reference == p_ptr) {
 			return;
 		}
-		unref();
 
 		T *r = Object::cast_to<T>(p_ptr);
-		if (r) {
-			ref_pointer(r);
+		if (r && r->init_ref()) {
+			unref();
+			reference = r;
+		} else {
+			unref();
 		}
 	}
 
@@ -179,34 +164,17 @@ public:
 
 	template <class T_Other>
 	Ref(const Ref<T_Other> &p_from) {
-		RefCounted *refb = const_cast<RefCounted *>(static_cast<const RefCounted *>(p_from.ptr()));
-		if (!refb) {
-			unref();
-			return;
-		}
-		Ref r;
-		r.reference = Object::cast_to<T>(refb);
-		ref(r);
-		r.reference = nullptr;
+		operator=(p_from);
 	}
 
 	Ref(T *p_reference) {
-		if (p_reference) {
-			ref_pointer(p_reference);
+		if (p_reference && p_reference->init_ref()) {
+			reference = p_reference;
 		}
 	}
 
 	Ref(const Variant &p_variant) {
-		Object *object = p_variant.get_validated_object();
-
-		if (!object) {
-			return;
-		}
-
-		T *r = Object::cast_to<T>(object);
-		if (r && r->reference()) {
-			reference = r;
-		}
+		operator=(p_variant);
 	}
 
 	inline bool is_valid() const { return reference != nullptr; }
