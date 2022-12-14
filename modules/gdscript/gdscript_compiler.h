@@ -61,7 +61,7 @@ class GDScriptCompiler {
 
 		GDScriptCodeGenerator::Address add_local_constant(const StringName &p_name, const Variant &p_value) {
 			uint32_t addr = generator->add_local_constant(p_name, p_value);
-			locals[p_name] = GDScriptCodeGenerator::Address(GDScriptCodeGenerator::Address::CONSTANT, addr);
+			locals[p_name] = GDScriptCodeGenerator::Address(GDScriptCodeGenerator::Address::CONSTANT, addr, GDScriptCompiler::_gdtype_from_variant(p_value));
 			return locals[p_name];
 		}
 
@@ -71,33 +71,24 @@ class GDScriptCompiler {
 		}
 
 		GDScriptCodeGenerator::Address add_constant(const Variant &p_constant) {
-			GDScriptDataType type;
-			type.has_type = true;
-			type.kind = GDScriptDataType::BUILTIN;
-			type.builtin_type = p_constant.get_type();
-			if (type.builtin_type == Variant::OBJECT) {
-				Object *obj = p_constant;
-				if (obj) {
-					type.kind = GDScriptDataType::NATIVE;
-					type.native_type = obj->get_class_name();
+			uint32_t addr = generator->add_or_get_constant(p_constant);
+			GDScriptCodeGenerator::Address const_addr(GDScriptCodeGenerator::Address::CONSTANT, addr, GDScriptCompiler::_gdtype_from_variant(p_constant));
+			return write_duplicate_constant(const_addr);
+		}
 
-					Ref<Script> scr = obj->get_script();
-					if (scr.is_valid()) {
-						type.script_type = scr.ptr();
-						Ref<GDScript> gdscript = scr;
-						if (gdscript.is_valid()) {
-							type.kind = GDScriptDataType::GDSCRIPT;
-						} else {
-							type.kind = GDScriptDataType::SCRIPT;
-						}
-					}
-				} else {
-					type.builtin_type = Variant::NIL;
+		GDScriptCodeGenerator::Address write_duplicate_constant(GDScriptCodeGenerator::Address p_const_addr) {
+			GDScriptCodeGenerator::Address result = p_const_addr;
+			if (p_const_addr.type.kind == GDScriptDataType::BUILTIN) {
+				if (p_const_addr.type.builtin_type > Variant::ARRAY) {
+					result = add_temporary(p_const_addr.type);
+					generator->write_call_builtin_type(result, p_const_addr, p_const_addr.type.builtin_type, "duplicate", {});
+				} else if (p_const_addr.type.builtin_type == Variant::DICTIONARY || p_const_addr.type.builtin_type == Variant::ARRAY) {
+					result = add_temporary(p_const_addr.type);
+					generator->write_call_builtin_type(result, p_const_addr, p_const_addr.type.builtin_type, "duplicate", { add_constant(true) });
 				}
 			}
 
-			uint32_t addr = generator->add_or_get_constant(p_constant);
-			return GDScriptCodeGenerator::Address(GDScriptCodeGenerator::Address::CONSTANT, addr, type);
+			return result;
 		}
 
 		void start_block() {
@@ -123,6 +114,7 @@ class GDScriptCompiler {
 	Error _create_binary_operator(CodeGen &codegen, const GDScriptParser::ExpressionNode *p_left_operand, const GDScriptParser::ExpressionNode *p_right_operand, Variant::Operator op, bool p_initializer = false, const GDScriptCodeGenerator::Address &p_index_addr = GDScriptCodeGenerator::Address());
 
 	GDScriptDataType _gdtype_from_datatype(const GDScriptParser::DataType &p_datatype, GDScript *p_owner);
+	static GDScriptDataType _gdtype_from_variant(const Variant &p_value);
 
 	GDScriptCodeGenerator::Address _parse_assign_right_expression(CodeGen &codegen, Error &r_error, const GDScriptParser::AssignmentNode *p_assignmentint, const GDScriptCodeGenerator::Address &p_index_addr = GDScriptCodeGenerator::Address());
 	GDScriptCodeGenerator::Address _parse_expression(CodeGen &codegen, Error &r_error, const GDScriptParser::ExpressionNode *p_expression, bool p_root = false, bool p_initializer = false, const GDScriptCodeGenerator::Address &p_index_addr = GDScriptCodeGenerator::Address());

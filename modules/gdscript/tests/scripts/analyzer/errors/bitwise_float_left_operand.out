@@ -1,2 +1,2 @@
 GDTEST_ANALYZER_ERROR
-Invalid operands to operator <<, float and int.
+Invalid operands "float" and "int" for "<<" operator.

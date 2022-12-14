@@ -170,6 +170,57 @@ GDScriptDataType GDScriptCompiler::_gdtype_from_datatype(const GDScriptParser::D
 	return result;
 }
 
+GDScriptDataType GDScriptCompiler::_gdtype_from_variant(const Variant &p_value) {
+	GDScriptDataType type;
+	type.has_type = true;
+	type.kind = GDScriptDataType::BUILTIN;
+	type.builtin_type = p_value.get_type();
+	if (type.builtin_type == Variant::OBJECT) {
+		Object *obj = p_value;
+		if (obj) {
+			type.kind = GDScriptDataType::NATIVE;
+			type.native_type = obj->get_class_name();
+
+			Ref<Script> scr = obj->get_script();
+			if (scr.is_valid()) {
+				type.script_type = scr.ptr();
+				Ref<GDScript> gdscript = scr;
+				if (gdscript.is_valid()) {
+					type.kind = GDScriptDataType::GDSCRIPT;
+				} else {
+					type.kind = GDScriptDataType::SCRIPT;
+				}
+			}
+		} else {
+			type.builtin_type = Variant::NIL;
+		}
+	} else if (type.builtin_type == Variant::ARRAY) {
+		Array array_val = p_value;
+		if (array_val.is_typed()) {
+			GDScriptDataType element_type;
+			element_type.has_type = true;
+			element_type.kind = GDScriptDataType::BUILTIN;
+			element_type.builtin_type = Variant::Type(array_val.get_typed_builtin());
+			element_type.native_type = array_val.get_typed_class_name();
+			if (element_type.native_type != StringName()) {
+				element_type.kind = GDScriptDataType::NATIVE;
+			}
+			Ref<Script> scr = array_val.get_typed_script();
+			if (scr.is_valid()) {
+				element_type.script_type = scr.ptr();
+				Ref<GDScript> gdscript = scr;
+				if (gdscript.is_valid()) {
+					type.kind = GDScriptDataType::GDSCRIPT;
+				} else {
+					type.kind = GDScriptDataType::SCRIPT;
+				}
+			}
+			type.set_container_element_type(element_type);
+		}
+	}
+	return type;
+}
+
 static bool _is_exact_type(const PropertyInfo &p_par_type, const GDScriptDataType &p_arg_type) {
 	if (!p_arg_type.has_type) {
 		return false;
@@ -233,7 +284,11 @@ GDScriptCodeGenerator::Address GDScriptCompiler::_parse_expression(CodeGen &code
 
 			// Try local variables and constants.
 			if (!p_initializer && codegen.locals.has(identifier)) {
-				return codegen.locals[identifier];
+				GDScriptCodeGenerator::Address local = codegen.locals[identifier];
+				if (local.mode == GDScriptCodeGenerator::Address::CONSTANT) {
+					local = codegen.write_duplicate_constant(local);
+				}
+				return local;
 			}
 
 			// Try class members.
