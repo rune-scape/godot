@@ -65,7 +65,7 @@ text += "\n"
 # In a second pass, we skip all consecutive comment lines starting with "/*",
 # then we can append the rest (step 2).
 
-fileread = open(fname.strip(), "r")
+fileread = open(fname.strip(), "r", newline="")
 line = fileread.readline()
 header_done = False
 
@@ -90,6 +90,6 @@ while line != "":  # Dump everything until EOF
 fileread.close()
 
 # Write
-filewrite = open(fname.strip(), "w")
+filewrite = open(fname.strip(), "w", newline="")
 filewrite.write(text)
 filewrite.close()
