@@ -154,6 +154,16 @@ void GDScriptFunction::disassemble(const Vector<String> &p_code_lines) const {
 
 				incr += 4;
 			} break;
+			case OPCODE_TYPE_MATCH: {
+				text += "type match ";
+				text += DADDR(3);
+				text += " = ";
+				text += DADDR(1);
+				text += " matches ";
+				text += DADDR(2);
+
+				incr += 4;
+			} break;
 			case OPCODE_SET_KEYED: {
 				text += "set keyed ";
 				text += DADDR(1);

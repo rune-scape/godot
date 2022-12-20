@@ -605,6 +605,13 @@ void GDScriptByteCodeGenerator::write_type_test_builtin(const Address &p_target,
 	append(p_type);
 }
 
+void GDScriptByteCodeGenerator::write_type_test_match(const Address &p_target, const Address &p_type_a, const Address &p_type_b) {
+	append(GDScriptFunction::OPCODE_TYPE_MATCH, 3);
+	append(p_type_a);
+	append(p_type_b);
+	append(p_target);
+}
+
 void GDScriptByteCodeGenerator::write_and_left_operand(const Address &p_left_operand) {
 	append(GDScriptFunction::OPCODE_JUMP_IF_NOT, 1);
 	append(p_left_operand);

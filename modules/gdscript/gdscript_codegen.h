@@ -92,6 +92,7 @@ public:
 	virtual void write_binary_operator(const Address &p_target, Variant::Operator p_operator, const Address &p_left_operand, const Address &p_right_operand) = 0;
 	virtual void write_type_test(const Address &p_target, const Address &p_source, const Address &p_type) = 0;
 	virtual void write_type_test_builtin(const Address &p_target, const Address &p_source, Variant::Type p_type) = 0;
+	virtual void write_type_test_match(const Address &p_target, const Address &p_type_a, const Address &p_type_b) = 0;
 	virtual void write_and_left_operand(const Address &p_left_operand) = 0;
 	virtual void write_and_right_operand(const Address &p_right_operand) = 0;
 	virtual void write_end_and(const Address &p_target) = 0;

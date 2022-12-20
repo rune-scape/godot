@@ -234,6 +234,7 @@ void (*type_init_function_table[])(Variant *) = {
 		&&OPCODE_OPERATOR_VALIDATED,                 \
 		&&OPCODE_EXTENDS_TEST,                       \
 		&&OPCODE_IS_BUILTIN,                         \
+		&&OPCODE_TYPE_MATCH,                         \
 		&&OPCODE_SET_KEYED,                          \
 		&&OPCODE_SET_KEYED_VALIDATED,                \
 		&&OPCODE_SET_INDEXED_VALIDATED,              \
@@ -791,6 +792,27 @@ Variant GDScriptFunction::call(GDScriptInstance *p_instance, const Variant **p_a
 				GD_ERR_BREAK(var_type < 0 || var_type >= Variant::VARIANT_MAX);
 
 				*dst = value->get_type() == var_type;
+				ip += 4;
+			}
+			DISPATCH_OPCODE;
+
+			OPCODE(OPCODE_TYPE_MATCH) {
+				CHECK_SPACE(4);
+
+				GET_INSTRUCTION_ARG(a, 0);
+				GET_INSTRUCTION_ARG(b, 1);
+				GET_INSTRUCTION_ARG(dst, 2);
+
+				Variant::Type type_a = (Variant::Type)a->operator int();
+				GD_ERR_BREAK(type_a < 0 || type_a >= Variant::VARIANT_MAX);
+				Variant::Type type_b = (Variant::Type)b->operator int();
+				GD_ERR_BREAK(type_b < 0 || type_b >= Variant::VARIANT_MAX);
+
+				*dst = type_a == type_b
+						|| (type_a == Variant::STRING && type_b == Variant::STRING_NAME)
+						|| (type_b == Variant::STRING && type_a == Variant::STRING_NAME)
+						|| (type_a == Variant::ARRAY && type_b >= Variant::ARRAY)
+						|| (type_b == Variant::ARRAY && type_a >= Variant::ARRAY);
 				ip += 4;
 			}
 			DISPATCH_OPCODE;
