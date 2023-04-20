@@ -29,6 +29,48 @@
 		<link title="Object notifications">$DOCS_URL/tutorials/best_practices/godot_notifications.html</link>
 	</tutorials>
 	<methods>
+		<method name="_add" qualifiers="virtual">
+			<return type="Variant" />
+			<param index="0" name="rhs" type="Variant" />
+			<description>
+				Override this method to customize the behavior of the binary '+' operator.
+			</description>
+		</method>
+		<method name="_and" qualifiers="virtual">
+			<return type="Variant" />
+			<param index="0" name="rhs" type="Variant" />
+			<description>
+				Override this method to customize the behavior of the binary '&amp;' operator.
+			</description>
+		</method>
+		<method name="_contains" qualifiers="virtual">
+			<return type="bool" />
+			<param index="0" name="rhs" type="Variant" />
+			<description>
+				Override this method to customize the behavior of the binary 'in' operator.
+			</description>
+		</method>
+		<method name="_div" qualifiers="virtual">
+			<return type="Variant" />
+			<param index="0" name="rhs" type="Variant" />
+			<description>
+				Override this method to customize the behavior of the binary '/' operator.
+			</description>
+		</method>
+		<method name="_eq" qualifiers="virtual">
+			<return type="bool" />
+			<param index="0" name="rhs" type="Variant" />
+			<description>
+				Override this method to customize the behavior of the binary '==' operator.
+			</description>
+		</method>
+		<method name="_ge" qualifiers="virtual">
+			<return type="bool" />
+			<param index="0" name="rhs" type="Variant" />
+			<description>
+				Override this method to customize the behavior of the binary '&gt;=' operator.
+			</description>
+		</method>
 		<method name="_get" qualifiers="virtual">
 			<return type="Variant" />
 			<param index="0" name="property" type="StringName" />
@@ -156,11 +198,72 @@
 				[b]Note:[/b] If the object's script is not [annotation @GDScript.@tool], this method will not be called in the editor.
 			</description>
 		</method>
+		<method name="_gt" qualifiers="virtual">
+			<return type="bool" />
+			<param index="0" name="rhs" type="Variant" />
+			<description>
+				Override this method to customize the behavior of the binary '&gt;' operator.
+			</description>
+		</method>
 		<method name="_init" qualifiers="virtual">
 			<return type="void" />
 			<description>
 				Called when the object's script is instantiated, oftentimes after the object is initialized in memory (through [code]Object.new()[/code] in GDScript, or [code]new Object[/code] in C#). It can be also defined to take in parameters. This method is similar to a constructor in most programming languages.
 				[b]Note:[/b] If [method _init] is defined with [i]required[/i] parameters, the Object with script may only be created directly. If any other means (such as [method PackedScene.instantiate] or [method Node.duplicate]) are used, the script's initialization will fail.
+			</description>
+		</method>
+		<method name="_invert" qualifiers="virtual">
+			<return type="Variant" />
+			<description>
+				Override this method to customize the behavior of the unary '~' operator.
+			</description>
+		</method>
+		<method name="_le" qualifiers="virtual">
+			<return type="bool" />
+			<param index="0" name="rhs" type="Variant" />
+			<description>
+				Override this method to customize the behavior of the binary '&lt;=' operator.
+			</description>
+		</method>
+		<method name="_lshift" qualifiers="virtual">
+			<return type="Variant" />
+			<param index="0" name="rhs" type="Variant" />
+			<description>
+				Override this method to customize the behavior of the binary '&lt;&lt;' operator.
+			</description>
+		</method>
+		<method name="_lt" qualifiers="virtual">
+			<return type="bool" />
+			<param index="0" name="rhs" type="Variant" />
+			<description>
+				Override this method to customize the behavior of the binary '&lt;' operator.
+			</description>
+		</method>
+		<method name="_mod" qualifiers="virtual">
+			<return type="Variant" />
+			<param index="0" name="rhs" type="Variant" />
+			<description>
+				Override this method to customize the behavior of the binary '%' operator.
+			</description>
+		</method>
+		<method name="_mul" qualifiers="virtual">
+			<return type="Variant" />
+			<param index="0" name="rhs" type="Variant" />
+			<description>
+				Override this method to customize the behavior of the binary '*' operator.
+			</description>
+		</method>
+		<method name="_negate" qualifiers="virtual">
+			<return type="Variant" />
+			<description>
+				Override this method to customize the behavior of the unary '-' operator.
+			</description>
+		</method>
+		<method name="_neq" qualifiers="virtual">
+			<return type="bool" />
+			<param index="0" name="rhs" type="Variant" />
+			<description>
+				Override this method to customize the behavior of the binary '!=' operator.
 			</description>
 		</method>
 		<method name="_notification" qualifiers="virtual">
@@ -187,6 +290,26 @@
 				[b]Note:[/b] The base [Object] defines a few notifications ([constant NOTIFICATION_POSTINITIALIZE] and [constant NOTIFICATION_PREDELETE]). Inheriting classes such as [Node] define a lot more notifications, which are also received by this method.
 			</description>
 		</method>
+		<method name="_or" qualifiers="virtual">
+			<return type="Variant" />
+			<param index="0" name="rhs" type="Variant" />
+			<description>
+				Override this method to customize the behavior of the binary '|' operator.
+			</description>
+		</method>
+		<method name="_positive" qualifiers="virtual">
+			<return type="Variant" />
+			<description>
+				Override this method to customize the behavior of the unary '+' operator.
+			</description>
+		</method>
+		<method name="_pow" qualifiers="virtual">
+			<return type="Variant" />
+			<param index="0" name="rhs" type="Variant" />
+			<description>
+				Override this method to customize the behavior of the binary '**' operator.
+			</description>
+		</method>
 		<method name="_property_can_revert" qualifiers="virtual">
 			<return type="bool" />
 			<param index="0" name="property" type="StringName" />
@@ -201,6 +324,90 @@
 			<description>
 				Override this method to customize the given [param property]'s revert behavior. Should return the default value for the [param property]. If the default value differs from the [param property]'s current value, a revert icon is displayed in the Inspector dock.
 				[b]Note:[/b] [method _property_can_revert] must also be overridden for this method to be called.
+			</description>
+		</method>
+		<method name="_radd" qualifiers="virtual">
+			<return type="Variant" />
+			<param index="0" name="lhs" type="Variant" />
+			<description>
+				Override this method to customize the behavior of the binary '+' operator as the right hand side. Invoked if [code]_add()[/code] was not found on the left hand side argument.
+			</description>
+		</method>
+		<method name="_rand" qualifiers="virtual">
+			<return type="Variant" />
+			<param index="0" name="lhs" type="Variant" />
+			<description>
+				Override this method to customize the behavior of the binary '&amp;' operator as the right hand side. Invoked if [code]_and()[/code] was not found on the left hand side argument.
+			</description>
+		</method>
+		<method name="_rdiv" qualifiers="virtual">
+			<return type="Variant" />
+			<param index="0" name="lhs" type="Variant" />
+			<description>
+				Override this method to customize the behavior of the binary '/' operator as the right hand side. Invoked if [code]_div()[/code] was not found on the left hand side argument.
+			</description>
+		</method>
+		<method name="_rlshift" qualifiers="virtual">
+			<return type="Variant" />
+			<param index="0" name="lhs" type="Variant" />
+			<description>
+				Override this method to customize the behavior of the binary '&lt;&lt;' operator as the right hand side. Invoked if [code]_lshift()[/code] was not found on the left hand side argument.
+			</description>
+		</method>
+		<method name="_rmod" qualifiers="virtual">
+			<return type="Variant" />
+			<param index="0" name="lhs" type="Variant" />
+			<description>
+				Override this method to customize the behavior of the binary '%' operator as the right hand side. Invoked if [code]_mod()[/code] was not found on the left hand side argument.
+			</description>
+		</method>
+		<method name="_rmul" qualifiers="virtual">
+			<return type="Variant" />
+			<param index="0" name="lhs" type="Variant" />
+			<description>
+				Override this method to customize the behavior of the binary '*' operator as the right hand side. Invoked if [code]_mul()[/code] was not found on the left hand side argument.
+			</description>
+		</method>
+		<method name="_ror" qualifiers="virtual">
+			<return type="Variant" />
+			<param index="0" name="lhs" type="Variant" />
+			<description>
+				Override this method to customize the behavior of the binary '|' operator as the right hand side. Invoked if [code]_or()[/code] was not found on the left hand side argument.
+			</description>
+		</method>
+		<method name="_rpow" qualifiers="virtual">
+			<return type="Variant" />
+			<param index="0" name="lhs" type="Variant" />
+			<description>
+				Override this method to customize the behavior of the binary '**' operator as the right hand side. Invoked if [code]_pow()[/code] was not found on the left hand side argument.
+			</description>
+		</method>
+		<method name="_rrshift" qualifiers="virtual">
+			<return type="Variant" />
+			<param index="0" name="lhs" type="Variant" />
+			<description>
+				Override this method to customize the behavior of the binary '&gt;&gt;' operator as the right hand side. Invoked if [code]_rshift()[/code] was not found on the left hand side argument.
+			</description>
+		</method>
+		<method name="_rshift" qualifiers="virtual">
+			<return type="Variant" />
+			<param index="0" name="rhs" type="Variant" />
+			<description>
+				Override this method to customize the behavior of the binary '&gt;&gt;' operator.
+			</description>
+		</method>
+		<method name="_rsub" qualifiers="virtual">
+			<return type="Variant" />
+			<param index="0" name="lhs" type="Variant" />
+			<description>
+				Override this method to customize the behavior of the binary '-' operator as the right hand side. Invoked if [code]_sub()[/code] was not found on the left hand side argument.
+			</description>
+		</method>
+		<method name="_rxor" qualifiers="virtual">
+			<return type="Variant" />
+			<param index="0" name="lhs" type="Variant" />
+			<description>
+				Override this method to customize the behavior of the binary '^' operator as the right hand side. Invoked if [code]_xor()[/code] was not found on the left hand side argument.
 			</description>
 		</method>
 		<method name="_set" qualifiers="virtual">
@@ -248,6 +455,13 @@
 				[/codeblocks]
 			</description>
 		</method>
+		<method name="_sub" qualifiers="virtual">
+			<return type="Variant" />
+			<param index="0" name="rhs" type="Variant" />
+			<description>
+				Override this method to customize the behavior of the binary '-' operator.
+			</description>
+		</method>
 		<method name="_to_string" qualifiers="virtual">
 			<return type="String" />
 			<description>
@@ -260,6 +474,13 @@
 				    print(self)       # Prints Welcome to Godot 4!"
 				    var a = str(self) # a is "Welcome to Godot 4!"
 				[/codeblock]
+			</description>
+		</method>
+		<method name="_xor" qualifiers="virtual">
+			<return type="Variant" />
+			<param index="0" name="rhs" type="Variant" />
+			<description>
+				Override this method to customize the behavior of the binary '^' operator.
 			</description>
 		</method>
 		<method name="add_user_signal">
