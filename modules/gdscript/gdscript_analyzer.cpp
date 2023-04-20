@@ -1562,7 +1562,7 @@ void GDScriptAnalyzer::resolve_function_signature(GDScriptParser::FunctionNode *
 		StringName native_base;
 		if (!p_is_lambda && get_function_signature(p_function, false, base_type, function_name, parent_return_type, parameters_types, default_par_count, is_static, is_vararg, &native_base)) {
 			bool valid = p_function->is_static == is_static;
-			valid = valid && parent_return_type == p_function->get_datatype();
+			valid = valid && (parent_return_type.is_variant() || parent_return_type == p_function->get_datatype());
 
 			int par_count_diff = p_function->parameters.size() - parameters_types.size();
 			valid = valid && par_count_diff >= 0;
@@ -4789,7 +4789,7 @@ GDScriptParser::DataType GDScriptAnalyzer::type_from_property(const PropertyInfo
 	return result;
 }
 
-bool GDScriptAnalyzer::get_function_signature(GDScriptParser::Node *p_source, bool p_is_constructor, GDScriptParser::DataType p_base_type, const StringName &p_function, GDScriptParser::DataType &r_return_type, List<GDScriptParser::DataType> &r_par_types, int &r_default_arg_count, bool &r_static, bool &r_vararg, StringName *r_native_class) {
+bool GDScriptAnalyzer::get_function_signature(const GDScriptParser::Node *p_source, bool p_is_constructor, GDScriptParser::DataType p_base_type, const StringName &p_function, GDScriptParser::DataType &r_return_type, List<GDScriptParser::DataType> &r_par_types, int &r_default_arg_count, bool &r_static, bool &r_vararg, StringName *r_native_class) {
 	r_static = false;
 	r_vararg = false;
 	r_default_arg_count = 0;
@@ -5100,6 +5100,42 @@ GDScriptParser::DataType GDScriptAnalyzer::get_operation_type(Variant::Operator 
 		result.type_source = hard_operation ? GDScriptParser::DataType::ANNOTATED_INFERRED : GDScriptParser::DataType::INFERRED;
 		result.kind = GDScriptParser::DataType::BUILTIN;
 		result.builtin_type = Variant::get_operator_return_type(p_operation, a_type, b_type);
+	} else if (p_a.is_object() || p_b.is_object()) {
+		GDScriptParser::DataType return_type;
+		List<GDScriptParser::DataType> par_types;
+		int default_arg_count = 0;
+		bool is_static = false;
+		bool is_vararg = false;
+
+		StringName overload_name = Variant::get_op_overload_name(p_operation);
+		StringName roverload_name = Variant::get_op_roverload_name(p_operation);
+		StringName delegate_overload_name;
+		if (p_operation == Variant::OP_EQUAL) {
+			delegate_overload_name = Variant::get_op_overload_name(Variant::OP_NOT_EQUAL);
+		} else if (p_operation == Variant::OP_NOT_EQUAL) {
+			delegate_overload_name = Variant::get_op_overload_name(Variant::OP_EQUAL);
+		}
+
+		if (overload_name != StringName() && get_function_signature(p_source, false, p_a, overload_name, return_type, par_types, default_arg_count, is_static, is_vararg)) {
+			r_valid = true;
+			result = return_type;
+			result.type_source = p_a.is_hard_type() ? GDScriptParser::DataType::ANNOTATED_INFERRED : GDScriptParser::DataType::INFERRED;
+		} else if (roverload_name != StringName() && get_function_signature(p_source, false, p_b, roverload_name, return_type, par_types, default_arg_count, is_static, is_vararg)) {
+			r_valid = true;
+			result = return_type;
+			result.type_source = p_b.is_hard_type() ? GDScriptParser::DataType::ANNOTATED_INFERRED : GDScriptParser::DataType::INFERRED;
+		} else if (delegate_overload_name != StringName() && get_function_signature(p_source, false, p_a, delegate_overload_name, return_type, par_types, default_arg_count, is_static, is_vararg)) {
+			r_valid = true;
+			result = return_type;
+			result.type_source = p_a.is_hard_type() ? GDScriptParser::DataType::ANNOTATED_INFERRED : GDScriptParser::DataType::INFERRED;
+		} else if (delegate_overload_name != StringName() && get_function_signature(p_source, false, p_b, delegate_overload_name, return_type, par_types, default_arg_count, is_static, is_vararg)) {
+			r_valid = true;
+			result = return_type;
+			result.type_source = p_b.is_hard_type() ? GDScriptParser::DataType::ANNOTATED_INFERRED : GDScriptParser::DataType::INFERRED;
+		} else {
+			r_valid = !hard_operation;
+			result.kind = GDScriptParser::DataType::VARIANT;
+		}
 	} else {
 		r_valid = !hard_operation;
 		result.kind = GDScriptParser::DataType::VARIANT;

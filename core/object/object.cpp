@@ -1543,6 +1543,50 @@ void Object::_bind_methods() {
 
 	ClassDB::add_virtual_method("Object", MethodInfo("free"), false);
 
+	HashSet<StringName> registered_ops;
+	for (int i = 0; i < Variant::Operator::OP_MAX; i++) {
+		Variant::Operator op = static_cast<Variant::Operator>(i);
+		bool is_unary = Variant::is_op_unary(op);
+		bool is_op_boolean = Variant::is_op_boolean(op);
+		StringName overload_name = Variant::get_op_overload_name(op);
+		if (overload_name == StringName()) {
+			continue;
+		}
+
+		PropertyInfo ret_value;
+		if (is_op_boolean) {
+			ret_value.type = Variant::BOOL;
+		} else {
+			ret_value.usage |= PROPERTY_USAGE_NIL_IS_VARIANT;
+		}
+
+		if (is_unary) {
+			ClassDB::add_virtual_method("Object", MethodInfo(ret_value, overload_name), true);
+		} else {
+			registered_ops.insert(overload_name);
+			ClassDB::add_virtual_method("Object", MethodInfo(ret_value, overload_name, PropertyInfo(Variant::NIL, "rhs")), true, { "rhs" });
+		}
+	}
+
+	for (int i = 0; i < Variant::Operator::OP_MAX; i++) {
+		Variant::Operator op = static_cast<Variant::Operator>(i);
+		bool is_op_boolean = Variant::is_op_boolean(op);
+		StringName roverload_name = Variant::get_op_roverload_name(op);
+		if (roverload_name == StringName() || registered_ops.has(roverload_name)) {
+			continue;
+		}
+
+		PropertyInfo ret_value;
+		if (is_op_boolean) {
+			ret_value.type = Variant::BOOL;
+		} else {
+			ret_value.usage |= PROPERTY_USAGE_NIL_IS_VARIANT;
+		}
+
+		registered_ops.insert(roverload_name);
+		ClassDB::add_virtual_method("Object", MethodInfo(ret_value, roverload_name, PropertyInfo(Variant::NIL, "lhs")), true, { "lhs" });
+	}
+
 	ADD_SIGNAL(MethodInfo("script_changed"));
 	ADD_SIGNAL(MethodInfo("property_list_changed"));
 
