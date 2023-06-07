@@ -253,7 +253,7 @@ Dictionary GDScriptSyntaxHighlighter::_get_line_syntax_highlighting_impl(int p_l
 				to--;
 			}
 			int from = to;
-			while (from > 0 && !is_symbol(str[from])) {
+			while (from >= 0 && !is_symbol(str[from])) {
 				from--;
 			}
 			String word = str.substr(from + 1, to - from);
