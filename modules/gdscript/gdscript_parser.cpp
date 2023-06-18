@@ -3312,6 +3312,11 @@ GDScriptParser::ExpressionNode *GDScriptParser::parse_type_test(ExpressionNode *
 	update_extents(type_test);
 
 	type_test->operand = p_previous_operand;
+
+	if (match(GDScriptTokenizer::Token::NOT)) {
+		type_test->is_not = true;
+	}
+
 	type_test->test_type = parse_type();
 	complete_extents(type_test);
 

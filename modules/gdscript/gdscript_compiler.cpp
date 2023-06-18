@@ -874,6 +874,9 @@ GDScriptCodeGenerator::Address GDScriptCompiler::_parse_expression(CodeGen &code
 
 			if (test_type.has_type) {
 				gen->write_type_test(result, operand, test_type);
+				if (type_test->is_not) {
+					gen->write_unary_operator(result, Variant::OP_NOT, result);
+				}
 			} else {
 				gen->write_assign_true(result);
 			}
