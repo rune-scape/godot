@@ -4466,7 +4466,16 @@ void GDScriptAnalyzer::reduce_type_test(GDScriptParser::TypeTestNode *p_type_tes
 		p_type_test->is_constant = true;
 		p_type_test->reduced_value = false;
 
-		if (!is_type_compatible(test_type, operand_type)) {
+		if (test_type.kind == GDScriptParser::DataType::BUILTIN && test_type.builtin_type == Variant::NIL) {
+			const Variant &operand_reduced_value = p_type_test->operand->reduced_value;
+			if (operand_reduced_value.get_type() == Variant::NIL) {
+				p_type_test->reduced_value = true;
+			} else if (operand_reduced_value.get_type() == Variant::OBJECT && operand_reduced_value.is_null()) {
+				p_type_test->reduced_value = true;
+			} else {
+				p_type_test->reduced_value = false;
+			}
+		} else if (!is_type_compatible(test_type, operand_type)) {
 			push_error(vformat(R"(Expression is of type "%s" so it can't be of type "%s".)", operand_type.to_string(), test_type.to_string()), p_type_test->operand);
 		} else if (is_type_compatible(test_type, type_from_variant(p_type_test->operand->reduced_value, p_type_test->operand))) {
 			p_type_test->reduced_value = test_type.builtin_type != Variant::OBJECT || !p_type_test->operand->reduced_value.is_null();
@@ -4475,7 +4484,11 @@ void GDScriptAnalyzer::reduce_type_test(GDScriptParser::TypeTestNode *p_type_tes
 		return;
 	}
 
-	if (!is_type_compatible(test_type, operand_type) && !is_type_compatible(operand_type, test_type)) {
+	if (test_type.kind == GDScriptParser::DataType::BUILTIN && test_type.builtin_type == Variant::NIL) {
+		if (operand_type.kind == GDScriptParser::DataType::ENUM || (operand_type.kind == GDScriptParser::DataType::BUILTIN && operand_type.builtin_type != Variant::NIL && operand_type.builtin_type != Variant::OBJECT)) {
+			push_error(vformat(R"(Expression is of type "%s" so it can't be null.)", operand_type.to_string()), p_type_test->operand);
+		}
+	} else if (!is_type_compatible(test_type, operand_type) && !is_type_compatible(operand_type, test_type)) {
 		if (operand_type.is_hard_type()) {
 			push_error(vformat(R"(Expression is of type "%s" so it can't be of type "%s".)", operand_type.to_string(), test_type.to_string()), p_type_test->operand);
 		} else {

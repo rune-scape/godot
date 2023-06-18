@@ -3317,7 +3317,20 @@ GDScriptParser::ExpressionNode *GDScriptParser::parse_type_test(ExpressionNode *
 		type_test->is_not = true;
 	}
 
-	type_test->test_type = parse_type();
+	if (check(GDScriptTokenizer::Token::LITERAL) && current.literal == Variant()) {
+		IdentifierNode *nil_identifier = alloc_node<IdentifierNode>();
+		nil_identifier->name = SNAME("Nil");
+		complete_extents(nil_identifier);
+
+		TypeNode *type = alloc_node<TypeNode>();
+		type->type_chain.push_back(nil_identifier);
+		complete_extents(type);
+
+		type_test->test_type = type;
+	} else {
+		type_test->test_type = parse_type();
+	}
+
 	complete_extents(type_test);
 
 	if (type_test->test_type == nullptr) {
