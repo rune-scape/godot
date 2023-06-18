@@ -30,6 +30,7 @@
 
 #include "texture_button.h"
 
+#include "core/core_string_names.h"
 #include "core/typedefs.h"
 
 #include <stdlib.h>
@@ -293,12 +294,26 @@ void TextureButton::_bind_methods() {
 	BIND_ENUM_CONSTANT(STRETCH_KEEP_ASPECT_COVERED);
 }
 
+void TextureButton::_texture_changed() {
+	queue_redraw();
+	update_minimum_size();
+}
+
 void TextureButton::set_texture_normal(const Ref<Texture2D> &p_normal) {
 	if (normal == p_normal) {
 		return;
 	}
 
+	if (normal.is_valid()) {
+		normal->disconnect(CoreStringNames::get_singleton()->changed, callable_mp(this, &TextureButton::_texture_changed));
+	}
+
 	normal = p_normal;
+
+	if (normal.is_valid()) {
+		normal->connect(CoreStringNames::get_singleton()->changed, callable_mp(this, &TextureButton::_texture_changed), Object::CONNECT_REFERENCE_COUNTED);
+	}
+
 	queue_redraw();
 	update_minimum_size();
 }
@@ -308,7 +323,16 @@ void TextureButton::set_texture_pressed(const Ref<Texture2D> &p_pressed) {
 		return;
 	}
 
+	if (pressed.is_valid()) {
+		pressed->disconnect(CoreStringNames::get_singleton()->changed, callable_mp(this, &TextureButton::_texture_changed));
+	}
+
 	pressed = p_pressed;
+
+	if (pressed.is_valid()) {
+		pressed->connect(CoreStringNames::get_singleton()->changed, callable_mp(this, &TextureButton::_texture_changed), Object::CONNECT_REFERENCE_COUNTED);
+	}
+
 	queue_redraw();
 	update_minimum_size();
 }
@@ -318,7 +342,16 @@ void TextureButton::set_texture_hover(const Ref<Texture2D> &p_hover) {
 		return;
 	}
 
+	if (hover.is_valid()) {
+		hover->disconnect(CoreStringNames::get_singleton()->changed, callable_mp(this, &TextureButton::_texture_changed));
+	}
+
 	hover = p_hover;
+
+	if (hover.is_valid()) {
+		hover->connect(CoreStringNames::get_singleton()->changed, callable_mp(this, &TextureButton::_texture_changed), Object::CONNECT_REFERENCE_COUNTED);
+	}
+
 	queue_redraw();
 	update_minimum_size();
 }
@@ -328,8 +361,18 @@ void TextureButton::set_texture_disabled(const Ref<Texture2D> &p_disabled) {
 		return;
 	}
 
+	if (disabled.is_valid()) {
+		disabled->disconnect(CoreStringNames::get_singleton()->changed, callable_mp(this, &TextureButton::_texture_changed));
+	}
+
 	disabled = p_disabled;
+
+	if (disabled.is_valid()) {
+		disabled->connect(CoreStringNames::get_singleton()->changed, callable_mp(this, &TextureButton::_texture_changed), Object::CONNECT_REFERENCE_COUNTED);
+	}
+
 	queue_redraw();
+	update_minimum_size();
 }
 
 void TextureButton::set_click_mask(const Ref<BitMap> &p_click_mask) {
@@ -366,7 +409,22 @@ Ref<Texture2D> TextureButton::get_texture_focused() const {
 };
 
 void TextureButton::set_texture_focused(const Ref<Texture2D> &p_focused) {
+	if (focused == p_focused) {
+		return;
+	}
+
+	if (focused.is_valid()) {
+		focused->disconnect(CoreStringNames::get_singleton()->changed, callable_mp(this, &TextureButton::_texture_changed));
+	}
+
 	focused = p_focused;
+
+	if (focused.is_valid()) {
+		focused->connect(CoreStringNames::get_singleton()->changed, callable_mp(this, &TextureButton::_texture_changed), Object::CONNECT_REFERENCE_COUNTED);
+	}
+
+	queue_redraw();
+	update_minimum_size();
 };
 
 bool TextureButton::get_ignore_texture_size() const {

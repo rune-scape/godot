@@ -92,6 +92,7 @@ private:
 	} theme_cache;
 
 	void _shape(Ref<TextParagraph> p_paragraph = Ref<TextParagraph>(), String p_text = "");
+	void _texture_changed();
 
 protected:
 	void _set_internal_margin(Side p_side, float p_value);

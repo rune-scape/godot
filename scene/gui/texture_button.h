@@ -64,6 +64,8 @@ private:
 	bool hflip = false;
 	bool vflip = false;
 
+	void _texture_changed();
+
 protected:
 	virtual Size2 get_minimum_size() const override;
 	virtual bool has_point(const Point2 &p_point) const override;

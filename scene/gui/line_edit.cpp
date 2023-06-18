@@ -30,6 +30,7 @@
 
 #include "line_edit.h"
 
+#include "core/core_string_names.h"
 #include "core/input/input_map.h"
 #include "core/object/message_queue.h"
 #include "core/os/keyboard.h"
@@ -2200,11 +2201,29 @@ bool LineEdit::is_deselect_on_focus_loss_enabled() const {
 	return deselect_on_focus_loss_enabled;
 }
 
+void LineEdit::_texture_changed() {
+	if (right_icon.is_valid()) {
+		_fit_to_width();
+		update_minimum_size();
+		queue_redraw();
+	}
+}
+
 void LineEdit::set_right_icon(const Ref<Texture2D> &p_icon) {
 	if (right_icon == p_icon) {
 		return;
 	}
+
+	if (right_icon.is_valid()) {
+		right_icon->disconnect(CoreStringNames::get_singleton()->changed, callable_mp(this, &LineEdit::_texture_changed));
+	}
+
 	right_icon = p_icon;
+
+	if (right_icon.is_valid()) {
+		right_icon->connect(CoreStringNames::get_singleton()->changed, callable_mp(this, &LineEdit::_texture_changed));
+	}
+
 	_fit_to_width();
 	update_minimum_size();
 	queue_redraw();

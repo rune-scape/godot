@@ -36,6 +36,8 @@
 class NinePatchRect : public Control {
 	GDCLASS(NinePatchRect, Control);
 
+	void _texture_changed();
+
 public:
 	enum AxisStretchMode {
 		AXIS_STRETCH_MODE_STRETCH,
