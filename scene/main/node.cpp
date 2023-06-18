@@ -1414,26 +1414,25 @@ TypedArray<Node> Node::find_children(const String &p_pattern, const String &p_ty
 			continue;
 		}
 
-		if (!p_pattern.is_empty()) {
-			if (!cptr[i]->data.name.operator String().match(p_pattern)) {
-				continue;
-			} else if (p_type.is_empty()) {
-				ret.append(cptr[i]);
-			}
-		}
+		bool name_matches = !p_pattern.is_empty() && cptr[i]->data.name.operator String().match(p_pattern);
 
+		bool type_matches = false;
 		if (cptr[i]->is_class(p_type)) {
-			ret.append(cptr[i]);
+			type_matches = true;
 		} else if (cptr[i]->get_script_instance()) {
 			Ref<Script> scr = cptr[i]->get_script_instance()->get_script();
 			while (scr.is_valid()) {
 				if ((ScriptServer::is_global_class(p_type) && ScriptServer::get_global_class_path(p_type) == scr->get_path()) || p_type == scr->get_path()) {
-					ret.append(cptr[i]);
+					type_matches = true;
 					break;
 				}
 
 				scr = scr->get_base_script();
 			}
+		}
+
+		if (name_matches && type_matches) {
+			ret.append(cptr[i]);
 		}
 
 		if (p_recursive) {
