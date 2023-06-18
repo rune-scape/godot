@@ -1194,6 +1194,7 @@ public:
 		ExpressionNode *operand = nullptr;
 		TypeNode *test_type = nullptr;
 		DataType test_datatype;
+		bool is_not = false;
 
 		TypeTestNode() {
 			type = TYPE_TEST;
