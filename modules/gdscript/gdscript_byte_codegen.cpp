@@ -661,6 +661,9 @@ void GDScriptByteCodeGenerator::write_type_test(const Address &p_target, const A
 				append(key_element_type.native_type);
 				append(value_element_type.builtin_type);
 				append(value_element_type.native_type);
+			} else if (p_type.builtin_type == Variant::NIL) {
+				GDScriptCodeGenerator::Address null_value_address(GDScriptCodeGenerator::Address::CONSTANT, add_or_get_constant(Variant()), p_type);
+				write_binary_operator(p_target, Variant::OP_EQUAL, p_source, null_value_address);
 			} else {
 				append_opcode(GDScriptFunction::OPCODE_TYPE_TEST_BUILTIN);
 				append(p_target);
