@@ -69,6 +69,7 @@ public:
 		UNSAFE_METHOD_ACCESS, // Function not found in the detected type (but can be in subtypes).
 		UNSAFE_CAST, // Cast used in an unknown type.
 		UNSAFE_CALL_ARGUMENT, // Function call argument is of a supertype of the require argument.
+		UNSAFE_CONNECTION, // Function signature does not match the signal.
 		UNSAFE_VOID_RETURN, // Function returns void but returned a call to a function that can't be type checked.
 		DEPRECATED_KEYWORD, // The keyword is deprecated and should be replaced.
 		STANDALONE_TERNARY, // Return value of ternary expression is discarded.
@@ -113,6 +114,7 @@ public:
 		IGNORE, // UNSAFE_METHOD_ACCESS // Too common in untyped scenarios.
 		IGNORE, // UNSAFE_CAST // Too common in untyped scenarios.
 		IGNORE, // UNSAFE_CALL_ARGUMENT // Too common in untyped scenarios.
+		WARN, // UNSAFE_CONNECTION
 		WARN, // UNSAFE_VOID_RETURN
 		WARN, // DEPRECATED_KEYWORD
 		WARN, // STANDALONE_TERNARY

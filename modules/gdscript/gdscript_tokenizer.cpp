@@ -120,6 +120,7 @@ static const char *token_names[] = {
 	"trait", // TRAIT,
 	"var", // VAR,
 	"void", // VOID,
+	"when", // WHEN,
 	"yield", // YIELD,
 	// Punctuation
 	"[", // BRACKET_OPEN,
@@ -221,6 +222,7 @@ bool GDScriptTokenizer::Token::is_node_name() const {
 		case UNDERSCORE:
 		case VAR:
 		case VOID:
+		case WHEN:
 		case WHILE:
 		case YIELD:
 			return true;
@@ -510,6 +512,7 @@ GDScriptTokenizer::Token GDScriptTokenizer::annotation() {
 	KEYWORD("var", Token::VAR)               \
 	KEYWORD("void", Token::VOID)             \
 	KEYWORD_GROUP('w')                       \
+	KEYWORD("when", Token::WHEN)             \
 	KEYWORD("while", Token::WHILE)           \
 	KEYWORD_GROUP('y')                       \
 	KEYWORD("yield", Token::YIELD)           \

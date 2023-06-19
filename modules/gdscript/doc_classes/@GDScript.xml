@@ -279,6 +279,16 @@
 		</constant>
 	</constants>
 	<annotations>
+		<annotation name="@deferred">
+			<return type="void" />
+			<description>
+				Mark the following when declaration to be connected with [constant Object.CONNECT_DEFERRED] flag.
+				[codeblock]
+				@deferred
+				when body_entered: monitoring = false
+				[/codeblock]
+			</description>
+		</annotation>
 		<annotation name="@export">
 			<return type="void" />
 			<description>
@@ -593,12 +603,27 @@
 				[b]Note:[/b] Unlike other annotations, the argument of the [code]@icon[/code] annotation must be a string literal (constant expressions are not supported).
 			</description>
 		</annotation>
+		<annotation name="@oneshot">
+			<return type="void" />
+			<description>
+				Mark the following when declaration to be connected with [constant Object.CONNECT_ONE_SHOT] flag.
+				[codeblock]
+				@oneshot
+				when pressed: print("once")
+				[/codeblock]
+			</description>
+		</annotation>
 		<annotation name="@onready">
 			<return type="void" />
 			<description>
 				Mark the following property as assigned when the [Node] is ready. Values for these properties are not assigned immediately when the node is initialized ([method Object._init]), and instead are computed and stored right before [method Node._ready].
 				[codeblock]
 				@onready var character_name: Label = $Label
+				[/codeblock]
+				Can also be used to mark a when declaration as evaluated and connected only on [Node]'s ready state change.
+				[codeblock]
+				@onready
+				when $Button.pressed: print("Hello, world!")
 				[/codeblock]
 			</description>
 		</annotation>
