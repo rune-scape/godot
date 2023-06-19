@@ -94,6 +94,14 @@ bool Texture2D::get_rect_region(const Rect2 &p_rect, const Rect2 &p_src_rect, Re
 	return true;
 }
 
+Ref<Image> Texture2D::get_image() const {
+	RID texture = get_rid();
+	if (!texture.is_valid()) {
+		return Ref<Image>();
+	}
+	return RenderingServer::get_singleton()->texture_2d_get(texture);
+}
+
 Ref<Resource> Texture2D::create_placeholder() const {
 	Ref<PlaceholderTexture2D> placeholder;
 	placeholder.instantiate();
@@ -3347,8 +3355,7 @@ RID CameraTexture::get_rid() const {
 }
 
 Ref<Image> CameraTexture::get_image() const {
-	// not (yet) supported
-	return Ref<Image>();
+	return Texture2D::get_image();
 }
 
 void CameraTexture::set_camera_feed_id(int p_new_id) {
