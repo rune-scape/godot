@@ -87,6 +87,14 @@ bool Texture2D::get_rect_region(const Rect2 &p_rect, const Rect2 &p_src_rect, Re
 	return true;
 }
 
+Ref<Image> Texture2D::get_image() const {
+	RID texture = get_rid();
+	if (!texture.is_valid()) {
+		return Ref<Image>();
+	}
+	return RenderingServer::get_singleton()->texture_2d_get(texture);
+}
+
 Ref<Resource> Texture2D::create_placeholder() const {
 	Ref<PlaceholderTexture2D> placeholder;
 	placeholder.instantiate();
