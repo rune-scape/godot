@@ -1619,6 +1619,7 @@ Vector<Signal> GDScriptInstance::_evaluate_when_signals(const GDScript::WhenDecl
 
 void GDScriptInstance::_connect_when_declarations(bool p_for_init, bool p_for_ready) {
 	ERR_FAIL_NULL(owner);
+	ERR_FAIL_NULL(script);
 
 	if (!(p_for_init && script->has_oninit_when_decls) && !(p_for_ready && script->has_onready_when_decls)) {
 		return;
@@ -1646,6 +1647,7 @@ void GDScriptInstance::_connect_when_declarations(bool p_for_init, bool p_for_re
 
 void GDScriptInstance::_disconnect_when_declarations(bool p_for_init, bool p_for_ready) {
 	ERR_FAIL_NULL(owner);
+	ERR_FAIL_NULL(script);
 
 	if (!(p_for_init && script->has_oninit_when_decls) && !(p_for_ready && script->has_onready_when_decls)) {
 		return;
@@ -1682,6 +1684,7 @@ void GDScriptInstance::_disconnect_when_declarations(bool p_for_init, bool p_for
 
 void GDScriptInstance::_refresh_when_declarations(bool p_for_init, bool p_for_ready) {
 	ERR_FAIL_NULL(owner);
+	ERR_FAIL_NULL(script);
 
 	if (!(p_for_init && script->has_oninit_when_decls) && !(p_for_ready && script->has_onready_when_decls)) {
 		return;
