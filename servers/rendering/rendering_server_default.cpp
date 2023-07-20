@@ -214,6 +214,7 @@ void RenderingServerDefault::_finish() {
 		free(test_cube);
 	}
 
+	memdelete(RSG::canvas);
 	RSG::rasterizer->finalize();
 }
 
@@ -420,7 +421,6 @@ RenderingServerDefault::RenderingServerDefault(bool p_create_thread) :
 }
 
 RenderingServerDefault::~RenderingServerDefault() {
-	memdelete(RSG::canvas);
 	memdelete(RSG::viewport);
 	memdelete(RSG::rasterizer);
 	memdelete(RSG::scene);
