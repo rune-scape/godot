@@ -517,8 +517,13 @@ public:
 	virtual bool free(RID p_rid) = 0;
 	virtual void update() = 0;
 
-	RendererCanvasRender() { singleton = this; }
-	virtual ~RendererCanvasRender() {}
+	RendererCanvasRender() {
+		ERR_FAIL_COND_MSG(singleton != nullptr, "A RendererCanvasRender singleton already exists.");
+		singleton = this;
+	}
+	virtual ~RendererCanvasRender() {
+		singleton = nullptr;
+	}
 };
 
 #endif // RENDERER_CANVAS_RENDER_H

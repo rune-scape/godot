@@ -49,6 +49,7 @@ bool RendererCompositor::is_xr_enabled() const {
 }
 
 RendererCompositor::RendererCompositor() {
+	ERR_FAIL_COND_MSG(singleton != nullptr, "A RendererCompositor singleton already exists.");
 	singleton = this;
 
 	if (XRServer::get_xr_mode() == XRServer::XRMODE_DEFAULT) {
@@ -56,6 +57,10 @@ RendererCompositor::RendererCompositor() {
 	} else {
 		xr_enabled = XRServer::get_xr_mode() == XRServer::XRMODE_ON;
 	}
+}
+
+RendererCompositor::~RendererCompositor() {
+	singleton = nullptr;
 }
 
 RendererCanvasRender *RendererCanvasRender::singleton = nullptr;
