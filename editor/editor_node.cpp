@@ -5664,7 +5664,7 @@ bool EditorNode::is_project_exporting() const {
 
 void EditorNode::show_accept(const String &p_text, const String &p_title) {
 	current_menu_option = -1;
-	if (accept) {
+	if (accept && !_is_blocked()) {
 		_close_save_scene_progress();
 		accept->set_ok_button_text(p_title);
 		accept->set_text(p_text);
@@ -5675,7 +5675,7 @@ void EditorNode::show_accept(const String &p_text, const String &p_title) {
 
 void EditorNode::show_save_accept(const String &p_text, const String &p_title) {
 	current_menu_option = -1;
-	if (save_accept) {
+	if (save_accept && !_is_blocked()) {
 		_close_save_scene_progress();
 		save_accept->set_ok_button_text(p_title);
 		save_accept->set_text(p_text);
@@ -5685,7 +5685,7 @@ void EditorNode::show_save_accept(const String &p_text, const String &p_title) {
 }
 
 void EditorNode::show_warning(const String &p_text, const String &p_title) {
-	if (warning) {
+	if (warning && !_is_blocked()) {
 		_close_save_scene_progress();
 		warning->set_text(p_text);
 		warning->set_title(p_title);
@@ -7519,6 +7519,11 @@ EditorNode::EditorNode() {
 	DEV_ASSERT(!singleton);
 	singleton = this;
 
+	// Load settings.
+	if (!EditorSettings::get_singleton()) {
+		EditorSettings::create();
+	}
+
 	// Detecting headless mode, that means the editor is running in command line.
 	if (!DisplayServer::get_singleton()->window_can_draw()) {
 		cmdline_mode = true;
@@ -7574,10 +7579,6 @@ EditorNode::EditorNode() {
 	GDExtensionManager::get_singleton()->connect("extensions_reloaded", callable_mp(this, &EditorNode::_gdextensions_reloaded));
 
 	TranslationServer::get_singleton()->get_main_domain()->set_enabled(false);
-	// Load settings.
-	if (!EditorSettings::get_singleton()) {
-		EditorSettings::create();
-	}
 
 	ED_SHORTCUT("editor/lock_selected_nodes", TTRC("Lock Selected Node(s)"), KeyModifierMask::CMD_OR_CTRL | Key::L);
 	ED_SHORTCUT("editor/unlock_selected_nodes", TTRC("Unlock Selected Node(s)"), KeyModifierMask::CMD_OR_CTRL | KeyModifierMask::SHIFT | Key::L);
