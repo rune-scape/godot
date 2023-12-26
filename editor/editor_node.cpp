@@ -3369,7 +3369,7 @@ void EditorNode::add_extension_editor_plugin(const StringName &p_class_name) {
 
 void EditorNode::remove_extension_editor_plugin(const StringName &p_class_name) {
 	// If we're exiting, the editor plugins will get cleaned up anyway, so don't do anything.
-	if (singleton->exiting) {
+	if (!singleton || singleton->exiting) {
 		return;
 	}
 
@@ -4703,7 +4703,7 @@ bool EditorNode::is_project_exporting() const {
 
 void EditorNode::show_accept(const String &p_text, const String &p_title) {
 	current_menu_option = -1;
-	if (accept) {
+	if (accept && !_is_blocked()) {
 		accept->set_ok_button_text(p_title);
 		accept->set_text(p_text);
 		EditorInterface::get_singleton()->popup_dialog_centered(accept);
@@ -4712,7 +4712,7 @@ void EditorNode::show_accept(const String &p_text, const String &p_title) {
 
 void EditorNode::show_save_accept(const String &p_text, const String &p_title) {
 	current_menu_option = -1;
-	if (save_accept) {
+	if (save_accept && !_is_blocked()) {
 		save_accept->set_ok_button_text(p_title);
 		save_accept->set_text(p_text);
 		EditorInterface::get_singleton()->popup_dialog_centered(save_accept);
@@ -4720,7 +4720,7 @@ void EditorNode::show_save_accept(const String &p_text, const String &p_title) {
 }
 
 void EditorNode::show_warning(const String &p_text, const String &p_title) {
-	if (warning) {
+	if (warning && !_is_blocked()) {
 		warning->set_text(p_text);
 		warning->set_title(p_title);
 		EditorInterface::get_singleton()->popup_dialog_centered(warning);
@@ -6770,6 +6770,11 @@ EditorNode::EditorNode() {
 	DEV_ASSERT(!singleton);
 	singleton = this;
 
+	// Load settings.
+	if (!EditorSettings::get_singleton()) {
+		EditorSettings::create();
+	}
+
 	Resource::_get_local_scene_func = _resource_get_edited_scene;
 
 	{
@@ -6814,10 +6819,6 @@ EditorNode::EditorNode() {
 	GDExtensionManager::get_singleton()->connect("extensions_reloaded", callable_mp(this, &EditorNode::_gdextensions_reloaded));
 
 	TranslationServer::get_singleton()->set_enabled(false);
-	// Load settings.
-	if (!EditorSettings::get_singleton()) {
-		EditorSettings::create();
-	}
 
 	FileAccess::set_backup_save(EDITOR_GET("filesystem/on_save/safe_save_on_backup_then_rename"));
 
