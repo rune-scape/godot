@@ -2835,8 +2835,8 @@ AnimatedTexture::AnimatedTexture() {
 
 AnimatedTexture::~AnimatedTexture() {
 	ERR_FAIL_NULL(RenderingServer::get_singleton());
-	RS::get_singleton()->free(proxy);
 	RS::get_singleton()->free(proxy_ph);
+	RS::get_singleton()->free(proxy);
 }
 
 ///////////////////////////////
@@ -3548,6 +3548,7 @@ void PlaceholderTextureLayered::_bind_methods() {
 
 PlaceholderTextureLayered::PlaceholderTextureLayered(LayeredType p_type) {
 	layered_type = p_type;
+	ERR_FAIL_COND_MSG(p_type == LAYERED_TYPE_CUBEMAP_ARRAY && OS::get_singleton()->get_current_rendering_method() == "gl_compatibility", "Cubemap Arrays are not supported in the GL Compatibility backend.");
 	rid = RS::get_singleton()->texture_2d_layered_placeholder_create(RS::TextureLayeredType(layered_type));
 }
 PlaceholderTextureLayered::~PlaceholderTextureLayered() {
