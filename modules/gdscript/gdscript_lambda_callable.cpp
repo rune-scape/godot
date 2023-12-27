@@ -148,7 +148,7 @@ GDScriptLambdaCallable::GDScriptLambdaCallable(Ref<GDScript> p_script, GDScriptF
 
 	h = (uint32_t)hash_murmur3_one_64((uint64_t)this);
 
-	updatable_func_ptr_element = p_script->_add_func_ptr_to_update(&function);
+	updatable_func_ptr_element = GDScript::_add_func_ptr_to_update(&function);
 }
 
 GDScriptLambdaCallable::~GDScriptLambdaCallable() {
@@ -274,10 +274,7 @@ GDScriptLambdaSelfCallable::GDScriptLambdaSelfCallable(Ref<RefCounted> p_self, G
 
 	h = (uint32_t)hash_murmur3_one_64((uint64_t)this);
 
-	GDScript *gds = p_function->get_script();
-	if (gds != nullptr) {
-		updatable_func_ptr_element = gds->_add_func_ptr_to_update(&function);
-	}
+	updatable_func_ptr_element = GDScript::_add_func_ptr_to_update(&function);
 }
 
 GDScriptLambdaSelfCallable::GDScriptLambdaSelfCallable(Object *p_self, GDScriptFunction *p_function, const Vector<Variant> &p_captures) {
@@ -289,10 +286,7 @@ GDScriptLambdaSelfCallable::GDScriptLambdaSelfCallable(Object *p_self, GDScriptF
 
 	h = (uint32_t)hash_murmur3_one_64((uint64_t)this);
 
-	GDScript *gds = p_function->get_script();
-	if (gds != nullptr) {
-		updatable_func_ptr_element = gds->_add_func_ptr_to_update(&function);
-	}
+	updatable_func_ptr_element = GDScript::_add_func_ptr_to_update(&function);
 }
 
 GDScriptLambdaSelfCallable::~GDScriptLambdaSelfCallable() {

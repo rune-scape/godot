@@ -119,27 +119,49 @@ class GDScript : public Script {
 
 	// List is used here because a ptr to elements are stored, so the memory locations need to be stable
 	struct UpdatableFuncPtr {
-		List<GDScriptFunction **> ptrs;
+		GDScriptFunction **ptr = nullptr;
+		GDScript *script = nullptr;
+		List<UpdatableFuncPtr *>::Element *weak_list_element = nullptr;
+	};
+	struct UpdatableFuncPtrOwnerListImpl {
+		List<UpdatableFuncPtr> ptrs;
 		Mutex mutex;
-		bool initialized : 1;
-		bool transferred : 1;
-		uint32_t rc = 1;
-		UpdatableFuncPtr() :
-				initialized(false), transferred(false) {}
+#ifdef DEBUG_ENABLED
+		List<UpdatableFuncPtrOwnerListImpl *>::Element *master_element = nullptr;
+		List<UpdatableFuncPtrOwnerListImpl *>::Element *orphan_element = nullptr;
+#endif
+		bool orphaned = false;
 	};
-	struct UpdatableFuncPtrElement {
-		List<GDScriptFunction **>::Element *element = nullptr;
-		UpdatableFuncPtr *func_ptr = nullptr;
+	struct UpdatableFuncPtrOwnerListContainer {
+		UpdatableFuncPtrOwnerListImpl *impl = nullptr;
+		UpdatableFuncPtrOwnerListContainer();
+		~UpdatableFuncPtrOwnerListContainer();
 	};
-	static UpdatableFuncPtr func_ptrs_to_update_main_thread;
-	static thread_local UpdatableFuncPtr *func_ptrs_to_update_thread_local;
+	struct UpdatableFuncPtrListElement {
+		List<UpdatableFuncPtr>::Element *owner_list_element = nullptr;
+		UpdatableFuncPtrOwnerListImpl *owner_list_ptr = nullptr;
+	};
+
+	static thread_local UpdatableFuncPtrOwnerListContainer _func_ptrs_to_update_thread_local;
+	static UpdatableFuncPtrOwnerListContainer &_get_func_ptrs_to_update_thread_local();
+
+#ifdef DEBUG_ENABLED
+	// To keep track of all updatable lists.
+	static List<UpdatableFuncPtrOwnerListImpl *> func_ptrs_to_update_master_list;
+	static Mutex func_ptrs_to_update_master_list_mutex;
+
+	// To keep track of all orphaned lists.
+	static List<UpdatableFuncPtrOwnerListImpl *> func_ptrs_to_update_orphan_list;
+	static Mutex func_ptrs_to_update_orphan_list_mutex;
+#endif
+
+	// To keep track of updatable function pointers relevant to this script.
 	List<UpdatableFuncPtr *> func_ptrs_to_update;
 	Mutex func_ptrs_to_update_mutex;
 
-	UpdatableFuncPtrElement _add_func_ptr_to_update(GDScriptFunction **p_func_ptr_ptr);
-	static void _remove_func_ptr_to_update(const UpdatableFuncPtrElement &p_func_ptr_element);
-
-	static void _fixup_thread_function_bookkeeping();
+	static UpdatableFuncPtrListElement _add_func_ptr_to_update(GDScriptFunction **p_func_ptr_ptr);
+	static void _remove_func_ptr_to_update(UpdatableFuncPtrListElement &p_func_ptr_element);
+	void _recurse_replace_function_ptrs(const HashMap<GDScriptFunction *, GDScriptFunction *> &p_replacements) const;
 
 #ifdef TOOLS_ENABLED
 	// For static data storage during hot-reloading.
@@ -561,11 +583,6 @@ public:
 	virtual void add_global_constant(const StringName &p_variable, const Variant &p_value) override;
 	virtual void add_named_global_constant(const StringName &p_name, const Variant &p_value) override;
 	virtual void remove_named_global_constant(const StringName &p_name) override;
-
-	/* MULTITHREAD FUNCTIONS */
-
-	virtual void thread_enter() override;
-	virtual void thread_exit() override;
 
 	/* DEBUGGER FUNCTIONS */
 

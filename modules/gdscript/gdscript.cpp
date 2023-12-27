@@ -1381,51 +1381,149 @@ String GDScript::debug_get_script_name(const Ref<Script> &p_script) {
 }
 #endif
 
-GDScript::UpdatableFuncPtr GDScript::func_ptrs_to_update_main_thread;
-thread_local GDScript::UpdatableFuncPtr *GDScript::func_ptrs_to_update_thread_local = nullptr;
+thread_local GDScript::UpdatableFuncPtrOwnerListContainer GDScript::_func_ptrs_to_update_thread_local;
 
-GDScript::UpdatableFuncPtrElement GDScript::_add_func_ptr_to_update(GDScriptFunction **p_func_ptr_ptr) {
-	UpdatableFuncPtrElement result = {};
+GDScript::UpdatableFuncPtrOwnerListContainer &GDScript::_get_func_ptrs_to_update_thread_local() {
+	return _func_ptrs_to_update_thread_local;
+}
 
+#ifdef DEBUG_ENABLED
+List<GDScript::UpdatableFuncPtrOwnerListImpl *> GDScript::func_ptrs_to_update_master_list;
+Mutex GDScript::func_ptrs_to_update_master_list_mutex;
+
+List<GDScript::UpdatableFuncPtrOwnerListImpl *> GDScript::func_ptrs_to_update_orphan_list;
+Mutex GDScript::func_ptrs_to_update_orphan_list_mutex;
+#endif
+
+GDScript::UpdatableFuncPtrOwnerListContainer::UpdatableFuncPtrOwnerListContainer() {
+	DEV_ASSERT(this == &GDScript::_get_func_ptrs_to_update_thread_local());
+	impl = memnew(UpdatableFuncPtrOwnerListImpl);
+
+#ifdef DEBUG_ENABLED
 	{
-		MutexLock lock(func_ptrs_to_update_thread_local->mutex);
-		result.element = func_ptrs_to_update_thread_local->ptrs.push_back(p_func_ptr_ptr);
-		result.func_ptr = func_ptrs_to_update_thread_local;
-
-		if (likely(func_ptrs_to_update_thread_local->initialized)) {
-			return result;
-		}
-
-		func_ptrs_to_update_thread_local->initialized = true;
+		MutexLock master_lock(func_ptrs_to_update_master_list_mutex);
+		impl->master_element = GDScript::func_ptrs_to_update_master_list.push_back(impl);
 	}
+#endif
+}
 
-	MutexLock lock(func_ptrs_to_update_mutex);
-	func_ptrs_to_update.push_back(func_ptrs_to_update_thread_local);
-	func_ptrs_to_update_thread_local->rc++;
+GDScript::UpdatableFuncPtrOwnerListContainer::~UpdatableFuncPtrOwnerListContainer() {
+	DEV_ASSERT(this == &GDScript::_get_func_ptrs_to_update_thread_local());
+
+	// impl is no longer accessible, besides through the master list. Safe to operate on and free while unlocked.
+#ifdef DEBUG_ENABLED
+	if (impl->master_element != nullptr) {
+		MutexLock master_lock(func_ptrs_to_update_master_list_mutex);
+		impl->master_element->erase();
+		impl->master_element = nullptr;
+	}
+#endif
+
+	if (impl->ptrs.is_empty()) {
+		memdelete(impl);
+	} else {
+		impl->orphaned = true;
+#ifdef DEBUG_ENABLED
+		{
+			MutexLock master_lock(func_ptrs_to_update_master_list_mutex);
+			impl->master_element = GDScript::func_ptrs_to_update_master_list.push_back(impl);
+		}
+		{
+			MutexLock orphan_lock(func_ptrs_to_update_orphan_list_mutex);
+			impl->orphan_element = GDScript::func_ptrs_to_update_orphan_list.push_back(impl);
+		}
+#endif
+	}
+}
+
+GDScript::UpdatableFuncPtrListElement GDScript::_add_func_ptr_to_update(GDScriptFunction **p_func_ptr_ptr) {
+	UpdatableFuncPtrListElement result = {};
+
+	ERR_FAIL_NULL_V(p_func_ptr_ptr, result);
+	ERR_FAIL_NULL_V(*p_func_ptr_ptr, result);
+
+	GDScript *script = (*p_func_ptr_ptr)->get_script();
+	ERR_FAIL_NULL_V(script, result);
+
+	UpdatableFuncPtr *updatable = nullptr;
+	{
+		UpdatableFuncPtrOwnerListContainer &func_ptrs_to_update_thread_local = _get_func_ptrs_to_update_thread_local();
+		MutexLock script_lock(script->func_ptrs_to_update_mutex);
+		MutexLock local_lock(func_ptrs_to_update_thread_local.impl->mutex);
+		result.owner_list_element = func_ptrs_to_update_thread_local.impl->ptrs.push_back({ p_func_ptr_ptr, script, nullptr });
+		result.owner_list_ptr = func_ptrs_to_update_thread_local.impl;
+
+		updatable = &result.owner_list_element->get();
+		updatable->weak_list_element = script->func_ptrs_to_update.push_back(updatable);
+	}
 
 	return result;
 }
 
-void GDScript::_remove_func_ptr_to_update(const UpdatableFuncPtrElement &p_func_ptr_element) {
-	ERR_FAIL_NULL(p_func_ptr_element.element);
-	ERR_FAIL_NULL(p_func_ptr_element.func_ptr);
-	MutexLock lock(p_func_ptr_element.func_ptr->mutex);
-	p_func_ptr_element.element->erase();
+void GDScript::_remove_func_ptr_to_update(UpdatableFuncPtrListElement &p_func_ptr_element) {
+	UpdatableFuncPtr &updatable = p_func_ptr_element.owner_list_element->get();
+
+	{
+		ERR_FAIL_NULL(updatable.script);
+		ERR_FAIL_NULL(updatable.weak_list_element);
+		MutexLock script_lock(updatable.script->func_ptrs_to_update_mutex);
+		updatable.weak_list_element->erase();
+		updatable.weak_list_element = nullptr;
+	}
+
+	bool is_orphaned = false;
+	bool is_owner_list_empty = false;
+	{
+		ERR_FAIL_NULL(p_func_ptr_element.owner_list_element);
+		ERR_FAIL_NULL(p_func_ptr_element.owner_list_ptr);
+		MutexLock owner_lock(p_func_ptr_element.owner_list_ptr->mutex);
+		p_func_ptr_element.owner_list_element->erase();
+		p_func_ptr_element.owner_list_element = nullptr;
+		is_orphaned = p_func_ptr_element.owner_list_ptr->orphaned;
+		is_owner_list_empty = p_func_ptr_element.owner_list_ptr->ptrs.is_empty();
+	}
+
+	if (unlikely(is_owner_list_empty)) {
+		// Cleanup and reset the last reference to the list instance.
+		// List is no longer accessible, besides through the master list. Safe to operate on and free while unlocked.
+#ifdef DEBUG_ENABLED
+		if (p_func_ptr_element.owner_list_ptr->master_element != nullptr) {
+			ERR_FAIL_NULL(p_func_ptr_element.owner_list_ptr);
+			MutexLock master_lock(func_ptrs_to_update_master_list_mutex);
+			p_func_ptr_element.owner_list_ptr->master_element->erase();
+			p_func_ptr_element.owner_list_ptr->master_element = nullptr;
+		}
+#endif
+
+		if (unlikely(is_orphaned)) {
+#ifdef DEBUG_ENABLED
+			if (p_func_ptr_element.owner_list_ptr->orphan_element != nullptr) {
+				MutexLock orphan_lock(func_ptrs_to_update_master_list_mutex);
+				p_func_ptr_element.owner_list_ptr->orphan_element->erase();
+				p_func_ptr_element.owner_list_ptr->orphan_element = nullptr;
+			}
+#endif
+			memdelete(p_func_ptr_element.owner_list_ptr);
+			p_func_ptr_element.owner_list_ptr = nullptr;
+		}
+	}
 }
 
-void GDScript::_fixup_thread_function_bookkeeping() {
-	// Transfer the ownership of these update items to the main thread,
-	// because the current one is dying, leaving theirs orphan, dangling.
+void GDScript::_recurse_replace_function_ptrs(const HashMap<GDScriptFunction *, GDScriptFunction *> &p_replacements) const {
+	MutexLock outer_lock(func_ptrs_to_update_mutex);
+	for (UpdatableFuncPtr *updatable : func_ptrs_to_update) {
+		MutexLock lock(func_ptrs_to_update_mutex);
+		HashMap<GDScriptFunction *, GDScriptFunction *>::ConstIterator replacement = p_replacements.find(*updatable->ptr);
+		if (replacement) {
+			*updatable->ptr = replacement->value;
+		} else {
+			// Probably a lambda from another reload, ignore.
+			*updatable->ptr = nullptr;
+		}
+	}
 
-	DEV_ASSERT(!Thread::is_main_thread());
-
-	MutexLock lock(func_ptrs_to_update_main_thread.mutex);
-	MutexLock lock2(func_ptrs_to_update_thread_local->mutex);
-
-	while (!func_ptrs_to_update_thread_local->ptrs.is_empty()) {
-		List<GDScriptFunction **>::Element *E = func_ptrs_to_update_thread_local->ptrs.front();
-		E->transfer_to_back(&func_ptrs_to_update_main_thread.ptrs);
-		func_ptrs_to_update_thread_local->transferred = true;
+	for (HashMap<StringName, Ref<GDScript>>::ConstIterator subscript = subclasses.begin(); subscript; ++subscript) {
+		subscript->value->_recurse_replace_function_ptrs(p_replacements);
 	}
 }
 
@@ -1447,30 +1545,9 @@ void GDScript::clear(ClearData *p_clear_data) {
 	}
 
 	{
-		MutexLock outer_lock(func_ptrs_to_update_mutex);
+		MutexLock lock(func_ptrs_to_update_mutex);
 		for (UpdatableFuncPtr *updatable : func_ptrs_to_update) {
-			bool destroy = false;
-			{
-				MutexLock inner_lock(updatable->mutex);
-				if (updatable->transferred) {
-					func_ptrs_to_update_main_thread.mutex.lock();
-				}
-				for (GDScriptFunction **func_ptr_ptr : updatable->ptrs) {
-					*func_ptr_ptr = nullptr;
-				}
-				DEV_ASSERT(updatable->rc != 0);
-				updatable->rc--;
-				if (updatable->rc == 0) {
-					destroy = true;
-				}
-				if (updatable->transferred) {
-					func_ptrs_to_update_main_thread.mutex.unlock();
-				}
-			}
-			if (destroy) {
-				DEV_ASSERT(updatable != &func_ptrs_to_update_main_thread);
-				memdelete(updatable);
-			}
+			*updatable->ptr = nullptr;
 		}
 	}
 
@@ -2091,33 +2168,6 @@ void GDScriptLanguage::remove_named_global_constant(const StringName &p_name) {
 	named_globals.erase(p_name);
 }
 
-void GDScriptLanguage::thread_enter() {
-	GDScript::func_ptrs_to_update_thread_local = memnew(GDScript::UpdatableFuncPtr);
-}
-
-void GDScriptLanguage::thread_exit() {
-	// This thread may have been created before GDScript was up
-	// (which also means it can't have run any GDScript code at all).
-	if (!GDScript::func_ptrs_to_update_thread_local) {
-		return;
-	}
-
-	GDScript::_fixup_thread_function_bookkeeping();
-
-	bool destroy = false;
-	{
-		MutexLock lock(GDScript::func_ptrs_to_update_thread_local->mutex);
-		DEV_ASSERT(GDScript::func_ptrs_to_update_thread_local->rc != 0);
-		GDScript::func_ptrs_to_update_thread_local->rc--;
-		if (GDScript::func_ptrs_to_update_thread_local->rc == 0) {
-			destroy = true;
-		}
-	}
-	if (destroy) {
-		memdelete(GDScript::func_ptrs_to_update_thread_local);
-	}
-}
-
 void GDScriptLanguage::init() {
 	//populate global constants
 	int gcc = CoreConstants::get_global_constant_count();
@@ -2149,8 +2199,6 @@ void GDScriptLanguage::init() {
 	for (const Engine::Singleton &E : singletons) {
 		_add_global(E.name, E.ptr);
 	}
-
-	GDScript::func_ptrs_to_update_thread_local = &GDScript::func_ptrs_to_update_main_thread;
 
 #ifdef TESTS_ENABLED
 	GDScriptTests::GDScriptTestRunner::handle_cmdline();
@@ -2199,10 +2247,35 @@ void GDScriptLanguage::finish() {
 		}
 		s = s->next();
 	}
+
+#ifdef DEBUG_ENABLED
+	{
+		int total_loose_lambdas = 0;
+		{
+			MutexLock master_lock(GDScript::func_ptrs_to_update_master_list_mutex);
+			for (GDScript::UpdatableFuncPtrOwnerListImpl *updatable_owner_list_impl : GDScript::func_ptrs_to_update_master_list) {
+				MutexLock lock(updatable_owner_list_impl->mutex);
+				total_loose_lambdas += updatable_owner_list_impl->ptrs.size();
+			}
+		}
+		int orphan_lambdas = 0;
+		int orphan_threads = 0;
+		{
+			MutexLock orphan_lock(GDScript::func_ptrs_to_update_orphan_list_mutex);
+			orphan_threads = GDScript::func_ptrs_to_update_orphan_list.size();
+			for (GDScript::UpdatableFuncPtrOwnerListImpl *updatable_orphan_list_impl : GDScript::func_ptrs_to_update_orphan_list) {
+				MutexLock lock(updatable_orphan_list_impl->mutex);
+				orphan_lambdas += updatable_orphan_list_impl->ptrs.size();
+			}
+		}
+		if (!GDScript::func_ptrs_to_update_master_list.is_empty()) {
+			print_verbose(vformat("GDScriptLanguage: %d invalid lambdas still referenced after cleanup. (%d from %d orphaned threads)", total_loose_lambdas, orphan_lambdas, orphan_threads));
+		}
+	}
+#endif
+
 	script_list.clear();
 	function_list.clear();
-
-	DEV_ASSERT(GDScript::func_ptrs_to_update_main_thread.rc == 1);
 }
 
 void GDScriptLanguage::profiling_start() {
