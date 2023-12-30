@@ -1615,7 +1615,7 @@ void GDScriptAnalyzer::resolve_function_signature(GDScriptParser::FunctionNode *
 		StringName native_base;
 		if (!p_is_lambda && get_function_signature(p_function, false, base_type, function_name, parent_return_type, parameters_types, default_par_count, method_flags, &native_base)) {
 			bool valid = p_function->is_static == method_flags.has_flag(METHOD_FLAG_STATIC);
-			valid = valid && parent_return_type == p_function->get_datatype();
+			valid = valid && (parent_return_type.is_variant() || parent_return_type == p_function->get_datatype());
 
 			int par_count_diff = p_function->parameters.size() - parameters_types.size();
 			valid = valid && par_count_diff >= 0;
@@ -2013,10 +2013,14 @@ void GDScriptAnalyzer::resolve_for(GDScriptParser::ForNode *p_for) {
 		} else if (list_type.is_typed_container_type()) {
 			variable_type = list_type.get_typed_container_type();
 			variable_type.type_source = list_type.type_source;
-		} else if (list_type.builtin_type == Variant::INT || list_type.builtin_type == Variant::FLOAT || list_type.builtin_type == Variant::STRING) {
+		} else if (list_type.builtin_type == Variant::INT || list_type.builtin_type == Variant::FLOAT) {
 			variable_type.type_source = list_type.type_source;
 			variable_type.kind = GDScriptParser::DataType::BUILTIN;
 			variable_type.builtin_type = list_type.builtin_type;
+		} else if (list_type.builtin_type == Variant::STRING || list_type.builtin_type == Variant::STRING_NAME) {
+			variable_type.type_source = list_type.type_source;
+			variable_type.kind = GDScriptParser::DataType::BUILTIN;
+			variable_type.builtin_type = Variant::STRING;
 		} else if (list_type.builtin_type == Variant::VECTOR2I || list_type.builtin_type == Variant::VECTOR3I) {
 			variable_type.type_source = list_type.type_source;
 			variable_type.kind = GDScriptParser::DataType::BUILTIN;
@@ -4098,6 +4102,7 @@ void GDScriptAnalyzer::reduce_subscript(GDScriptParser::SubscriptNode *p_subscri
 							case Variant::PACKED_VECTOR3_ARRAY:
 							case Variant::ARRAY:
 							case Variant::STRING:
+							case Variant::STRING_NAME:
 								error = index_type.builtin_type != Variant::INT && index_type.builtin_type != Variant::FLOAT;
 								break;
 							// Expect String only.
@@ -4136,7 +4141,6 @@ void GDScriptAnalyzer::reduce_subscript(GDScriptParser::SubscriptNode *p_subscri
 							case Variant::NIL:
 							case Variant::NODE_PATH:
 							case Variant::SIGNAL:
-							case Variant::STRING_NAME:
 								break;
 							// Here for completeness.
 							case Variant::DICTIONARY:
@@ -4172,7 +4176,6 @@ void GDScriptAnalyzer::reduce_subscript(GDScriptParser::SubscriptNode *p_subscri
 					case Variant::NIL:
 					case Variant::NODE_PATH:
 					case Variant::SIGNAL:
-					case Variant::STRING_NAME:
 						result_type.kind = GDScriptParser::DataType::VARIANT;
 						push_error(vformat(R"(Cannot use subscript operator on a base of type "%s".)", base_type.to_string()), p_subscript->base);
 						break;
@@ -4199,6 +4202,10 @@ void GDScriptAnalyzer::reduce_subscript(GDScriptParser::SubscriptNode *p_subscri
 						result_type.builtin_type = Variant::COLOR;
 						break;
 					// Return String.
+					case Variant::STRING_NAME:
+						// StringName characters are not modifiable.
+						result_type.is_constant = true;
+						[[fallthrough]];
 					case Variant::PACKED_STRING_ARRAY:
 					case Variant::STRING:
 						result_type.builtin_type = Variant::STRING;
