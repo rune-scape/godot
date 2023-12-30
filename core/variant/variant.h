@@ -540,6 +540,8 @@ public:
 	};
 
 	static String get_operator_name(Operator p_op);
+	static bool is_op_unary(Operator p_op);
+	static bool is_op_boolean(Operator p_op);
 	static void evaluate(const Operator &p_op, const Variant &p_a, const Variant &p_b, Variant &r_ret, bool &r_valid);
 	static _FORCE_INLINE_ Variant evaluate(const Operator &p_op, const Variant &p_a, const Variant &p_b) {
 		bool valid = true;

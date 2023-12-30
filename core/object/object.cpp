@@ -1580,6 +1580,50 @@ void Object::_bind_methods() {
 
 	ClassDB::add_virtual_method("Object", MethodInfo("free"), false);
 
+	HashSet<StringName> registered_ops;
+	for (int i = 0; i < Variant::Operator::OP_MAX; i++) {
+		Variant::Operator op = static_cast<Variant::Operator>(i);
+		bool is_unary = Variant::is_op_unary(op);
+		bool is_op_boolean = Variant::is_op_boolean(op);
+		StringName overload_name = get_op_overload_name(op);
+		if (overload_name == StringName()) {
+			continue;
+		}
+
+		PropertyInfo ret_value;
+		if (is_op_boolean) {
+			ret_value.type = Variant::BOOL;
+		} else {
+			ret_value.usage |= PROPERTY_USAGE_NIL_IS_VARIANT;
+		}
+
+		if (is_unary) {
+			ClassDB::add_virtual_method("Object", MethodInfo(ret_value, overload_name), true);
+		} else {
+			registered_ops.insert(overload_name);
+			ClassDB::add_virtual_method("Object", MethodInfo(ret_value, overload_name, PropertyInfo(Variant::NIL, "rhs")), true, { "rhs" });
+		}
+	}
+
+	for (int i = 0; i < Variant::Operator::OP_MAX; i++) {
+		Variant::Operator op = static_cast<Variant::Operator>(i);
+		bool is_op_boolean = Variant::is_op_boolean(op);
+		StringName roverload_name = get_op_roverload_name(op);
+		if (roverload_name == StringName() || registered_ops.has(roverload_name)) {
+			continue;
+		}
+
+		PropertyInfo ret_value;
+		if (is_op_boolean) {
+			ret_value.type = Variant::BOOL;
+		} else {
+			ret_value.usage |= PROPERTY_USAGE_NIL_IS_VARIANT;
+		}
+
+		registered_ops.insert(roverload_name);
+		ClassDB::add_virtual_method("Object", MethodInfo(ret_value, roverload_name, PropertyInfo(Variant::NIL, "lhs")), true, { "lhs" });
+	}
+
 	ADD_SIGNAL(MethodInfo("script_changed"));
 	ADD_SIGNAL(MethodInfo("property_list_changed"));
 
@@ -1743,6 +1787,115 @@ StringName Object::get_class_name_for_extension(const GDExtension *p_library) co
 	}
 
 	return SNAME("Object");
+}
+
+StringName Object::get_op_overload_name(Variant::Operator p_op) {
+	ERR_FAIL_INDEX_V(p_op, Variant::OP_MAX, StringName());
+	switch (p_op) {
+		case Variant::OP_EQUAL:
+			return SNAME("_eq");
+		case Variant::OP_NOT_EQUAL:
+			return SNAME("_ne");
+		case Variant::OP_LESS:
+			return SNAME("_lt");
+		case Variant::OP_LESS_EQUAL:
+			return SNAME("_le");
+		case Variant::OP_GREATER:
+			return SNAME("_gt");
+		case Variant::OP_GREATER_EQUAL:
+			return SNAME("_ge");
+		case Variant::OP_ADD:
+			return SNAME("_add");
+		case Variant::OP_SUBTRACT:
+			return SNAME("_sub");
+		case Variant::OP_MULTIPLY:
+			return SNAME("_mul");
+		case Variant::OP_DIVIDE:
+			return SNAME("_div");
+		case Variant::OP_NEGATE:
+			return SNAME("_neg");
+		case Variant::OP_POSITIVE:
+			return SNAME("_pos");
+		case Variant::OP_MODULE:
+			return SNAME("_mod");
+		case Variant::OP_POWER:
+			return SNAME("_pow");
+		case Variant::OP_SHIFT_LEFT:
+			return SNAME("_lshift");
+		case Variant::OP_SHIFT_RIGHT:
+			return SNAME("_rshift");
+		case Variant::OP_BIT_AND:
+			return SNAME("_and");
+		case Variant::OP_BIT_OR:
+			return SNAME("_or");
+		case Variant::OP_BIT_XOR:
+			return SNAME("_xor");
+		case Variant::OP_BIT_NEGATE:
+			return SNAME("_invert");
+		case Variant::OP_AND:
+		case Variant::OP_OR:
+		case Variant::OP_XOR:
+		case Variant::OP_NOT:
+			return StringName();
+		case Variant::OP_IN:
+			return SNAME("_contains");
+		case Variant::OP_MAX:
+			return StringName();
+	}
+
+	return StringName();
+}
+
+StringName Object::get_op_roverload_name(Variant::Operator p_op) {
+	ERR_FAIL_INDEX_V(p_op, Variant::OP_MAX, StringName());
+	switch (p_op) {
+		case Variant::OP_EQUAL:
+		case Variant::OP_NOT_EQUAL:
+			return get_op_overload_name(p_op);
+		case Variant::OP_LESS:
+			return get_op_overload_name(Variant::OP_GREATER);
+		case Variant::OP_LESS_EQUAL:
+			return get_op_overload_name(Variant::OP_GREATER_EQUAL);
+		case Variant::OP_GREATER:
+			return get_op_overload_name(Variant::OP_LESS);
+		case Variant::OP_GREATER_EQUAL:
+			return get_op_overload_name(Variant::OP_LESS_EQUAL);
+		case Variant::OP_ADD:
+			return SNAME("_radd");
+		case Variant::OP_SUBTRACT:
+			return SNAME("_rsub");
+		case Variant::OP_MULTIPLY:
+			return SNAME("_rmul");
+		case Variant::OP_DIVIDE:
+			return SNAME("_rdiv");
+		case Variant::OP_NEGATE:
+		case Variant::OP_POSITIVE:
+			return StringName();
+		case Variant::OP_MODULE:
+			return SNAME("_rmod");
+		case Variant::OP_POWER:
+			return SNAME("_rpow");
+		case Variant::OP_SHIFT_LEFT:
+			return SNAME("_rlshift");
+		case Variant::OP_SHIFT_RIGHT:
+			return SNAME("_rrshift");
+		case Variant::OP_BIT_AND:
+			return SNAME("_rand");
+		case Variant::OP_BIT_OR:
+			return SNAME("_ror");
+		case Variant::OP_BIT_XOR:
+			return SNAME("_rxor");
+		case Variant::OP_BIT_NEGATE:
+		case Variant::OP_AND:
+		case Variant::OP_OR:
+		case Variant::OP_XOR:
+		case Variant::OP_NOT:
+		case Variant::OP_IN:
+		case Variant::OP_MAX:
+			return StringName();
+	}
+
+	return StringName();
 }
 
 void Object::set_instance_binding(void *p_token, void *p_binding, const GDExtensionInstanceBindingCallbacks *p_callbacks) {
