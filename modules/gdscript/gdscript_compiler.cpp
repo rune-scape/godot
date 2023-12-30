@@ -2312,10 +2312,28 @@ GDScriptFunction *GDScriptCompiler::_parse_function(Error &r_error, GDScript *p_
 	GDScriptFunction *gd_function = codegen.generator->write_end();
 
 	if (is_initializer) {
+		if (p_script->initializer != nullptr) {
+			r_error = ERR_COMPILATION_FAILED;
+			ERR_PRINT("Compiler Bug: initializer already written.");
+			memdelete(codegen.generator);
+			return nullptr;
+		}
 		p_script->initializer = gd_function;
 	} else if (is_implicit_initializer) {
+		if (p_script->implicit_initializer != nullptr) {
+			r_error = ERR_COMPILATION_FAILED;
+			ERR_PRINT("Compiler Bug: implicit_initializer already written.");
+			memdelete(codegen.generator);
+			return nullptr;
+		}
 		p_script->implicit_initializer = gd_function;
 	} else if (is_implicit_ready) {
+		if (p_script->implicit_ready != nullptr) {
+			r_error = ERR_COMPILATION_FAILED;
+			ERR_PRINT("Compiler Bug: implicit_ready already written.");
+			memdelete(codegen.generator);
+			return nullptr;
+		}
 		p_script->implicit_ready = gd_function;
 	}
 
@@ -2335,6 +2353,12 @@ GDScriptFunction *GDScriptCompiler::_parse_function(Error &r_error, GDScript *p_
 	}
 
 	if (!is_implicit_initializer && !is_implicit_ready && !p_for_lambda) {
+		if (p_script->member_functions.has(func_name)) {
+			r_error = ERR_COMPILATION_FAILED;
+			ERR_PRINT(vformat("Compiler Bug: func '%s' already written.", func_name));
+			memdelete(codegen.generator);
+			return nullptr;
+		}
 		p_script->member_functions[func_name] = gd_function;
 	}
 
