@@ -150,7 +150,11 @@ int test_main(int argc, char *argv[]) {
 
 	for (int i = 0; i < argc; i++) {
 		args.push_back(String::utf8(argv[i]));
+		if (args.back()->get() == "-v" || args.back()->get() == "--verbose") { // verbose output
+			OS::get_singleton()->_verbose_stdout = true;
+		}
 	}
+
 	OS::get_singleton()->set_cmdline("", args, List<String>());
 	DisplayServerMock::register_mock_driver();
 
