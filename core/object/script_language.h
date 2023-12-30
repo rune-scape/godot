@@ -418,6 +418,7 @@ public:
 	virtual Vector<StackInfo> debug_get_current_stack_info() { return Vector<StackInfo>(); }
 
 	virtual void reload_all_scripts() = 0;
+	virtual void reload_scripts(const Array &p_script_paths, bool p_soft_reload) = 0;
 	virtual void reload_tool_script(const Ref<Script> &p_script, bool p_soft_reload) = 0;
 	/* LOADER FUNCTIONS */
 

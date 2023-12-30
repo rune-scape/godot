@@ -1449,8 +1449,12 @@ void ScriptEditorDebugger::set_breakpoint(const String &p_path, int p_line, bool
 	}
 }
 
-void ScriptEditorDebugger::reload_scripts() {
-	_put_msg("reload_scripts", Array());
+void ScriptEditorDebugger::reload_all_scripts() {
+	_put_msg("reload_all_scripts", Array());
+}
+
+void ScriptEditorDebugger::reload_scripts(const Vector<String> &p_script_paths) {
+	_put_msg("reload_scripts", Variant(p_script_paths).operator Array());
 }
 
 bool ScriptEditorDebugger::is_skip_breakpoints() {
