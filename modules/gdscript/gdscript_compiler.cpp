@@ -2551,6 +2551,11 @@ Error GDScriptCompiler::_populate_class_members(GDScript *p_script, const GDScri
 
 	p_script->static_variables.clear();
 
+	for (GDScript::WhenDeclaration &when_decl : p_script->when_declarations) {
+		memdelete(when_decl.get_signal);
+		memdelete(when_decl.body);
+	}
+
 	if (p_script->implicit_initializer) {
 		memdelete(p_script->implicit_initializer);
 	}
@@ -2567,6 +2572,9 @@ Error GDScriptCompiler::_populate_class_members(GDScript *p_script, const GDScri
 	p_script->static_variables_indices.clear();
 	p_script->static_variables.clear();
 	p_script->_signals.clear();
+	p_script->has_oninit_when_decls = false;
+	p_script->has_onready_when_decls = false;
+	p_script->when_declarations.clear();
 	p_script->initializer = nullptr;
 	p_script->implicit_initializer = nullptr;
 	p_script->implicit_ready = nullptr;
@@ -2626,6 +2634,8 @@ Error GDScriptCompiler::_populate_class_members(GDScript *p_script, const GDScri
 
 			p_script->base = base;
 			p_script->_base = base.ptr();
+			p_script->has_oninit_when_decls = base->has_oninit_when_decls;
+			p_script->has_onready_when_decls = base->has_onready_when_decls;
 			p_script->member_indices = base->member_indices;
 		} break;
 		default: {
@@ -2726,6 +2736,12 @@ Error GDScriptCompiler::_populate_class_members(GDScript *p_script, const GDScri
 				p_script->_signals[name] = parameters_names;
 			} break;
 
+			case GDScriptParser::ClassNode::Member::WHEN: {
+				const GDScriptParser::WhenNode *when = member.when;
+				p_script->has_oninit_when_decls |= !when->onready;
+				p_script->has_onready_when_decls |= when->onready;
+			} break;
+
 			case GDScriptParser::ClassNode::Member::ENUM: {
 				const GDScriptParser::EnumNode *enum_n = member.m_enum;
 				StringName name = enum_n->identifier->name;
@@ -2798,6 +2814,33 @@ Error GDScriptCompiler::_compile_class(GDScript *p_script, const GDScriptParser:
 			if (err) {
 				return err;
 			}
+		} else if (member.type == member.WHEN) {
+			const GDScriptParser::WhenNode *when = member.when;
+			Error err = OK;
+			GDScriptFunction *get_signal_fn = _parse_function(err, p_script, p_class, when->get_signal_function, false, true);
+			if (err) {
+				return err;
+			}
+
+			GDScriptFunction *body_fn = _parse_function(err, p_script, p_class, when->function, false, true);
+			if (err) {
+				return err;
+			}
+
+			GDScript::WhenDeclaration when_decl{
+				get_signal_fn,
+				body_fn,
+				when->connect_flags,
+				when->onready,
+				!when->has_parameters,
+				p_script->_get_debug_path(),
+				when->start_line
+			};
+			if (err) {
+				return err;
+			}
+
+			p_script->when_declarations.push_back(when_decl);
 		} else if (member.type == member.VARIABLE) {
 			const GDScriptParser::VariableNode *variable = member.variable;
 			if (variable->property == GDScriptParser::VariableNode::PROP_INLINE) {
@@ -3022,6 +3065,11 @@ GDScriptCompiler::ScriptLambdaInfo GDScriptCompiler::_get_script_lambda_replacem
 
 	for (const KeyValue<StringName, GDScriptFunction *> &E : p_script->member_functions) {
 		info.member_function_infos.insert(E.key, _get_function_lambda_replacement_info(E.value));
+	}
+
+	for (GDScript::WhenDeclaration &when_decl : p_script->when_declarations) {
+		info.other_function_infos.push_back(_get_function_replacement_info(when_decl.get_signal));
+		info.other_function_infos.push_back(_get_function_replacement_info(when_decl.body));
 	}
 
 	for (const KeyValue<StringName, Ref<GDScript>> &KV : p_script->get_subclasses()) {

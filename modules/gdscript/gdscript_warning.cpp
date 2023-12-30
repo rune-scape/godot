@@ -100,6 +100,9 @@ String GDScriptWarning::get_message() const {
 		case UNSAFE_CALL_ARGUMENT:
 			CHECK_SYMBOLS(4);
 			return vformat(R"*(The argument %s of the function "%s()" requires a the subtype "%s" but the supertype "%s" was provided.)*", symbols[0], symbols[1], symbols[2], symbols[3]);
+		case UNSAFE_CONNECTION:
+			CHECK_SYMBOLS(1);
+			return vformat(R"(The function signature does not match the signal: '%s')", symbols[0]);
 		case UNSAFE_VOID_RETURN:
 			CHECK_SYMBOLS(2);
 			return vformat(R"*(The method "%s()" returns "void" but it's trying to return a call to "%s()" that can't be ensured to also be "void".)*", symbols[0], symbols[1]);
@@ -198,6 +201,7 @@ String GDScriptWarning::get_name_from_code(Code p_code) {
 		"UNSAFE_METHOD_ACCESS",
 		"UNSAFE_CAST",
 		"UNSAFE_CALL_ARGUMENT",
+		"UNSAFE_CONNECTION",
 		"UNSAFE_VOID_RETURN",
 		"RETURN_VALUE_DISCARDED",
 		"STATIC_CALLED_ON_INSTANCE",

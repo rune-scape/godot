@@ -52,6 +52,19 @@
 #include "core/io/file_access.h"
 #include "core/io/file_access_encrypted.h"
 #include "core/os/os.h"
+#include "core/templates/vmap.h"
+#include "core/templates/vset.h"
+#include "gdscript_analyzer.h"
+#include "gdscript_cache.h"
+#include "gdscript_compiler.h"
+#include "gdscript_parser.h"
+#include "gdscript_rpc_callable.h"
+#include "gdscript_warning.h"
+#include "gdscript_when_callable.h"
+
+#ifdef TESTS_ENABLED
+#include "tests/gdscript_test_runner.h"
+#endif
 
 #ifdef TOOLS_ENABLED
 #include "editor/editor_paths.h"
@@ -188,6 +201,9 @@ GDScriptInstance *GDScript::_create_instance(const Variant **p_args, int p_argco
 			ERR_FAIL_V_MSG(nullptr, "Error constructing a GDScriptInstance.");
 		}
 	}
+
+	instance->_connect_when_declarations(true, false);
+
 	//@TODO make thread safe
 	return instance;
 }
@@ -1320,6 +1336,11 @@ void GDScript::_collect_dependencies(RBSet<GDScript *> &p_dependencies, const GD
 		_collect_function_dependencies(E.value, p_dependencies, p_except);
 	}
 
+	for (GDScript::WhenDeclaration &when_decl : when_declarations) {
+		_collect_function_dependencies(when_decl.get_signal, p_dependencies, p_except);
+		_collect_function_dependencies(when_decl.body, p_dependencies, p_except);   
+	}
+
 	if (implicit_initializer) {
 		_collect_function_dependencies(implicit_initializer, p_dependencies, p_except);
 	}
@@ -1526,6 +1547,12 @@ void GDScript::clear(ClearData *p_clear_data) {
 	static_variables.clear();
 	static_variables_indices.clear();
 
+	for (GDScript::WhenDeclaration &when_decl : when_declarations) {
+		clear_data->functions.insert(when_decl.get_signal);
+		clear_data->functions.insert(when_decl.body);
+	}
+	when_declarations.clear();
+
 	if (implicit_initializer) {
 		clear_data->functions.insert(implicit_initializer);
 		implicit_initializer = nullptr;
@@ -1607,6 +1634,79 @@ GDScript::~GDScript() {
 //////////////////////////////
 //         INSTANCE         //
 //////////////////////////////
+
+Vector<Signal> GDScriptInstance::_evaluate_when_signals(const GDScript::WhenDeclaration &p_when_decl) {
+	Callable::CallError err;
+	Variant when_expr_result = p_when_decl.get_signal->call(this, nullptr, 0, err);
+	if (err.error != Callable::CallError::CALL_OK) {
+		ERR_PRINT("Error evaluating when expression: " + Variant::get_call_error_text(owner, p_when_decl.get_signal->get_name(), nullptr, 0, err) + ".");
+	}
+
+	Array when_signal_array;
+	if (when_expr_result.is_array()) {
+		when_signal_array = when_expr_result;
+	} else {
+		when_signal_array.push_back(when_expr_result);
+	}
+
+	Vector<Signal> result;
+	for (int i = 0; i < when_signal_array.size(); i++) {
+		if (when_signal_array[i].get_type() != Variant::SIGNAL) {
+			String message = vformat("Expected Signal in when declaration, got '%s'.", Variant::get_type_name(when_expr_result.get_type()));
+			if (when_expr_result.get_type() == Variant::NIL) {
+				message += " Annotate with @onready if signal expression depends on the scene tree.";
+			}
+			if (!GDScriptLanguage::get_singleton()->debug_break(message)) {
+				_err_print_error(String(p_when_decl.body->get_name()).utf8(), p_when_decl.file_path.utf8(), p_when_decl.start_line, message, false, ERR_HANDLER_SCRIPT);
+			}
+
+			return Vector<Signal>();
+		}
+
+		Signal when_signal = when_signal_array[i];
+		if (when_signal.get_object_id().is_null() || when_signal.get_name() == StringName()) { // Signal::is_null() does not evaluate if its valid, is that incorrect??
+			String message = "Invalid Signal in when declaration. Annotate with @onready if signal expression depends on the scene tree.";
+			if (!GDScriptLanguage::get_singleton()->debug_break(message)) {
+				_err_print_error(String(p_when_decl.body->get_name()).utf8(), p_when_decl.file_path.utf8(), p_when_decl.start_line, message, false, ERR_HANDLER_SCRIPT);
+			}
+
+			return Vector<Signal>();
+		} else {
+			result.push_back(when_signal);
+		}
+	}
+	return result;
+}
+
+void GDScriptInstance::_connect_when_declarations(bool p_for_init, bool p_for_ready) {
+	ERR_FAIL_NULL(owner);
+	ERR_FAIL_NULL(script);
+
+	if (!(p_for_init && script->has_oninit_when_decls) && !(p_for_ready && script->has_onready_when_decls)) {
+		return;
+	}
+
+	Vector<GDScript *> script_stack;
+	for (GDScript *sptr = script.ptr(); sptr; sptr = sptr->_base) {
+		script_stack.insert(0, sptr);
+	}
+
+	for (int32_t i = 0; i < script_stack.size(); i++) {
+		GDScript *sptr = script_stack[i];
+		for (int32_t j = 0; j < sptr->when_declarations.size(); j++) {
+			GDScript::WhenDeclaration when_decl = sptr->when_declarations[j];
+			if ((when_decl.onready && p_for_ready) || (!when_decl.onready && p_for_init)) {
+				Vector<Signal> when_signals = _evaluate_when_signals(when_decl);
+				for (Signal &s : when_signals) {
+					Callable when_callable = Callable(memnew(GDScriptWhenCallable(owner, when_decl.body, when_decl.drop_args, i, j)));
+					if (!s.is_connected(when_callable)) {
+						s.connect(when_callable, when_decl.connect_flags);
+					}
+				}
+			}
+		}
+	}
+}
 
 bool GDScriptInstance::set(const StringName &p_name, const Variant &p_value) {
 	{
@@ -1941,6 +2041,12 @@ Variant GDScriptInstance::callp(const StringName &p_method, const Variant **p_ar
 			sptr = sptr->_base;
 		}
 
+		// This happens before "_ready" is called (because i dont want to add a check before every script call) but the initializer one is called after "_init".
+		// I think its ok because _ready and _init represent different things
+		//   - init is a constructor, it needs to run before anything happens
+		//   - _ready is more of a letting you know, a notification, a signal, letting you know everything is set up correctly
+		_connect_when_declarations(false, true);
+
 		// Reset this back for the regular call.
 		sptr = script.ptr();
 	}
@@ -2180,6 +2286,18 @@ void GDScriptLanguage::finish() {
 			}
 			for (KeyValue<StringName, GDScript::MemberInfo> &E : scr->member_indices) {
 				E.value.data_type.script_type_ref = Ref<Script>();
+			}
+
+			for (GDScript::WhenDeclaration &when_decl : scr->when_declarations) {
+				for (int i = 0; i < when_decl.get_signal->argument_types.size(); i++) {
+					when_decl.get_signal->argument_types.write[i].script_type_ref = Ref<Script>();
+				}
+				when_decl.get_signal->return_type.script_type_ref = Ref<Script>();
+
+				for (int i = 0; i < when_decl.body->argument_types.size(); i++) {
+					when_decl.body->argument_types.write[i].script_type_ref = Ref<Script>();
+				}
+				when_decl.body->return_type.script_type_ref = Ref<Script>();
 			}
 
 			// Clear backup for scripts that could slip out of the cyclic reference
@@ -2501,6 +2619,7 @@ void GDScriptLanguage::get_reserved_words(List<String> *p_words) const {
 		"preload",
 		"signal",
 		"super",
+		"when",
 		// var
 		"const",
 		"enum",
