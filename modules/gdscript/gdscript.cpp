@@ -1438,6 +1438,47 @@ String GDScript::debug_get_script_name(const Ref<Script> &p_script) {
 }
 #endif
 
+GDScript::UpdatableFuncPtr::UpdatableFuncPtr(GDScriptFunction *p_function) {
+	if (p_function == nullptr) {
+		return;
+	}
+
+	ptr = p_function;
+	script = ptr->get_script();
+	ERR_FAIL_NULL(script);
+
+	MutexLock script_lock(script->func_ptrs_to_update_mutex);
+	list_element = script->func_ptrs_to_update.push_back(this);
+}
+
+GDScript::UpdatableFuncPtr::~UpdatableFuncPtr() {
+	ERR_FAIL_NULL(script);
+
+	if (list_element) {
+		MutexLock script_lock(script->func_ptrs_to_update_mutex);
+		list_element->erase();
+		list_element = nullptr;
+	}
+}
+
+void GDScript::_recurse_replace_function_ptrs(const HashMap<GDScriptFunction *, GDScriptFunction *> &p_replacements) const {
+	MutexLock outer_lock(func_ptrs_to_update_mutex);
+	for (UpdatableFuncPtr *updatable : func_ptrs_to_update) {
+		MutexLock lock(func_ptrs_to_update_mutex);
+		HashMap<GDScriptFunction *, GDScriptFunction *>::ConstIterator replacement = p_replacements.find(updatable->ptr);
+		if (replacement) {
+			updatable->ptr = replacement->value;
+		} else {
+			// Probably a lambda from another reload, ignore.
+			updatable->ptr = nullptr;
+		}
+	}
+
+	for (HashMap<StringName, Ref<GDScript>>::ConstIterator subscript = subclasses.begin(); subscript; ++subscript) {
+		subscript->value->_recurse_replace_function_ptrs(p_replacements);
+	}
+}
+
 void GDScript::clear(ClearData *p_clear_data) {
 	if (clearing) {
 		return;
@@ -1453,6 +1494,13 @@ void GDScript::clear(ClearData *p_clear_data) {
 	if (clear_data == nullptr) {
 		clear_data = &data;
 		is_root = true;
+	}
+
+	{
+		MutexLock lock(func_ptrs_to_update_mutex);
+		for (UpdatableFuncPtr *updatable : func_ptrs_to_update) {
+			updatable->ptr = nullptr;
+		}
 	}
 
 	RBSet<GDScript *> must_clear_dependencies = get_must_clear_dependencies();
@@ -1523,6 +1571,13 @@ GDScript::~GDScript() {
 		return;
 	}
 	destructing = true;
+
+	if (is_print_verbose_enabled()) {
+		MutexLock lock(func_ptrs_to_update_mutex);
+		if (!func_ptrs_to_update.is_empty()) {
+			print_line(vformat("GDScript: %d orphaned lambdas becoming invalid at destruction of script '%s'.", func_ptrs_to_update.size(), fully_qualified_name));
+		}
+	}
 
 	clear();
 

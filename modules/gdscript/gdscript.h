@@ -103,6 +103,36 @@ class GDScript : public Script {
 	HashMap<StringName, Vector<StringName>> _signals;
 	Dictionary rpc_config;
 
+	struct LambdaInfo {
+		int capture_count;
+		bool use_self;
+	};
+
+	HashMap<GDScriptFunction *, LambdaInfo> lambda_info;
+
+public:
+	class UpdatableFuncPtr {
+		friend class GDScript;
+
+		GDScriptFunction *ptr;
+		GDScript *script = nullptr;
+		List<UpdatableFuncPtr *>::Element *list_element = nullptr;
+
+	public:
+		GDScriptFunction *operator->() const { return ptr; }
+		operator GDScriptFunction *() const { return ptr; }
+
+		UpdatableFuncPtr(GDScriptFunction *p_function);
+		~UpdatableFuncPtr();
+	};
+
+private:
+	// List is used here because a ptr to elements are stored, so the memory locations need to be stable
+	List<UpdatableFuncPtr *> func_ptrs_to_update;
+	Mutex func_ptrs_to_update_mutex;
+
+	void _recurse_replace_function_ptrs(const HashMap<GDScriptFunction *, GDScriptFunction *> &p_replacements) const;
+
 #ifdef TOOLS_ENABLED
 	// For static data storage during hot-reloading.
 	HashMap<StringName, MemberInfo> old_static_variables_indices;
