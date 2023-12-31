@@ -96,6 +96,7 @@ static Ref<ResourceFormatLoaderJSON> resource_loader_json;
 static core_bind::ResourceLoader *_resource_loader = nullptr;
 static core_bind::ResourceSaver *_resource_saver = nullptr;
 static core_bind::OS *_os = nullptr;
+static Time *_time = nullptr;
 static core_bind::Engine *_engine = nullptr;
 static core_bind::special::ClassDB *_classdb = nullptr;
 static core_bind::Marshalls *_marshalls = nullptr;
@@ -127,6 +128,7 @@ void register_core_types() {
 	ObjectDB::setup();
 
 	StringName::setup();
+	_time = memnew(Time);
 	ResourceLoader::initialize();
 
 	register_global_constants();
@@ -373,6 +375,7 @@ void unregister_core_types() {
 	memdelete(_engine_debugger);
 	memdelete(_marshalls);
 	memdelete(_classdb);
+	memdelete(_time);
 	memdelete(_engine);
 	memdelete(_os);
 	memdelete(_resource_saver);
