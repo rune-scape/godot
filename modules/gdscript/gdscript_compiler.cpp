@@ -2973,22 +2973,6 @@ Error GDScriptCompiler::_compile_class(GDScript *p_script, const GDScriptParser:
 
 	has_static_data = p_class->has_static_data;
 
-	for (int i = 0; i < p_class->members.size(); i++) {
-		if (p_class->members[i].type != GDScriptParser::ClassNode::Member::CLASS) {
-			continue;
-		}
-		const GDScriptParser::ClassNode *inner_class = p_class->members[i].m_class;
-		StringName name = inner_class->identifier->name;
-		GDScript *subclass = p_script->subclasses[name].ptr();
-
-		Error err = _compile_class(subclass, inner_class, p_keep_state);
-		if (err) {
-			return err;
-		}
-
-		has_static_data = has_static_data || inner_class->has_static_data;
-	}
-
 	if (p_script->_base) {
 		// Compile base if it isn't already compiling.
 		Error err = OK;
@@ -3023,6 +3007,23 @@ Error GDScriptCompiler::_compile_class(GDScript *p_script, const GDScriptParser:
 	compiling_classes.erase(p_script);
 	compiled_classes.insert(p_script);
 	p_script->valid = true;
+
+	for (int i = 0; i < p_class->members.size(); i++) {
+		if (p_class->members[i].type != GDScriptParser::ClassNode::Member::CLASS) {
+			continue;
+		}
+		const GDScriptParser::ClassNode *inner_class = p_class->members[i].m_class;
+		StringName name = inner_class->identifier->name;
+		GDScript *subclass = p_script->subclasses[name].ptr();
+
+		Error err = _compile_class(subclass, inner_class, p_keep_state);
+		if (err) {
+			return err;
+		}
+
+		has_static_data = has_static_data || inner_class->has_static_data;
+	}
+
 	return OK;
 }
 
