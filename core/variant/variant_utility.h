@@ -105,6 +105,8 @@ struct VariantUtilityFunctions {
 	static int64_t wrapi(int64_t value, int64_t min, int64_t max);
 	static double wrapf(double value, double min, double max);
 	static double pingpong(double value, double length);
+	static Vector2i hilbert2d_index_to_pos(int64_t index);
+	static int64_t hilbert2d_pos_to_index(Vector2i pos);
 	static Variant max(const Variant **p_args, int p_argcount, Callable::CallError &r_error);
 	static double maxf(double x, double y);
 	static int64_t maxi(int64_t x, int64_t y);

@@ -38,6 +38,7 @@
 #include "core/templates/rid.h"
 #include "core/templates/rid_owner.h"
 #include "core/variant/binder_common.h"
+#include "core/variant/hilbert.hpp"
 #include "core/variant/variant_parser.h"
 
 // Math
@@ -630,6 +631,26 @@ double VariantUtilityFunctions::wrapf(double value, double min, double max) {
 
 double VariantUtilityFunctions::pingpong(double value, double length) {
 	return Math::pingpong(value, length);
+}
+
+Vector2i VariantUtilityFunctions::hilbert2d_index_to_pos(int64_t index) {
+	std::array<uint32_t, 2> tmp;
+
+	tmp[0] = uint32_t((index >> 32) & 0xffffffff);
+	tmp[1] = uint32_t(index & 0xffffffff);
+
+	std::array<uint32_t, 2> ret = hilbert::v1::IndexToPosition(tmp);
+	return { int32_t(ret[0]), int32_t(ret[1]) };
+}
+
+int64_t VariantUtilityFunctions::hilbert2d_pos_to_index(Vector2i pos) {
+	std::array<uint32_t, 2> tmp{ uint32_t(pos.x), uint32_t(pos.y) };
+	std::array<uint32_t, 2> ret = hilbert::v1::PositionToIndex(tmp);
+
+	uint64_t idx =
+		(uint64_t(ret[0]) << 32) +
+		(uint64_t(ret[1]));
+	return int64_t(idx);
 }
 
 Variant VariantUtilityFunctions::max(const Variant **p_args, int p_argcount, Callable::CallError &r_error) {
@@ -1777,6 +1798,8 @@ void Variant::_register_variant_utility_functions() {
 
 	FUNCBINDR(nearest_po2, sarray("value"), Variant::UTILITY_FUNC_TYPE_MATH);
 	FUNCBINDR(pingpong, sarray("value", "length"), Variant::UTILITY_FUNC_TYPE_MATH);
+	FUNCBINDR(hilbert2d_index_to_pos, sarray("index"), Variant::UTILITY_FUNC_TYPE_MATH);
+	FUNCBINDR(hilbert2d_pos_to_index, sarray("pos"), Variant::UTILITY_FUNC_TYPE_MATH);
 
 	// Random
 
