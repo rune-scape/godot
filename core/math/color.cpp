@@ -242,6 +242,85 @@ void Color::set_hsv(float p_h, float p_s, float p_v, float p_alpha) {
 	}
 }
 
+float Color::get_hsl_h() const {
+	return get_h();
+}
+
+float Color::get_hsl_s() const {
+	float min = MIN(r, g);
+	min = MIN(min, b);
+	float max = MAX(r, g);
+	max = MAX(max, b);
+
+	float delta = max - min;
+	float l = (max + min) / 2.0f;
+
+	if (delta == 0.0f) {
+		return 0.0f;
+	}
+
+	return (l <= 0.5) ? (delta / (max + min)) : (delta / (2 - max - min));
+}
+
+float Color::get_hsl_l() const {
+	float min = MIN(r, g);
+	min = MIN(min, b);
+	float max = MAX(r, g);
+	max = MAX(max, b);
+	return (max + min) / 2.0f;
+}
+
+static float hue_to_rgb(float v1, float v2, float vH) {
+	if (vH < 0) {
+		vH += 1.0f;
+	}
+	if (vH > 1) {
+		vH -= 1.0f;
+	}
+
+	if ((6.0f * vH) < 1) {
+		return (v1 + (v2 - v1) * 6.0f * vH);
+	}
+	if ((2.0f * vH) < 1) {
+		return v2;
+	}
+	if ((3.0f * vH) < 2) {
+		return (v1 + (v2 - v1) * ((2.0f / 3.0f) - vH) * 6.0f);
+	}
+
+	return v1;
+}
+
+void Color::set_hsl(float p_h, float p_s, float p_l, float p_alpha) {
+	a = p_alpha;
+
+	if (p_s == 0.0f) {
+		// Achromatic (gray)
+		r = g = b = p_l;
+		return;
+	}
+
+	float v2 = (p_l < 0.5f) ? (p_l * (1.0f + p_s)) : ((p_l + p_s) - (p_l * p_s));
+	float v1 = 2.0f * p_l - v2;
+
+	r = hue_to_rgb(v1, v2, p_h + (1.0f / 3.0f));
+	g = hue_to_rgb(v1, v2, p_h);
+	b = hue_to_rgb(v1, v2, p_h - (1.0f / 3.0f));
+}
+
+void Color::set_ok_hsv(float p_h, float p_s, float p_v, float p_alpha) {
+	ok_color::HSV hsv;
+	hsv.h = p_h;
+	hsv.s = p_s;
+	hsv.v = p_v;
+	ok_color::RGB rgb = ok_color::okhsv_to_srgb(hsv);
+	Color c = Color(rgb.r, rgb.g, rgb.b, p_alpha).clamp();
+	r = c.r;
+	g = c.g;
+	b = c.b;
+	a = c.a;
+}
+
 void Color::set_ok_hsl(float p_h, float p_s, float p_l, float p_alpha) {
 	ok_color::HSL hsl;
 	hsl.h = p_h;
@@ -467,6 +546,12 @@ Color Color::from_hsv(float p_h, float p_s, float p_v, float p_alpha) {
 	return c;
 }
 
+Color Color::from_hsl(float p_h, float p_s, float p_l, float p_alpha) {
+	Color c;
+	c.set_hsl(p_h, p_s, p_l, p_alpha);
+	return c;
+}
+
 Color Color::from_rgbe9995(uint32_t p_rgbe) {
 	float r = p_rgbe & 0x1ff;
 	float g = (p_rgbe >> 9) & 0x1ff;
@@ -583,10 +668,52 @@ Color Color::operator-() const {
 			1.0f - a);
 }
 
+Color Color::from_ok_hsv(float p_h, float p_s, float p_v, float p_alpha) {
+	Color c;
+	c.set_ok_hsv(p_h, p_s, p_v, p_alpha);
+	return c;
+}
+
 Color Color::from_ok_hsl(float p_h, float p_s, float p_l, float p_alpha) {
 	Color c;
 	c.set_ok_hsl(p_h, p_s, p_l, p_alpha);
 	return c;
+}
+
+float Color::get_ok_hsv_h() const {
+	ok_color::RGB rgb;
+	rgb.r = r;
+	rgb.g = g;
+	rgb.b = b;
+	ok_color::HSV ok_hsv = ok_color::srgb_to_okhsv(rgb);
+	if (Math::is_nan(ok_hsv.h)) {
+		return 0.0f;
+	}
+	return CLAMP(ok_hsv.h, 0.0f, 1.0f);
+}
+
+float Color::get_ok_hsv_s() const {
+	ok_color::RGB rgb;
+	rgb.r = r;
+	rgb.g = g;
+	rgb.b = b;
+	ok_color::HSV ok_hsv = ok_color::srgb_to_okhsv(rgb);
+	if (Math::is_nan(ok_hsv.s)) {
+		return 0.0f;
+	}
+	return CLAMP(ok_hsv.s, 0.0f, 1.0f);
+}
+
+float Color::get_ok_hsv_v() const {
+	ok_color::RGB rgb;
+	rgb.r = r;
+	rgb.g = g;
+	rgb.b = b;
+	ok_color::HSV ok_hsv = ok_color::srgb_to_okhsv(rgb);
+	if (Math::is_nan(ok_hsv.v)) {
+		return 0.0f;
+	}
+	return CLAMP(ok_hsv.v, 0.0f, 1.0f);
 }
 
 float Color::get_ok_hsl_h() const {
