@@ -42,10 +42,41 @@ class GDScriptAnalyzer {
 	GDScriptParser *parser = nullptr;
 	HashMap<String, Ref<GDScriptParserRef>> depended_parsers;
 
-	const GDScriptParser::EnumNode *current_enum = nullptr;
-	GDScriptParser::LambdaNode *current_lambda = nullptr;
 	List<GDScriptParser::LambdaNode *> pending_body_resolution_lambdas;
 	bool static_context = false;
+
+	class NodeResolvingGuard {
+		GDScriptParser::Node *node = nullptr;
+		GDScriptParser::DataType *datatype_ptr = nullptr;
+		GDScriptParser::DataType bad_datatype;
+
+	public:
+		NodeResolvingGuard(GDScriptParser::Node *p_node, GDScriptParser::DataType p_bad_datatype) {
+			ERR_FAIL_NULL(p_node);
+			node = p_node;
+			bad_datatype = p_bad_datatype;
+			GDScriptParser::DataType resolving_datatype;
+			resolving_datatype.kind = GDScriptParser::DataType::RESOLVING;
+			p_node->set_datatype(resolving_datatype);
+		}
+
+		NodeResolvingGuard(GDScriptParser::DataType &p_datatype_ref, GDScriptParser::DataType p_bad_datatype) {
+			datatype_ptr = &p_datatype_ref;
+			bad_datatype = p_bad_datatype;
+			GDScriptParser::DataType resolving_datatype;
+			resolving_datatype.kind = GDScriptParser::DataType::RESOLVING;
+			p_datatype_ref = resolving_datatype;
+		}
+
+		~NodeResolvingGuard() {
+			if (node != nullptr && node->get_datatype().is_resolving()) {
+				node->set_datatype(bad_datatype);
+			}
+			if (datatype_ptr != nullptr && datatype_ptr->is_resolving()) {
+				*datatype_ptr = bad_datatype;
+			}
+		}
+	};
 
 	// Tests for detecting invalid overloading of script members
 	static _FORCE_INLINE_ bool has_member_name_conflict_in_script_class(const StringName &p_name, const GDScriptParser::ClassNode *p_current_class_node, const GDScriptParser::Node *p_member);
@@ -53,7 +84,10 @@ class GDScriptAnalyzer {
 	Error check_native_member_name_conflict(const StringName &p_member_name, const GDScriptParser::Node *p_member_node, const StringName &p_native_type_string);
 	Error check_class_member_name_conflict(const GDScriptParser::ClassNode *p_class_node, const StringName &p_member_name, const GDScriptParser::Node *p_member_node);
 
-	void get_class_node_current_scope_classes(GDScriptParser::ClassNode *p_node, List<GDScriptParser::ClassNode *> *p_list);
+	template<typename Fn>
+	void for_class_node_current_scope_classes(GDScriptParser::ClassNode *p_class, Fn &&p_fn, bool p_resolve_base_classes, bool p_use_outer_classes, const GDScriptParser::Node *p_source = nullptr);
+	template<typename Fn>
+	bool for_class_node_current_scope_classes_impl(GDScriptParser::ClassNode *p_class, Fn &&p_fn, bool p_resolve_base_classes, bool p_use_outer_classes, const GDScriptParser::Node *p_source, HashSet<GDScriptParser::ClassNode *> &p_class_set);
 
 	Error resolve_class_inheritance(GDScriptParser::ClassNode *p_class, const GDScriptParser::Node *p_source = nullptr);
 	Error resolve_class_inheritance(GDScriptParser::ClassNode *p_class, bool p_recursive);
@@ -97,6 +131,7 @@ class GDScriptAnalyzer {
 	void reduce_get_node(GDScriptParser::GetNodeNode *p_get_node);
 	void reduce_identifier(GDScriptParser::IdentifierNode *p_identifier, bool can_be_builtin = false);
 	void reduce_identifier_from_base(GDScriptParser::IdentifierNode *p_identifier, GDScriptParser::DataType *p_base = nullptr);
+	void reduce_identifier_from_base_class(GDScriptParser::IdentifierNode *p_identifier, StringName p_name, GDScriptParser::DataType p_base, bool p_base_is_inferred_self, GDScriptParser::ClassNode *p_class, HashSet<GDScriptParser::ClassNode *> &p_class_set, bool p_is_base = true);
 	void reduce_lambda(GDScriptParser::LambdaNode *p_lambda);
 	void reduce_literal(GDScriptParser::LiteralNode *p_literal);
 	void reduce_preload(GDScriptParser::PreloadNode *p_preload);

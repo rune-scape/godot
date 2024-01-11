@@ -502,10 +502,39 @@ void GDScriptParser::end_statement(const String &p_context) {
 	}
 }
 
+void GDScriptParser::init_class_datatype(ClassNode *p_class) {
+	if (p_class->identifier) {
+		StringName class_name = p_class->identifier->name;
+		if (class_name == SNAME("new")) {
+			push_error(vformat(R"(Invalid class name: "%s".)", class_name), p_class->identifier);
+		} else if (class_name == SNAME("_init")) {
+			push_error(vformat(R"(Invalid class name: "%s".)", class_name), p_class->identifier);
+		} else if (GDScriptParser::get_builtin_type(class_name) < Variant::VARIANT_MAX) {
+			push_error(vformat(R"(Class "%s" hides a built-in type.)", class_name), p_class->identifier);
+		} else if (ClassDB::class_exists(class_name) && ClassDB::is_class_exposed(class_name)) {
+			push_error(vformat(R"(Class "%s" hides a native class.)", class_name), p_class->identifier);
+		} else if (ScriptServer::is_global_class(class_name) && (ScriptServer::get_global_class_path(class_name) != script_path || p_class != head)) {
+			push_error(vformat(R"(Class "%s" hides a global script class.)", class_name), p_class->identifier);
+		} else if (ProjectSettings::get_singleton()->has_autoload(class_name) && ProjectSettings::get_singleton()->get_autoload(class_name).is_singleton) {
+			push_error(vformat(R"(Class "%s" hides an autoload singleton.)", class_name), p_class->identifier);
+		}
+	}
+
+	GDScriptParser::DataType class_type;
+	class_type.is_constant = true;
+	class_type.is_meta_type = true;
+	class_type.type_source = GDScriptParser::DataType::ANNOTATED_EXPLICIT;
+	class_type.kind = GDScriptParser::DataType::CLASS;
+	class_type.class_type = p_class;
+	class_type.script_path = script_path;
+	class_type.builtin_type = Variant::OBJECT;
+	p_class->set_datatype(class_type);
+}
+
 void GDScriptParser::parse_program() {
 	head = alloc_node<ClassNode>();
 	head->fqcn = script_path;
-	current_class = head;
+	CurrentScopeGuard class_scope_guard(current_class, head);
 	bool can_have_class_or_extends = true;
 
 	while (!check(GDScriptTokenizer::Token::TK_EOF)) {
@@ -580,6 +609,7 @@ void GDScriptParser::parse_program() {
 		}
 	}
 
+	init_class_datatype(head);
 	parse_class_body(true);
 	complete_extents(head);
 
@@ -652,9 +682,8 @@ bool GDScriptParser::has_class(const GDScriptParser::ClassNode *p_class) const {
 GDScriptParser::ClassNode *GDScriptParser::parse_class(bool p_is_static) {
 	ClassNode *n_class = alloc_node<ClassNode>();
 
-	ClassNode *previous_class = current_class;
-	current_class = n_class;
-	n_class->outer = previous_class;
+	n_class->outer = current_class;
+	CurrentScopeGuard class_scope_guard(current_class, n_class);
 
 	if (consume(GDScriptTokenizer::Token::IDENTIFIER, R"(Expected identifier for the class name after "class".)")) {
 		n_class->identifier = parse_identifier();
@@ -673,12 +702,13 @@ GDScriptParser::ClassNode *GDScriptParser::parse_class(bool p_is_static) {
 		parse_extends();
 	}
 
+	init_class_datatype(n_class);
+
 	consume(GDScriptTokenizer::Token::COLON, R"(Expected ":" after class declaration.)");
 
 	bool multiline = match(GDScriptTokenizer::Token::NEWLINE);
 
 	if (multiline && !consume(GDScriptTokenizer::Token::INDENT, R"(Expected indented block after class declaration.)")) {
-		current_class = previous_class;
 		complete_extents(n_class);
 		return n_class;
 	}
@@ -698,7 +728,6 @@ GDScriptParser::ClassNode *GDScriptParser::parse_class(bool p_is_static) {
 		consume(GDScriptTokenizer::Token::DEDENT, R"(Missing unindent at the end of the class body.)");
 	}
 
-	current_class = previous_class;
 	return n_class;
 }
 
@@ -1087,15 +1116,13 @@ void GDScriptParser::parse_property_setter(VariableNode *p_variable) {
 			consume(GDScriptTokenizer::Token::PARENTHESIS_CLOSE, R"*(Expected ")" after parameter name.)*");
 			consume(GDScriptTokenizer::Token::COLON, R"*(Expected ":" after ")".)*");
 
-			FunctionNode *previous_function = current_function;
-			current_function = function;
+			CurrentScopeGuard fn_scope_guard(current_function, function);
 			if (p_variable->setter_parameter != nullptr) {
 				SuiteNode *body = alloc_node<SuiteNode>();
 				body->add_local(parameter, function);
 				function->body = parse_suite("setter declaration", body);
 				p_variable->setter = function;
 			}
-			current_function = previous_function;
 			complete_extents(function);
 			break;
 		}
@@ -1124,14 +1151,12 @@ void GDScriptParser::parse_property_getter(VariableNode *p_variable) {
 			function->identifier = identifier;
 			function->is_static = p_variable->is_static;
 
-			FunctionNode *previous_function = current_function;
-			current_function = function;
+			CurrentScopeGuard fn_scope_guard(current_function, function);
 
 			SuiteNode *body = alloc_node<SuiteNode>();
 			function->body = parse_suite("getter declaration", body);
 			p_variable->getter = function;
 
-			current_function = previous_function;
 			complete_extents(function);
 			break;
 		}
@@ -1437,24 +1462,21 @@ GDScriptParser::FunctionNode *GDScriptParser::parse_function(bool p_is_static) {
 		return nullptr;
 	}
 
-	FunctionNode *previous_function = current_function;
-	current_function = function;
+	CurrentScopeGuard fn_scope_guard(current_function, function);
 
 	function->identifier = parse_identifier();
 	function->is_static = p_is_static;
 
 	SuiteNode *body = alloc_node<SuiteNode>();
-	SuiteNode *previous_suite = current_suite;
-	current_suite = body;
+	{
+		CurrentScopeGuard suite_scope_guard(current_suite, body);
+		push_multiline(true);
+		consume(GDScriptTokenizer::Token::PARENTHESIS_OPEN, R"(Expected opening "(" after function name.)");
+		parse_function_signature(function, body, "function");
+	}
 
-	push_multiline(true);
-	consume(GDScriptTokenizer::Token::PARENTHESIS_OPEN, R"(Expected opening "(" after function name.)");
-	parse_function_signature(function, body, "function");
-
-	current_suite = previous_suite;
 	function->body = parse_suite("function declaration", body);
 
-	current_function = previous_function;
 	complete_extents(function);
 	return function;
 }
@@ -1551,7 +1573,7 @@ GDScriptParser::SuiteNode *GDScriptParser::parse_suite(const String &p_context, 
 	SuiteNode *suite = p_suite != nullptr ? p_suite : alloc_node<SuiteNode>();
 	suite->parent_block = current_suite;
 	suite->parent_function = current_function;
-	current_suite = suite;
+	CurrentScopeGuard suite_scope_guard(current_suite, suite);
 
 	if (!p_for_lambda && suite->parent_block != nullptr && suite->parent_block->is_in_loop) {
 		// Do not reset to false if true is set before calling parse_suite().
@@ -1566,7 +1588,6 @@ GDScriptParser::SuiteNode *GDScriptParser::parse_suite(const String &p_context, 
 
 	if (multiline) {
 		if (!consume(GDScriptTokenizer::Token::INDENT, vformat(R"(Expected indented block after %s.)", p_context))) {
-			current_suite = suite->parent_block;
 			complete_extents(suite);
 			return suite;
 		}
@@ -1637,7 +1658,6 @@ GDScriptParser::SuiteNode *GDScriptParser::parse_suite(const String &p_context, 
 	if (p_for_lambda) {
 		lambda_ended = true;
 	}
-	current_suite = suite->parent_block;
 	return suite;
 }
 
@@ -1937,15 +1957,12 @@ GDScriptParser::IfNode *GDScriptParser::parse_if(const String &p_token) {
 		else_block->parent_function = current_function;
 		else_block->parent_block = current_suite;
 
-		SuiteNode *previous_suite = current_suite;
-		current_suite = else_block;
+		CurrentScopeGuard suite_scope_guard(current_suite, else_block);
 
 		IfNode *elif = parse_if("elif");
 		else_block->statements.push_back(elif);
 		complete_extents(else_block);
 		n_if->false_block = else_block;
-
-		current_suite = previous_suite;
 	} else if (match(GDScriptTokenizer::Token::ELSE)) {
 		consume(GDScriptTokenizer::Token::COLON, R"(Expected ":" after "else".)");
 		n_if->false_block = parse_suite(R"("else" block)");
@@ -1963,6 +1980,8 @@ GDScriptParser::IfNode *GDScriptParser::parse_if(const String &p_token) {
 }
 
 GDScriptParser::MatchNode *GDScriptParser::parse_match() {
+	ERR_FAIL_NULL_V(current_suite, nullptr);
+
 	MatchNode *match = alloc_node<MatchNode>();
 
 	match->test = parse_expression(false);
@@ -2051,9 +2070,8 @@ GDScriptParser::MatchBranchNode *GDScriptParser::parse_match_branch() {
 			}
 		}
 
-		SuiteNode *parent_block = current_suite;
-		branch->guard_body->parent_block = parent_block;
-		current_suite = branch->guard_body;
+		branch->guard_body->parent_block = current_suite;
+		CurrentScopeGuard suite_scope_guard(current_suite, branch->guard_body);
 
 		ExpressionNode *guard = parse_expression(false);
 		if (guard == nullptr) {
@@ -2061,7 +2079,6 @@ GDScriptParser::MatchBranchNode *GDScriptParser::parse_match_branch() {
 		} else {
 			branch->guard_body->statements.append(guard);
 		}
-		current_suite = parent_block;
 		complete_extents(branch->guard_body);
 
 		has_guard = true;
@@ -2089,6 +2106,8 @@ GDScriptParser::MatchBranchNode *GDScriptParser::parse_match_branch() {
 }
 
 GDScriptParser::PatternNode *GDScriptParser::parse_match_pattern(PatternNode *p_root_pattern) {
+	ERR_FAIL_NULL_V(current_suite, nullptr);
+
 	PatternNode *pattern = alloc_node<PatternNode>();
 	reset_extents(pattern, current);
 
@@ -3222,22 +3241,17 @@ GDScriptParser::ExpressionNode *GDScriptParser::parse_lambda(ExpressionNode *p_p
 		consume(GDScriptTokenizer::Token::PARENTHESIS_OPEN, R"(Expected opening "(" after "func".)");
 	}
 
-	FunctionNode *previous_function = current_function;
-	current_function = function;
-
-	LambdaNode *previous_lambda = current_lambda;
-	current_lambda = lambda;
+	CurrentScopeGuard fn_scope_guard(current_function, function);
+	CurrentScopeGuard lambda_scope_guard(current_lambda, lambda);
 
 	SuiteNode *body = alloc_node<SuiteNode>();
 	body->parent_function = current_function;
 	body->parent_block = current_suite;
 
-	SuiteNode *previous_suite = current_suite;
-	current_suite = body;
-
-	parse_function_signature(function, body, "lambda");
-
-	current_suite = previous_suite;
+	{
+		CurrentScopeGuard suite_scope_guard(current_suite, body);
+		parse_function_signature(function, body, "lambda");
+	}
 
 	bool previous_in_lambda = in_lambda;
 	in_lambda = true;
@@ -3264,8 +3278,6 @@ GDScriptParser::ExpressionNode *GDScriptParser::parse_lambda(ExpressionNode *p_p
 		tokenizer.pop_expression_indented_block();
 	}
 
-	current_function = previous_function;
-	current_lambda = previous_lambda;
 	in_lambda = previous_in_lambda;
 	lambda->function = function;
 
@@ -3885,9 +3897,10 @@ bool GDScriptParser::icon_annotation(const AnnotationNode *p_annotation, Node *p
 }
 
 bool GDScriptParser::onready_annotation(const AnnotationNode *p_annotation, Node *p_target, ClassNode *p_class) {
+	ERR_FAIL_NULL_V(current_class, false);
 	ERR_FAIL_COND_V_MSG(p_target->type != Node::VARIABLE, false, R"("@onready" annotation can only be applied to class variables.)");
 
-	if (current_class && !ClassDB::is_parent_class(current_class->get_datatype().native_type, SNAME("Node"))) {
+	if (!ClassDB::is_parent_class(current_class->get_datatype().native_type, SNAME("Node"))) {
 		push_error(R"("@onready" can only be used in classes that inherit "Node".)", p_annotation);
 	}
 

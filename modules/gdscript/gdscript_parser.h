@@ -780,6 +780,16 @@ public:
 			members_indices[name] = members.size();
 			members.push_back(Member(p_annotation_node));
 		}
+		bool is_base_class_of(ClassNode *p_class) {
+			while (p_class != nullptr) {
+				if (this == p_class) {
+					return true;
+				}
+				p_class = p_class->base_type.class_type;
+			}
+
+			return false;
+		}
 
 		ClassNode() {
 			type = CLASS;
@@ -1332,6 +1342,26 @@ private:
 	FunctionNode *current_function = nullptr;
 	LambdaNode *current_lambda = nullptr;
 	SuiteNode *current_suite = nullptr;
+	EnumNode *current_enum = nullptr;
+
+	class CurrentScopeGuard {
+		Node *prev_scope_node = nullptr;
+		Node **current_scope_node_ptr = nullptr;
+
+	public:
+		template<typename T>
+		CurrentScopeGuard(T *&p_scope_ptr, Node *p_current_scope) {
+			prev_scope_node = p_scope_ptr;
+			current_scope_node_ptr = reinterpret_cast<Node **>(&p_scope_ptr);
+			*current_scope_node_ptr = p_current_scope;
+		}
+
+		~CurrentScopeGuard() {
+			if (current_scope_node_ptr != nullptr) {
+				*current_scope_node_ptr = prev_scope_node;
+			}
+		}
+	};
 
 	CompletionContext completion_context;
 	CompletionCall completion_call;
@@ -1444,6 +1474,7 @@ private:
 
 	// Main blocks.
 	void parse_program();
+	void init_class_datatype(ClassNode *p_class);
 	ClassNode *parse_class(bool p_is_static);
 	void parse_class_name();
 	void parse_extends();
