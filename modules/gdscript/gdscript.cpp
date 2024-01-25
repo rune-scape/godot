@@ -846,15 +846,25 @@ void GDScript::unload_static() const {
 }
 
 Variant GDScript::callp(const StringName &p_method, const Variant **p_args, int p_argcount, Callable::CallError &r_error) {
-	GDScript *top = this;
-	while (top) {
-		HashMap<StringName, GDScriptFunction *>::Iterator E = top->member_functions.find(p_method);
-		if (E) {
-			ERR_FAIL_COND_V_MSG(!E->value->is_static(), Variant(), "Can't call non-static function '" + String(p_method) + "' in script.");
+	if (p_method == SNAME("new")) {
+		// Constructor.
+		return _new(p_args, p_argcount, r_error);
+	}
 
-			return E->value->call(nullptr, p_args, p_argcount, r_error);
-		}
-		top = top->_base;
+	HashMap<StringName, GDScriptFunction *>::Iterator E = member_functions.find(p_method);
+	if (E) {
+		ERR_FAIL_COND_V_MSG(!E->value->is_static(), Variant(), "Can't call non-static function '" + String(p_method) + "' in script.");
+		return E->value->call(nullptr, p_args, p_argcount, r_error);
+	}
+
+	if (_base) {
+		return _base->callp(p_method, p_args, p_argcount, r_error);
+	}
+	
+	MethodBind *method = ClassDB::get_method(native->get_name(), p_method);
+	if (method && method->is_static()) {
+		// Native static method.
+		return method->call(nullptr, p_args, p_argcount, r_error);
 	}
 
 	//none found, regular
