@@ -1928,6 +1928,7 @@ Variant GDScriptFunction::call(GDScriptInstance *p_instance, const Variant **p_a
 		for (int i = 0; i < argc; i++) {                                             \
 			GET_INSTRUCTION_ARG(v, i);                                               \
 			argptrs[i] = VariantInternal::get_opaque_pointer((const Variant *)v);    \
+			GD_ERR_BREAK(argptrs[i] == nullptr);                                     \
 		}                                                                            \
 		uint64_t call_time = 0;                                                      \
 		if (GDScriptLanguage::get_singleton()->profiling) {                          \
@@ -1957,6 +1958,7 @@ Variant GDScriptFunction::call(GDScriptInstance *p_instance, const Variant **p_a
 		for (int i = 0; i < argc; i++) {                                          \
 			GET_INSTRUCTION_ARG(v, i);                                            \
 			argptrs[i] = VariantInternal::get_opaque_pointer((const Variant *)v); \
+			GD_ERR_BREAK(argptrs[i] == nullptr);                                  \
 		}                                                                         \
 		GET_INSTRUCTION_ARG(ret, argc + 1);                                       \
 		VariantInternal::initialize(ret, Variant::m_type);                        \
@@ -2035,6 +2037,7 @@ Variant GDScriptFunction::call(GDScriptInstance *p_instance, const Variant **p_a
 				for (int i = 0; i < argc; i++) {
 					GET_INSTRUCTION_ARG(v, i);
 					argptrs[i] = VariantInternal::get_opaque_pointer((const Variant *)v);
+					GD_ERR_BREAK(argptrs[i] == nullptr);
 				}
 #ifdef DEBUG_ENABLED
 				uint64_t call_time = 0;
@@ -2095,6 +2098,7 @@ Variant GDScriptFunction::call(GDScriptInstance *p_instance, const Variant **p_a
 				for (int i = 0; i < argc; i++) {
 					GET_INSTRUCTION_ARG(v, i);
 					argptrs[i] = VariantInternal::get_opaque_pointer((const Variant *)v);
+					GD_ERR_BREAK(argptrs[i] == nullptr);
 				}
 #ifdef DEBUG_ENABLED
 				uint64_t call_time = 0;
