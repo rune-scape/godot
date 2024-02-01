@@ -133,7 +133,7 @@ public:
 	class UpdatableFuncPtr {
 		friend class GDScript;
 
-		GDScriptFunction *ptr;
+		GDScriptFunction *ptr = nullptr;
 		GDScript *script = nullptr;
 		List<UpdatableFuncPtr *>::Element *list_element = nullptr;
 
