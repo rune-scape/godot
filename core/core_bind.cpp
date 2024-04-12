@@ -523,6 +523,10 @@ String OS::get_cache_dir() const {
 	return ::OS::get_singleton()->get_cache_path();
 }
 
+bool OS::is_crashing() const {
+	return ::OS::get_singleton()->is_crashing();
+}
+
 bool OS::is_debug_build() const {
 #ifdef DEBUG_ENABLED
 	return true;
@@ -630,6 +634,7 @@ void OS::_bind_methods() {
 	ClassDB::bind_method(D_METHOD("is_userfs_persistent"), &OS::is_userfs_persistent);
 	ClassDB::bind_method(D_METHOD("is_stdout_verbose"), &OS::is_stdout_verbose);
 
+	ClassDB::bind_method(D_METHOD("is_crashing"), &OS::is_crashing);
 	ClassDB::bind_method(D_METHOD("is_debug_build"), &OS::is_debug_build);
 
 	ClassDB::bind_method(D_METHOD("get_static_memory_usage"), &OS::get_static_memory_usage);

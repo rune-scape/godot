@@ -31,6 +31,7 @@
 #include "main_loop.h"
 
 #include "core/object/script_language.h"
+#include "core/os/os.h"
 
 void MainLoop::_bind_methods() {
 	BIND_CONSTANT(NOTIFICATION_OS_MEMORY_WARNING);
@@ -50,6 +51,14 @@ void MainLoop::_bind_methods() {
 	GDVIRTUAL_BIND(_physics_process, "delta");
 	GDVIRTUAL_BIND(_process, "delta");
 	GDVIRTUAL_BIND(_finalize);
+}
+
+void MainLoop::_notification(int p_what) {
+	if (p_what == NOTIFICATION_CRASH) {
+		if (OS::get_singleton() != nullptr) {
+			OS::get_singleton()->_is_crashing = true;
+		}
+	}
 }
 
 void MainLoop::initialize() {

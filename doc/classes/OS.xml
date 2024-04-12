@@ -558,6 +558,12 @@
 				[b]Note:[/b] On the Web platform, one of the following additional tags is defined to indicate the host platform: [code]web_android[/code], [code]web_ios[/code], [code]web_linuxbsd[/code], [code]web_macos[/code], or [code]web_windows[/code].
 			</description>
 		</method>
+		<method name="is_crashing" qualifiers="const">
+			<return type="bool" />
+			<description>
+				Returns [code]true[/code] if a crash state has been triggered. (see [method crash] and [constant MainLoop.NOTIFICATION_CRASH])
+			</description>
+		</method>
 		<method name="is_debug_build" qualifiers="const">
 			<return type="bool" />
 			<description>

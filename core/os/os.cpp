@@ -200,6 +200,10 @@ void OS::set_stderr_enabled(bool p_enabled) {
 	_stderr_enabled = p_enabled;
 }
 
+bool OS::is_crashing() const {
+	return _is_crashing;
+}
+
 int OS::get_exit_code() const {
 	return _exit_code;
 }

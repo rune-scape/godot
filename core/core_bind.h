@@ -188,6 +188,7 @@ public:
 
 	String get_model_name() const;
 
+	bool is_crashing() const;
 	bool is_debug_build() const;
 
 	String get_unique_id() const;

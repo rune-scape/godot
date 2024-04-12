@@ -62,6 +62,7 @@ class OS {
 	bool _allow_layered = false;
 	bool _stdout_enabled = true;
 	bool _stderr_enabled = true;
+	bool _is_crashing = false;
 	bool _writing_movie = false;
 
 	CompositeLogger *_logger = nullptr;
@@ -98,6 +99,7 @@ public:
 
 protected:
 	friend class Main;
+	friend class MainLoop;
 	// Needed by tests to setup command-line args.
 	friend int test_main(int argc, char *argv[]);
 
@@ -240,6 +242,7 @@ public:
 	bool is_stderr_enabled() const;
 	void set_stdout_enabled(bool p_enabled);
 	void set_stderr_enabled(bool p_enabled);
+	bool is_crashing() const;
 
 	virtual void disable_crash_handler() {}
 	virtual bool is_disable_crash_handler() const { return false; }

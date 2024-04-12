@@ -34,6 +34,7 @@
 #include "core/core_string_names.h"
 #include "core/object/class_db.h"
 #include "core/object/script_language.h"
+#include "core/os/os.h"
 
 #include <stdio.h>
 
@@ -95,8 +96,10 @@ Error CallQueue::push_callablep(const Callable &p_callable, const Variant **p_ar
 
 	if ((page_bytes[pages_used - 1] + room_needed) > uint32_t(PAGE_SIZE_BYTES)) {
 		if (pages_used == max_pages) {
-			fprintf(stderr, "Failed method: %s. Message queue out of memory. %s\n", String(p_callable).utf8().get_data(), error_text.utf8().get_data());
-			statistics();
+			if (!OS::get_singleton()->is_crashing()) {
+				fprintf(stderr, "Failed method: %s. Message queue out of memory. %s\n", String(p_callable).utf8().get_data(), error_text.utf8().get_data());
+				statistics();
+			}
 			UNLOCK_MUTEX;
 			return ERR_OUT_OF_MEMORY;
 		}
