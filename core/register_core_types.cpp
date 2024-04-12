@@ -374,6 +374,7 @@ void unregister_core_types() {
 	memdelete(_engine_debugger);
 	memdelete(_marshalls);
 	memdelete(_classdb);
+	memdelete(_time);
 	memdelete(_engine);
 	memdelete(_os);
 	memdelete(_resource_saver);
@@ -425,7 +426,6 @@ void unregister_core_types() {
 	ResourceLoader::finalize();
 
 	ClassDB::cleanup_defaults();
-	memdelete(_time);
 	ObjectDB::cleanup();
 
 	Variant::unregister_types();
