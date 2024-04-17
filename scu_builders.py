@@ -195,15 +195,9 @@ def process_folder(folders, sought_exceptions=[], includes_per_scu=0, extension=
     # calculate how many lines to write in each file
     total_lines = len(found_includes)
 
-    # adjust number of output files according to whether DEV or release
     num_output_files = 1
-    if _is_release_build:
-        # always have a maximum in release
-        includes_per_scu = 8
+    if includes_per_scu > 0:
         num_output_files = max(math.ceil(total_lines / float(includes_per_scu)), 1)
-    else:
-        if includes_per_scu > 0:
-            num_output_files = max(math.ceil(total_lines / float(includes_per_scu)), 1)
 
     lines_per_file = math.ceil(total_lines / float(num_output_files))
     lines_per_file = max(lines_per_file, 1)
