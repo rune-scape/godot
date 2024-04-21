@@ -29,12 +29,12 @@ header="""\
 /*************************************************************************/
 """
 
-f = open("files","rb")
+f = open("files","r")
 
 fname = f.readline()
 while (fname!=""):
 
-  fr = open(fname.strip(),"rb")
+  fr = open(fname.strip(),"r")
   l = fr.readline()
   bc=False
   fsingle = fname.strip()
@@ -64,7 +64,7 @@ while (fname!=""):
     l=fr.readline()
 
   fr.close()      
-  fr=open(fname.strip(),"wb")
+  fr=open(fname.strip(),"w")
   fr.write(text)
   fr.close()
   #print(text)

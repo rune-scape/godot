@@ -13,7 +13,7 @@ def get_name():
 def can_build():
 
 	import os
-	if (not os.environ.has_key("QNX_TARGET")):
+	if ("QNX_TARGET" not in os.environ):
 		return False
 	return True
 

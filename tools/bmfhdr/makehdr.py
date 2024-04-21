@@ -5,7 +5,7 @@ import sys
 if (len(sys.argv)!=2):
   print("Pass me a .fnt argument!")
   
-f = open(sys.argv[1],"rb")
+f = open(sys.argv[1],"r")
 
 name = sys.argv[1].lower().replace(".fnt","")
 

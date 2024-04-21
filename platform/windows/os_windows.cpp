@@ -1237,12 +1237,12 @@ void OS_Windows::print_error(const char* p_function,const char* p_file,int p_lin
 	if (!hCon || hCon==INVALID_HANDLE_VALUE) {
 		if (p_rationale && p_rationale[0]) {
 
-			print("\E[1;31;40mERROR: %s: \E[1;37;40m%s\n",p_function,p_rationale);
-			print("\E[0;31;40m   At: %s:%i.\E[0;0;37m\n",p_file,p_line);
+			print("\x1b[1;31;40mERROR: %s: \x1b[1;37;40m%s\n",p_function,p_rationale);
+			print("\x1b[0;31;40m   At: %s:%i.\x1b[0;0;37m\n",p_file,p_line);
 
 		} else {
-			print("\E[1;31;40mERROR: %s: \E[1;37;40m%s\n",p_function,p_code);
-			print("\E[0;31;40m   At: %s:%i.\E[0;0;37m\n",p_file,p_line);
+			print("\x1b[1;31;40mERROR: %s: \x1b[1;37;40m%s\n",p_function,p_code);
+			print("\x1b[0;31;40m   At: %s:%i.\x1b[0;0;37m\n",p_file,p_line);
 
 		}
 	} else {

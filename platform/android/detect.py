@@ -10,23 +10,20 @@ def get_name():
 	return "Android"
 
 def can_build():
-
-        import os
-        if (not os.environ.has_key("ANDROID_NDK_ROOT")):
-        	return False
+	import os
+	if ("ANDROID_NDK_ROOT" not in os.environ):
+		return False
 	return True
 
 def get_opts():
-
 	return [
-	     ('ANDROID_NDK_ROOT', 'the path to Android NDK', os.environ.get("ANDROID_NDK_ROOT", 0)), 
-             ('NDK_TOOLCHAIN', 'toolchain to use for the NDK',"arm-eabi-4.4.0"), 	                      
-             #android 2.3       
-		 ('ndk_platform', 'compile for platform: (2.2,2.3)',"2.2"),
-		 ('NDK_TARGET', 'toolchain to use for the NDK',"arm-linux-androideabi-4.7"),
-	     ('android_stl','enable STL support in android port (for modules)','no'),
-	     ('armv6','compile for older phones running arm v6 (instead of v7+neon+smp)','no')
-
+		('ANDROID_NDK_ROOT', 'the path to Android NDK', os.environ.get("ANDROID_NDK_ROOT", 0)), 
+		('NDK_TOOLCHAIN', 'toolchain to use for the NDK',"arm-eabi-4.4.0"),
+		#android 2.3
+		('ndk_platform', 'compile for platform: (2.2,2.3)',"2.2"),
+		('NDK_TARGET', 'toolchain to use for the NDK',"arm-linux-androideabi-4.7"),
+		('android_stl','enable STL support in android port (for modules)','no'),
+		('armv6','compile for older phones running arm v6 (instead of v7+neon+smp)','no')
 	]
 
 def get_flags():
@@ -104,7 +101,7 @@ def configure(env):
 	ld_path=env["ANDROID_NDK_ROOT"]+"/platforms/"+ndk_platform+"/arch-arm/usr/lib"
 	env.Append(CPPPATH=[gcc_include])
 #	env['CCFLAGS'] = string.split('-DNO_THREADS -MMD -MP -MF -fpic -ffunction-sections -funwind-tables -fstack-protector -D__ARM_ARCH_5__ -D__ARM_ARCH_5T__ -D__ARM_ARCH_5E__ -D__ARM_ARCH_5TE__  -Wno-psabi -march=armv5te -mtune=xscale -msoft-float  -fno-exceptions -mthumb -fno-strict-aliasing -DANDROID -Wa,--noexecstack -DGLES2_ENABLED ')
-	print("********* armv6", env['armv6'])
+	print(("********* armv6", env['armv6']))
 	if env["armv6"]!="no":
 		env['CCFLAGS'] = string.split('-DNO_STATVFS -MMD -MP -MF -fpic -ffunction-sections -funwind-tables -fstack-protector -D__ARM_ARCH_6__ -D__GLIBC__  -Wno-psabi -march=armv6 -mfpu=vfp -mfloat-abi=softfp -funsafe-math-optimizations -fno-strict-aliasing -DANDROID -Wa,--noexecstack -DGLES2_ENABLED -DGLES1_ENABLED')
 	else:

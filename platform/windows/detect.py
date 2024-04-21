@@ -7,9 +7,9 @@ import sys
 
 def is_active():
 	return True
-        
+
 def get_name():
-        return "Windows"
+	return "Windows"
 
 def can_build():
 	
@@ -117,15 +117,15 @@ def configure(env):
 		env.Append(LIBS=['winmm','opengl32','dsound','kernel32','ole32','user32','gdi32','wsock32'])
 		
 		env.Append(LIBPATH=[os.getenv("WindowsSdkDir")+"/Lib"])
-                if (os.getenv("DXSDK_DIR")):
-                        DIRECTX_PATH=os.getenv("DXSDK_DIR")
-                else:
-                        DIRECTX_PATH="C:/Program Files/Microsoft DirectX SDK (March 2009)"
+		if (os.getenv("DXSDK_DIR")):
+			DIRECTX_PATH=os.getenv("DXSDK_DIR")
+		else:
+			DIRECTX_PATH="C:/Program Files/Microsoft DirectX SDK (March 2009)"
 
-                if (os.getenv("VCINSTALLDIR")):
-                        VC_PATH=os.getenv("VCINSTALLDIR")
-                else:
-                        VC_PATH=""
+		if (os.getenv("VCINSTALLDIR")):
+			VC_PATH=os.getenv("VCINSTALLDIR")
+		else:
+			VC_PATH=""
 
 		env.Append(CCFLAGS=["/I"+VC_PATH+"/Include"])
 		env.Append(LIBPATH=[VC_PATH+"/Lib"])
@@ -140,10 +140,10 @@ def configure(env):
 		mingw_prefix=""
 
 		if (env["force_32_bits"]!="no"):
-		    env['OBJSUFFIX'] = ".32"+env['OBJSUFFIX']
-		    env['LIBSUFFIX'] = ".32"+env['LIBSUFFIX']
-		    env.Append(CCFLAGS=['-m32'])
-		    env.Append(LINKFLAGS=['-m32'])
+			env['OBJSUFFIX'] = ".32"+env['OBJSUFFIX']
+			env['LIBSUFFIX'] = ".32"+env['LIBSUFFIX']
+			env.Append(CCFLAGS=['-m32'])
+			env.Append(LINKFLAGS=['-m32'])
 
 
 

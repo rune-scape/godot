@@ -6,7 +6,7 @@ arg="memdump.txt"
 if (len(sys.argv)>1):
 	arg=sys.argv[1]
 
-f = open(arg,"rb")
+f = open(arg,"r")
 
 
 l=f.readline()

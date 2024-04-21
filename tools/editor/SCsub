@@ -6,7 +6,7 @@ def make_doc_header(target,source,env):
 	src = source[0].srcnode().abspath
 	dst = target[0].srcnode().abspath
 	f = open(src,"rb")
-	g = open(dst,"wb")
+	g = open(dst,"w")
 	buf = f.read()
 	decomp_size = len(buf)
 	import zlib
@@ -20,7 +20,7 @@ def make_doc_header(target,source,env):
 	g.write("static const int _doc_data_uncompressed_size="+str(decomp_size)+";\n")
 	g.write("static const unsigned char _doc_data_compressed[]={\n")
 	for i in range(len(buf)):
-		g.write(str(ord(buf[i]))+",\n")
+		g.write(str(buf[i])+",\n")
 	g.write("};\n")
 	g.write("#endif")
 
@@ -39,7 +39,7 @@ if (env["tools"]=="yes"):
 		reg_exporters+='\tregister_'+e+'_exporter();\n'
 		reg_exporters_inc+='#include "platform/'+e+'/export/export.h"\n'
 	reg_exporters+='}\n'
-	f = open("register_exporters.cpp","wb")
+	f = open("register_exporters.cpp","w")
 	f.write(reg_exporters_inc)
 	f.write(reg_exporters)
 	f.close()
