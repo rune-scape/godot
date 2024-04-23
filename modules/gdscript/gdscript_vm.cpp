@@ -670,22 +670,16 @@ Variant GDScriptFunction::call(GDScriptInstance *p_instance, const Variant **p_a
 				}
 #endif
 
-				// Check if this is the first run. If so, store the current signature for the optimized path.
 				if (unlikely(op_signature == 0)) {
+					// If this is the first run, store the current signature for the optimized path.
 					static Mutex initializer_mutex;
-					initializer_mutex.lock();
+					MutexLock initializer_lock(initializer_mutex);
 					Variant::Type a_type = (Variant::Type)((actual_signature >> 8) & 0xFF);
 					Variant::Type b_type = (Variant::Type)(actual_signature & 0xFF);
 
 					Variant::ValidatedOperatorEvaluator op_func = Variant::get_validated_operator_evaluator(op, a_type, b_type);
 
-					if (unlikely(!op_func)) {
-#ifdef DEBUG_ENABLED
-						err_text = "Invalid operands '" + Variant::get_type_name(a->get_type()) + "' and '" + Variant::get_type_name(b->get_type()) + "' in operator '" + Variant::get_operator_name(op) + "'.";
-#endif
-						initializer_mutex.unlock();
-						OPCODE_BREAK;
-					} else {
+					if (likely(op_func)) {
 						Variant::Type ret_type = Variant::get_operator_return_type(op, a_type, b_type);
 						VariantInternal::initialize(dst, ret_type);
 						op_func(a, b, dst);
@@ -697,8 +691,9 @@ Variant GDScriptFunction::call(GDScriptInstance *p_instance, const Variant **p_a
 							Variant::ValidatedOperatorEvaluator *tmp = reinterpret_cast<Variant::ValidatedOperatorEvaluator *>(&_code_ptr[ip + 7]);
 							*tmp = op_func;
 						}
+					} else {
+						goto slow_op_eval_path;
 					}
-					initializer_mutex.unlock();
 				} else if (likely(op_signature == actual_signature)) {
 					// If the signature matches, we can use the optimized path.
 					Variant::Type ret_type = static_cast<Variant::Type>(_code_ptr[ip + 6]);
@@ -708,9 +703,9 @@ Variant GDScriptFunction::call(GDScriptInstance *p_instance, const Variant **p_a
 					VariantInternal::initialize(dst, ret_type);
 					op_func(a, b, dst);
 				} else {
+				slow_op_eval_path:
 					// If the signature doesn't match, we have to use the slow path.
 #ifdef DEBUG_ENABLED
-
 					Variant ret;
 					Variant::evaluate(op, *a, *b, ret, valid);
 #else
@@ -3445,6 +3440,7 @@ Variant GDScriptFunction::call(GDScriptInstance *p_instance, const Variant **p_a
 				line = _code_ptr[ip + 1];
 				ip += 2;
 
+#ifdef DEBUG_ENABLED
 				if (EngineDebugger::is_active()) {
 					// line
 					bool do_break = false;
@@ -3468,6 +3464,7 @@ Variant GDScriptFunction::call(GDScriptInstance *p_instance, const Variant **p_a
 
 					EngineDebugger::get_singleton()->line_poll();
 				}
+#endif
 			}
 			DISPATCH_OPCODE;
 

@@ -843,6 +843,9 @@ public:
 
 	StringName get_class_name_for_extension(const GDExtension *p_library) const;
 
+	static StringName get_op_overload_name(Variant::Operator p_op);
+	static StringName get_op_roverload_name(Variant::Operator p_op);
+
 	/* IAPI */
 
 	void set(const StringName &p_name, const Variant &p_value, bool *r_valid = nullptr);

@@ -1058,9 +1058,56 @@ void Variant::evaluate(const Operator &p_op, const Variant &p_a,
 	ERR_FAIL_INDEX(type_b, Variant::VARIANT_MAX);
 
 	VariantEvaluatorFunction ev = operator_evaluator_table[p_op][type_a][type_b];
-	if (unlikely(!ev)) {
+	if (!ev) {
+		Object *operand_left = p_a.get_validated_object();
+		Object *operand_right = p_b.get_validated_object();
+		StringName op_overload;
+
 		r_valid = false;
 		r_ret = Variant();
+
+		Callable::CallError err;
+		if (is_op_unary(p_op) && operand_left && operand_left->has_method(op_overload = Object::get_op_overload_name(p_op))) {
+			r_ret = operand_left->callp(op_overload, nullptr, 0, err);
+			r_valid = !err.error;
+			return;
+		} else if (operand_left && operand_left->has_method(op_overload = Object::get_op_overload_name(p_op))) {
+			const Variant *variant_arg = &p_b;
+			r_ret = operand_left->callp(op_overload, &variant_arg, 1, err);
+			r_valid = !err.error;
+			return;
+		} else if (operand_right && operand_right->has_method(op_overload = Object::get_op_roverload_name(p_op))) {
+			const Variant *variant_arg = &p_a;
+			r_ret = operand_right->callp(op_overload, &variant_arg, 1, err);
+			r_valid = !err.error;
+			return;
+		} else if (p_op == OP_EQUAL || p_op == OP_NOT_EQUAL) {
+			if (p_op == OP_EQUAL) {
+				op_overload = Object::get_op_overload_name(OP_NOT_EQUAL);
+			} else if (p_op == OP_NOT_EQUAL) {
+				op_overload = Object::get_op_overload_name(OP_EQUAL);
+			}
+			if (operand_left && operand_left->has_method(op_overload)) {
+				const Variant *variant_arg = &p_b;
+				r_ret = !operand_left->callp(op_overload, &variant_arg, 1, err).booleanize();
+				r_valid = !err.error;
+				return;
+			} else if (operand_right && operand_right->has_method(op_overload)) {
+				const Variant *variant_arg = &p_a;
+				r_ret = !operand_right->callp(op_overload, &variant_arg, 1, err).booleanize();
+				r_valid = !err.error;
+				return;
+			}
+		}
+
+		if (r_valid && is_op_boolean(p_op)) {
+			r_ret = r_ret.booleanize();
+		}
+
+		if (!r_valid) {
+			r_ret = r_ret.booleanize();
+		}
+
 		return;
 	}
 
@@ -1120,6 +1167,39 @@ static const char *_op_names[Variant::OP_MAX] = {
 String Variant::get_operator_name(Operator p_op) {
 	ERR_FAIL_INDEX_V(p_op, OP_MAX, "");
 	return _op_names[p_op];
+}
+
+bool Variant::is_op_unary(Operator p_op) {
+	ERR_FAIL_INDEX_V(p_op, OP_MAX, false);
+	switch (p_op) {
+		case OP_NEGATE:
+		case OP_POSITIVE:
+		case OP_BIT_NEGATE:
+		case OP_NOT:
+			return true;
+		default:
+			return false;
+	}
+}
+
+bool Variant::is_op_boolean(Operator p_op) {
+	ERR_FAIL_INDEX_V(p_op, OP_MAX, false);
+	switch (p_op) {
+		case Variant::OP_EQUAL:
+		case Variant::OP_NOT_EQUAL:
+		case Variant::OP_LESS:
+		case Variant::OP_LESS_EQUAL:
+		case Variant::OP_GREATER:
+		case Variant::OP_GREATER_EQUAL:
+		case Variant::OP_AND:
+		case Variant::OP_OR:
+		case Variant::OP_XOR:
+		case Variant::OP_NOT:
+		case Variant::OP_IN:
+			return true;
+		default:
+			return false;
+	}
 }
 
 Variant::operator bool() const {

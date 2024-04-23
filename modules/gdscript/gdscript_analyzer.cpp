@@ -5316,6 +5316,41 @@ GDScriptParser::DataType GDScriptAnalyzer::get_operation_type(Variant::Operator 
 		result.type_source = hard_operation ? GDScriptParser::DataType::ANNOTATED_INFERRED : GDScriptParser::DataType::INFERRED;
 		result.kind = GDScriptParser::DataType::BUILTIN;
 		result.builtin_type = Variant::get_operator_return_type(p_operation, a_type, b_type);
+	} else if (p_a.is_object() || p_b.is_object()) {
+		GDScriptParser::DataType return_type;
+		List<GDScriptParser::DataType> par_types;
+		int default_arg_count = 0;
+		BitField<MethodFlags> method_flags;
+
+		StringName overload_name = Object::get_op_overload_name(p_operation);
+		StringName roverload_name = Object::get_op_roverload_name(p_operation);
+		StringName delegate_overload_name;
+		if (p_operation == Variant::OP_EQUAL) {
+			delegate_overload_name = Object::get_op_overload_name(Variant::OP_NOT_EQUAL);
+		} else if (p_operation == Variant::OP_NOT_EQUAL) {
+			delegate_overload_name = Object::get_op_overload_name(Variant::OP_EQUAL);
+		}
+
+		if (overload_name != StringName() && get_function_signature(p_source, false, p_a, overload_name, return_type, par_types, default_arg_count, method_flags)) {
+			r_valid = true;
+			result = return_type;
+			result.type_source = p_a.is_hard_type() ? GDScriptParser::DataType::ANNOTATED_INFERRED : GDScriptParser::DataType::INFERRED;
+		} else if (roverload_name != StringName() && get_function_signature(p_source, false, p_b, roverload_name, return_type, par_types, default_arg_count, method_flags)) {
+			r_valid = true;
+			result = return_type;
+			result.type_source = p_b.is_hard_type() ? GDScriptParser::DataType::ANNOTATED_INFERRED : GDScriptParser::DataType::INFERRED;
+		} else if (delegate_overload_name != StringName() && get_function_signature(p_source, false, p_a, delegate_overload_name, return_type, par_types, default_arg_count, method_flags)) {
+			r_valid = true;
+			result = return_type;
+			result.type_source = p_a.is_hard_type() ? GDScriptParser::DataType::ANNOTATED_INFERRED : GDScriptParser::DataType::INFERRED;
+		} else if (delegate_overload_name != StringName() && get_function_signature(p_source, false, p_b, delegate_overload_name, return_type, par_types, default_arg_count, method_flags)) {
+			r_valid = true;
+			result = return_type;
+			result.type_source = p_b.is_hard_type() ? GDScriptParser::DataType::ANNOTATED_INFERRED : GDScriptParser::DataType::INFERRED;
+		} else {
+			r_valid = !hard_operation;
+			result.kind = GDScriptParser::DataType::VARIANT;
+		}
 	} else {
 		r_valid = !hard_operation;
 		result.kind = GDScriptParser::DataType::VARIANT;
