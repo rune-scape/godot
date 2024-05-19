@@ -2625,6 +2625,9 @@ Error GDScriptCompiler::_prepare_compilation(GDScript *p_script, const GDScriptP
 		memdelete(when_decl.get_signal);
 		memdelete(when_decl.body);
 	}
+	for (GDScript::WhenNotifiedDeclaration &when_notif_decl : p_script->when_notified_declarations) {
+		memdelete(when_notif_decl.body);
+	}
 
 	if (p_script->implicit_initializer) {
 		memdelete(p_script->implicit_initializer);
@@ -2644,6 +2647,8 @@ Error GDScriptCompiler::_prepare_compilation(GDScript *p_script, const GDScriptP
 	p_script->has_oninit_when_decls = false;
 	p_script->has_onready_when_decls = false;
 	p_script->when_declarations.clear();
+	p_script->when_notified_declarations.clear();
+	p_script->when_notified_map.clear();
 	p_script->initializer = nullptr;
 	p_script->implicit_initializer = nullptr;
 	p_script->implicit_ready = nullptr;
@@ -2889,6 +2894,64 @@ Error GDScriptCompiler::_prepare_compilation(GDScript *p_script, const GDScriptP
 }
 
 Error GDScriptCompiler::_compile_class(GDScript *p_script, const GDScriptParser::ClassNode *p_class, bool p_keep_state) {
+	if (compiled_classes.has(p_script)) {
+		return OK;
+	}
+
+	String class_name = p_script->get_global_name();
+	if (class_name.is_empty()) {
+		class_name = p_script->get_local_name();
+	}
+	if (class_name.is_empty()) {
+		class_name = p_script->get_fully_qualified_name();
+	}
+	if (compiling_classes.has(p_script)) {
+		_set_error(vformat(R"(Cyclic class reference for "%s".)", class_name), p_class);
+		return ERR_PARSE_ERROR;
+	}
+
+	compiling_classes.insert(p_script);
+
+	if (p_script->_base) {
+		String base_class_name = p_script->_base->get_global_name();
+		if (base_class_name.is_empty()) {
+			base_class_name = p_script->_base->get_fully_qualified_name();
+		}
+
+		Error err = OK;
+		if (!p_script->_base->is_valid()) {
+			if (main_script->has_class(p_script->_base)) {
+				err = _prepare_compilation(p_script->_base, p_class->base_type.class_type, p_keep_state);
+				if (err) {
+					return err;
+				}
+				err = _compile_class(p_script->_base, p_class->base_type.class_type, p_keep_state);
+				if (err) {
+					return err;
+				}
+			} else {
+				GDScript *base_root_script = p_script->_base->get_root_script();
+				ERR_FAIL_NULL_V(base_root_script, ERR_BUG);
+				if (base_root_script->reloading) {
+					_set_error(vformat(R"(Cyclic class reference for "%s" while compiling base.)", class_name), p_class);
+					return ERR_COMPILATION_FAILED;
+				}
+				err = base_root_script->reload(true);
+				if (err != OK) {
+					_set_error(vformat(R"(Could not compile base class "%s".)", base_class_name), nullptr);
+					return ERR_COMPILATION_FAILED;
+				}
+			}
+		}
+
+		if (!p_script->_base->is_valid()) {
+			_set_error(R"(Compiler bug: base is not valid!)", nullptr);
+			return ERR_BUG;
+		}
+
+		p_script->when_notified_map = p_script->_base->when_notified_map;
+	}
+
 	// Compile member functions, getters, and setters.
 	for (int i = 0; i < p_class->members.size(); i++) {
 		const GDScriptParser::ClassNode::Member &member = p_class->members[i];
@@ -2898,6 +2961,24 @@ Error GDScriptCompiler::_compile_class(GDScript *p_script, const GDScriptParser:
 			_parse_function(err, p_script, p_class, function);
 			if (err) {
 				return err;
+			}
+		} else if (member.type == member.WHEN && member.when->is_notification) {
+			const GDScriptParser::WhenNode *when = member.when;
+			Error err = OK;
+			GDScriptFunction *body = _parse_function(err, p_script, p_class, when->function, false, true);
+			if (err) {
+				return err;
+			}
+
+			GDScript::WhenNotifiedDeclaration when_decl{
+				when->notifications,
+				body
+			};
+
+			p_script->when_notified_declarations.push_back(when_decl);
+
+			for (int notification : when_decl.notifications) {
+				p_script->when_notified_map[notification].push_back(when_decl.body);
 			}
 		} else if (member.type == member.WHEN) {
 			const GDScriptParser::WhenNode *when = member.when;
@@ -2974,6 +3055,8 @@ Error GDScriptCompiler::_compile_class(GDScript *p_script, const GDScriptParser:
 
 	p_script->_static_default_init();
 
+	compiling_classes.erase(p_script);
+	compiled_classes.insert(p_script);
 	p_script->valid = true;
 
 #ifdef DEBUG_ENABLED
@@ -3157,6 +3240,9 @@ GDScriptCompiler::ScriptLambdaInfo GDScriptCompiler::_get_script_lambda_replacem
 
 	for (GDScript::WhenDeclaration &when_decl : p_script->when_declarations) {
 		info.other_function_infos.push_back(_get_function_replacement_info(when_decl.get_signal));
+		info.other_function_infos.push_back(_get_function_replacement_info(when_decl.body));
+	}
+	for (GDScript::WhenNotifiedDeclaration &when_decl : p_script->when_notified_declarations) {
 		info.other_function_infos.push_back(_get_function_replacement_info(when_decl.body));
 	}
 
