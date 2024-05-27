@@ -556,7 +556,7 @@ if selected_platform in platform_list:
 
     # Run SCU file generation script if in a SCU build.
     if env["scu_build"]:
-        max_includes_per_scu = 8
+        max_includes_per_scu = 32
         if env_base.dev_build == True:
             max_includes_per_scu = 1024
 
