@@ -2929,6 +2929,8 @@ Error GDScriptCompiler::_compile_class(GDScript *p_script, const GDScriptParser:
 		}
 	}
 
+	p_script->_static_default_init();
+
 	p_script->valid = true;
 
 #ifdef DEBUG_ENABLED
