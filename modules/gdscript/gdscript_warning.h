@@ -70,6 +70,7 @@ public:
 		UNSAFE_METHOD_ACCESS, // Function not found in the detected type (but can be in subtypes).
 		UNSAFE_CAST, // Cast used in an unknown type.
 		UNSAFE_CALL_ARGUMENT, // Function call argument is of a supertype of the required type.
+		UNSAFE_WHEN_PARAMETER, // When declaration parameter is of a supertype of the required type from the signal.
 		UNSAFE_VOID_RETURN, // Function returns void but returned a call to a function that can't be type checked.
 		RETURN_VALUE_DISCARDED, // Function call returns something but the value isn't used.
 		STATIC_CALLED_ON_INSTANCE, // A static method was called on an instance of a class instead of on the class itself.
@@ -119,6 +120,7 @@ public:
 		IGNORE, // UNSAFE_METHOD_ACCESS // Too common in untyped scenarios.
 		IGNORE, // UNSAFE_CAST // Too common in untyped scenarios.
 		IGNORE, // UNSAFE_CALL_ARGUMENT // Too common in untyped scenarios.
+		WARN, // UNSAFE_CONNECTION
 		WARN, // UNSAFE_VOID_RETURN
 		IGNORE, // RETURN_VALUE_DISCARDED // Too spammy by default on common cases (connect, Tween, etc.).
 		WARN, // STATIC_CALLED_ON_INSTANCE

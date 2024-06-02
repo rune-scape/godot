@@ -69,6 +69,8 @@ class GDScriptAnalyzer {
 	void resolve_class_body(GDScriptParser::ClassNode *p_class, bool p_recursive);
 	void resolve_function_signature(GDScriptParser::FunctionNode *p_function, const GDScriptParser::Node *p_source = nullptr, bool p_is_lambda = false);
 	void resolve_function_body(GDScriptParser::FunctionNode *p_function, bool p_is_lambda = false);
+	void resolve_when_signature(GDScriptParser::WhenNode *p_when);
+	void resolve_when_body(GDScriptParser::WhenNode *p_when);
 	void resolve_node(GDScriptParser::Node *p_node, bool p_is_root = true);
 	void resolve_suite(GDScriptParser::SuiteNode *p_suite);
 	void resolve_assignable(GDScriptParser::AssignableNode *p_assignable, const char *p_kind);
@@ -120,6 +122,7 @@ class GDScriptAnalyzer {
 	bool function_signature_from_info(const MethodInfo &p_info, GDScriptParser::DataType &r_return_type, List<GDScriptParser::DataType> &r_par_types, int &r_default_arg_count, BitField<MethodFlags> &r_method_flags, const GDScriptParser::Node *p_source);
 	void validate_call_arg(const List<GDScriptParser::DataType> &p_par_types, int p_default_args_count, bool p_is_vararg, const GDScriptParser::CallNode *p_call);
 	void validate_call_arg(const MethodInfo &p_method, const GDScriptParser::CallNode *p_call);
+	void validate_when_connection(const GDScriptParser::WhenNode *p_when, const GDScriptParser::ExpressionNode *p_signal_expr);
 	GDScriptParser::DataType get_operation_type(Variant::Operator p_operation, const GDScriptParser::DataType &p_a, const GDScriptParser::DataType &p_b, bool &r_valid, const GDScriptParser::Node *p_source);
 	GDScriptParser::DataType get_operation_type(Variant::Operator p_operation, const GDScriptParser::DataType &p_a, bool &r_valid, const GDScriptParser::Node *p_source);
 	void update_const_expression_builtin_type(GDScriptParser::ExpressionNode *p_expression, const GDScriptParser::DataType &p_type, const char *p_usage, bool p_is_cast = false);
