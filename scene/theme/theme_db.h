@@ -49,13 +49,13 @@ class ThemeContext;
 #define BIND_THEME_ITEM(m_data_type, m_class, m_prop)                                                                   \
 	ThemeDB::get_singleton()->bind_class_item(m_data_type, get_class_static(), #m_prop, #m_prop, [](Node *p_instance) { \
 		m_class *p_cast = Object::cast_to<m_class>(p_instance);                                                         \
-		p_cast->theme_cache.m_prop = p_cast->get_theme_item(m_data_type, _scs_create(#m_prop));                         \
+		p_cast->theme_cache.m_prop = p_cast->get_theme_item(m_data_type, SNAME(#m_prop));                         \
 	})
 
 #define BIND_THEME_ITEM_CUSTOM(m_data_type, m_class, m_prop, m_item_name)                                                   \
 	ThemeDB::get_singleton()->bind_class_item(m_data_type, get_class_static(), #m_prop, m_item_name, [](Node *p_instance) { \
 		m_class *p_cast = Object::cast_to<m_class>(p_instance);                                                             \
-		p_cast->theme_cache.m_prop = p_cast->get_theme_item(m_data_type, _scs_create(m_item_name));                         \
+		p_cast->theme_cache.m_prop = p_cast->get_theme_item(m_data_type, SNAME(m_item_name));                         \
 	})
 
 // Macro for binding theme items used by this class, but defined/binded by other classes. This is primarily used for
@@ -64,13 +64,17 @@ class ThemeContext;
 #define BIND_THEME_ITEM_EXT(m_data_type, m_class, m_prop, m_item_name, m_type_name)                                                               \
 	ThemeDB::get_singleton()->bind_class_external_item(m_data_type, get_class_static(), #m_prop, m_item_name, m_type_name, [](Node *p_instance) { \
 		m_class *p_cast = Object::cast_to<m_class>(p_instance);                                                                                   \
-		p_cast->theme_cache.m_prop = p_cast->get_theme_item(m_data_type, _scs_create(m_item_name), _scs_create(m_type_name));                     \
+		p_cast->theme_cache.m_prop = p_cast->get_theme_item(m_data_type, SNAME(m_item_name), SNAME(m_type_name));                     \
 	})
 
 class ThemeDB : public Object {
 	GDCLASS(ThemeDB, Object);
 
 	static ThemeDB *singleton;
+
+	// Caching
+
+	HashMap<StringName, Vector<StringName>> native_type_dependency_cache;
 
 	// Global Theme resources used by the default theme context.
 
@@ -154,7 +158,7 @@ public:
 	void set_fallback_stylebox(const Ref<StyleBox> &p_stylebox);
 	Ref<StyleBox> get_fallback_stylebox();
 
-	void get_native_type_dependencies(const StringName &p_base_type, List<StringName> *p_list);
+	Vector<StringName> get_native_type_dependencies(const StringName &p_base_type);
 
 	// Global theme contexts.
 

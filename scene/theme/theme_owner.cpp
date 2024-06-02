@@ -199,10 +199,12 @@ void ThemeOwner::propagate_theme_changed(Node *p_to_node, Node *p_owner_node, bo
 
 // Theme lookup.
 
-void ThemeOwner::get_theme_type_dependencies(const Node *p_for_node, const StringName &p_theme_type, List<StringName> *r_list) const {
+Vector<StringName> ThemeOwner::_get_theme_type_dependencies(const Node *p_for_node, const StringName &p_theme_type) const {
+	Vector<StringName> ret;
+
 	const Control *for_c = Object::cast_to<Control>(p_for_node);
 	const Window *for_w = Object::cast_to<Window>(p_for_node);
-	ERR_FAIL_COND_MSG(!for_c && !for_w, "Only Control and Window nodes and derivatives can be polled for theming.");
+	ERR_FAIL_COND_V_MSG(!for_c && !for_w, ret, "Only Control and Window nodes and derivatives can be polled for theming.");
 
 	StringName type_name = p_for_node->get_class_name();
 	StringName type_variation;
@@ -224,8 +226,8 @@ void ThemeOwner::get_theme_type_dependencies(const Node *p_for_node, const Strin
 		while (owner_node) {
 			Ref<Theme> owner_theme = _get_owner_node_theme(owner_node);
 			if (owner_theme.is_valid() && owner_theme->get_type_variation_base(type_variation) != StringName()) {
-				owner_theme->get_type_dependencies(type_name, type_variation, r_list);
-				return;
+				ret.append_array(owner_theme->get_type_dependencies(type_name, type_variation));
+				return ret;
 			}
 
 			owner_node = _get_next_owner_node(owner_node);
@@ -235,22 +237,24 @@ void ThemeOwner::get_theme_type_dependencies(const Node *p_for_node, const Strin
 		ThemeContext *global_context = _get_active_owner_context();
 		for (const Ref<Theme> &theme : global_context->get_themes()) {
 			if (theme.is_valid() && theme->get_type_variation_base(type_variation) != StringName()) {
-				theme->get_type_dependencies(type_name, type_variation, r_list);
-				return;
+				ret.append_array(theme->get_type_dependencies(type_name, type_variation));
+				return ret;
 			}
 		}
 
 		// If nothing was found, get the native dependencies for the current class.
-		ThemeDB::get_singleton()->get_native_type_dependencies(type_name, r_list);
-		return;
+		ret.append_array(ThemeDB::get_singleton()->get_native_type_dependencies(type_name));
+		return ret;
 	}
 
 	// Otherwise, get the native dependencies for the provided theme type.
-	ThemeDB::get_singleton()->get_native_type_dependencies(p_theme_type, r_list);
+	ret.append_array(ThemeDB::get_singleton()->get_native_type_dependencies(p_theme_type));
+	return ret;
 }
 
-Variant ThemeOwner::get_theme_item_in_types(Theme::DataType p_data_type, const StringName &p_name, const List<StringName> &p_theme_types) {
-	ERR_FAIL_COND_V_MSG(p_theme_types.is_empty(), Variant(), "At least one theme type must be specified.");
+Variant ThemeOwner::get_theme_item(Theme::DataType p_data_type, const StringName &p_name, const Node *p_for_node, const StringName &p_theme_type) {
+	Vector<StringName> theme_types = _get_theme_type_dependencies(p_for_node, p_theme_type);
+	ERR_FAIL_COND_V_MSG(theme_types.is_empty(), Variant(), "At least one theme type must be specified.");
 
 	// First, look through each control or window node in the branch, until no valid parent can be found.
 	// Only nodes with a theme resource attached are considered.
@@ -258,7 +262,7 @@ Variant ThemeOwner::get_theme_item_in_types(Theme::DataType p_data_type, const S
 
 	while (owner_node) {
 		// For each theme resource check the theme types provided and see if p_name exists with any of them.
-		for (const StringName &E : p_theme_types) {
+		for (const StringName &E : theme_types) {
 			Ref<Theme> owner_theme = _get_owner_node_theme(owner_node);
 
 			if (owner_theme.is_valid() && owner_theme->has_theme_item(p_data_type, p_name, E)) {
@@ -273,7 +277,7 @@ Variant ThemeOwner::get_theme_item_in_types(Theme::DataType p_data_type, const S
 	ThemeContext *global_context = _get_active_owner_context();
 	for (const Ref<Theme> &theme : global_context->get_themes()) {
 		if (theme.is_valid()) {
-			for (const StringName &E : p_theme_types) {
+			for (const StringName &E : theme_types) {
 				if (theme->has_theme_item(p_data_type, p_name, E)) {
 					return theme->get_theme_item(p_data_type, p_name, E);
 				}
@@ -285,8 +289,9 @@ Variant ThemeOwner::get_theme_item_in_types(Theme::DataType p_data_type, const S
 	return global_context->get_fallback_theme()->get_theme_item(p_data_type, p_name, StringName());
 }
 
-bool ThemeOwner::has_theme_item_in_types(Theme::DataType p_data_type, const StringName &p_name, const List<StringName> &p_theme_types) {
-	ERR_FAIL_COND_V_MSG(p_theme_types.is_empty(), false, "At least one theme type must be specified.");
+bool ThemeOwner::has_theme_item(Theme::DataType p_data_type, const StringName &p_name, const Node *p_for_node, const StringName &p_theme_type) {
+	Vector<StringName> theme_types = _get_theme_type_dependencies(p_for_node, p_theme_type);
+	ERR_FAIL_COND_V_MSG(theme_types.is_empty(), false, "At least one theme type must be specified.");
 
 	// First, look through each control or window node in the branch, until no valid parent can be found.
 	// Only nodes with a theme resource attached are considered.
@@ -294,7 +299,7 @@ bool ThemeOwner::has_theme_item_in_types(Theme::DataType p_data_type, const Stri
 
 	while (owner_node) {
 		// For each theme resource check the theme types provided and see if p_name exists with any of them.
-		for (const StringName &E : p_theme_types) {
+		for (const StringName &E : theme_types) {
 			Ref<Theme> owner_theme = _get_owner_node_theme(owner_node);
 
 			if (owner_theme.is_valid() && owner_theme->has_theme_item(p_data_type, p_name, E)) {
@@ -309,7 +314,7 @@ bool ThemeOwner::has_theme_item_in_types(Theme::DataType p_data_type, const Stri
 	ThemeContext *global_context = _get_active_owner_context();
 	for (const Ref<Theme> &theme : global_context->get_themes()) {
 		if (theme.is_valid()) {
-			for (const StringName &E : p_theme_types) {
+			for (const StringName &E : theme_types) {
 				if (theme->has_theme_item(p_data_type, p_name, E)) {
 					return true;
 				}

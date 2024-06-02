@@ -198,16 +198,22 @@ Ref<StyleBox> ThemeDB::get_fallback_stylebox() {
 	return fallback_stylebox;
 }
 
-void ThemeDB::get_native_type_dependencies(const StringName &p_base_type, List<StringName> *p_list) {
-	ERR_FAIL_NULL(p_list);
+Vector<StringName> ThemeDB::get_native_type_dependencies(const StringName &p_base_type) {
+	HashMap<StringName, Vector<StringName>>::Iterator E = native_type_dependency_cache.find(p_base_type);
+	if (E) {
+		return E->value;
+	}
 
 	// TODO: It may make sense to stop at Control/Window, because their parent classes cannot be used in
 	// a meaningful way.
+	Vector<StringName> ret;
 	StringName class_name = p_base_type;
 	while (class_name != StringName()) {
-		p_list->push_back(class_name);
+		ret.push_back(class_name);
 		class_name = ClassDB::get_parent_class_nocheck(class_name);
 	}
+	native_type_dependency_cache.insert(p_base_type, ret);
+	return ret;
 }
 
 // Global theme contexts.

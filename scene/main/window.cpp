@@ -2148,9 +2148,7 @@ Ref<Texture2D> Window::get_theme_icon(const StringName &p_name, const StringName
 		return theme_icon_cache[p_theme_type][p_name];
 	}
 
-	List<StringName> theme_types;
-	theme_owner->get_theme_type_dependencies(this, p_theme_type, &theme_types);
-	Ref<Texture2D> icon = theme_owner->get_theme_item_in_types(Theme::DATA_TYPE_ICON, p_name, theme_types);
+	Ref<Texture2D> icon = theme_owner->get_theme_item(Theme::DATA_TYPE_ICON, p_name, this, p_theme_type);
 	theme_icon_cache[p_theme_type][p_name] = icon;
 	return icon;
 }
@@ -2172,9 +2170,7 @@ Ref<StyleBox> Window::get_theme_stylebox(const StringName &p_name, const StringN
 		return theme_style_cache[p_theme_type][p_name];
 	}
 
-	List<StringName> theme_types;
-	theme_owner->get_theme_type_dependencies(this, p_theme_type, &theme_types);
-	Ref<StyleBox> style = theme_owner->get_theme_item_in_types(Theme::DATA_TYPE_STYLEBOX, p_name, theme_types);
+	Ref<StyleBox> style = theme_owner->get_theme_item(Theme::DATA_TYPE_STYLEBOX, p_name, this, p_theme_type);
 	theme_style_cache[p_theme_type][p_name] = style;
 	return style;
 }
@@ -2196,9 +2192,7 @@ Ref<Font> Window::get_theme_font(const StringName &p_name, const StringName &p_t
 		return theme_font_cache[p_theme_type][p_name];
 	}
 
-	List<StringName> theme_types;
-	theme_owner->get_theme_type_dependencies(this, p_theme_type, &theme_types);
-	Ref<Font> font = theme_owner->get_theme_item_in_types(Theme::DATA_TYPE_FONT, p_name, theme_types);
+	Ref<Font> font = theme_owner->get_theme_item(Theme::DATA_TYPE_FONT, p_name, this, p_theme_type);
 	theme_font_cache[p_theme_type][p_name] = font;
 	return font;
 }
@@ -2220,9 +2214,7 @@ int Window::get_theme_font_size(const StringName &p_name, const StringName &p_th
 		return theme_font_size_cache[p_theme_type][p_name];
 	}
 
-	List<StringName> theme_types;
-	theme_owner->get_theme_type_dependencies(this, p_theme_type, &theme_types);
-	int font_size = theme_owner->get_theme_item_in_types(Theme::DATA_TYPE_FONT_SIZE, p_name, theme_types);
+	int font_size = theme_owner->get_theme_item(Theme::DATA_TYPE_FONT_SIZE, p_name, this, p_theme_type);
 	theme_font_size_cache[p_theme_type][p_name] = font_size;
 	return font_size;
 }
@@ -2244,9 +2236,7 @@ Color Window::get_theme_color(const StringName &p_name, const StringName &p_them
 		return theme_color_cache[p_theme_type][p_name];
 	}
 
-	List<StringName> theme_types;
-	theme_owner->get_theme_type_dependencies(this, p_theme_type, &theme_types);
-	Color color = theme_owner->get_theme_item_in_types(Theme::DATA_TYPE_COLOR, p_name, theme_types);
+	Color color = theme_owner->get_theme_item(Theme::DATA_TYPE_COLOR, p_name, this, p_theme_type);
 	theme_color_cache[p_theme_type][p_name] = color;
 	return color;
 }
@@ -2268,9 +2258,7 @@ int Window::get_theme_constant(const StringName &p_name, const StringName &p_the
 		return theme_constant_cache[p_theme_type][p_name];
 	}
 
-	List<StringName> theme_types;
-	theme_owner->get_theme_type_dependencies(this, p_theme_type, &theme_types);
-	int constant = theme_owner->get_theme_item_in_types(Theme::DATA_TYPE_CONSTANT, p_name, theme_types);
+	int constant = theme_owner->get_theme_item(Theme::DATA_TYPE_CONSTANT, p_name, this, p_theme_type);
 	theme_constant_cache[p_theme_type][p_name] = constant;
 	return constant;
 }
@@ -2314,9 +2302,7 @@ bool Window::has_theme_icon(const StringName &p_name, const StringName &p_theme_
 		}
 	}
 
-	List<StringName> theme_types;
-	theme_owner->get_theme_type_dependencies(this, p_theme_type, &theme_types);
-	return theme_owner->has_theme_item_in_types(Theme::DATA_TYPE_ICON, p_name, theme_types);
+	return theme_owner->has_theme_item(Theme::DATA_TYPE_ICON, p_name, this, p_theme_type);
 }
 
 bool Window::has_theme_stylebox(const StringName &p_name, const StringName &p_theme_type) const {
@@ -2331,9 +2317,7 @@ bool Window::has_theme_stylebox(const StringName &p_name, const StringName &p_th
 		}
 	}
 
-	List<StringName> theme_types;
-	theme_owner->get_theme_type_dependencies(this, p_theme_type, &theme_types);
-	return theme_owner->has_theme_item_in_types(Theme::DATA_TYPE_STYLEBOX, p_name, theme_types);
+	return theme_owner->has_theme_item(Theme::DATA_TYPE_STYLEBOX, p_name, this, p_theme_type);
 }
 
 bool Window::has_theme_font(const StringName &p_name, const StringName &p_theme_type) const {
@@ -2348,9 +2332,7 @@ bool Window::has_theme_font(const StringName &p_name, const StringName &p_theme_
 		}
 	}
 
-	List<StringName> theme_types;
-	theme_owner->get_theme_type_dependencies(this, p_theme_type, &theme_types);
-	return theme_owner->has_theme_item_in_types(Theme::DATA_TYPE_FONT, p_name, theme_types);
+	return theme_owner->has_theme_item(Theme::DATA_TYPE_FONT, p_name, this, p_theme_type);
 }
 
 bool Window::has_theme_font_size(const StringName &p_name, const StringName &p_theme_type) const {
@@ -2365,9 +2347,7 @@ bool Window::has_theme_font_size(const StringName &p_name, const StringName &p_t
 		}
 	}
 
-	List<StringName> theme_types;
-	theme_owner->get_theme_type_dependencies(this, p_theme_type, &theme_types);
-	return theme_owner->has_theme_item_in_types(Theme::DATA_TYPE_FONT_SIZE, p_name, theme_types);
+	return theme_owner->has_theme_item(Theme::DATA_TYPE_FONT_SIZE, p_name, this, p_theme_type);
 }
 
 bool Window::has_theme_color(const StringName &p_name, const StringName &p_theme_type) const {
@@ -2382,9 +2362,7 @@ bool Window::has_theme_color(const StringName &p_name, const StringName &p_theme
 		}
 	}
 
-	List<StringName> theme_types;
-	theme_owner->get_theme_type_dependencies(this, p_theme_type, &theme_types);
-	return theme_owner->has_theme_item_in_types(Theme::DATA_TYPE_COLOR, p_name, theme_types);
+	return theme_owner->has_theme_item(Theme::DATA_TYPE_COLOR, p_name, this, p_theme_type);
 }
 
 bool Window::has_theme_constant(const StringName &p_name, const StringName &p_theme_type) const {
@@ -2399,9 +2377,7 @@ bool Window::has_theme_constant(const StringName &p_name, const StringName &p_th
 		}
 	}
 
-	List<StringName> theme_types;
-	theme_owner->get_theme_type_dependencies(this, p_theme_type, &theme_types);
-	return theme_owner->has_theme_item_in_types(Theme::DATA_TYPE_CONSTANT, p_name, theme_types);
+	return theme_owner->has_theme_item(Theme::DATA_TYPE_CONSTANT, p_name, this, p_theme_type);
 }
 
 /// Local property overrides.

@@ -52,6 +52,8 @@ class ThemeOwner : public Object {
 	Node *_get_next_owner_node(Node *p_from_node) const;
 	Ref<Theme> _get_owner_node_theme(Node *p_owner_node) const;
 
+	Vector<StringName> _get_theme_type_dependencies(const Node *p_for_node, const StringName &p_theme_type) const;
+
 public:
 	// Theme owner node.
 
@@ -69,10 +71,8 @@ public:
 
 	// Theme lookup.
 
-	void get_theme_type_dependencies(const Node *p_for_node, const StringName &p_theme_type, List<StringName> *r_list) const;
-
-	Variant get_theme_item_in_types(Theme::DataType p_data_type, const StringName &p_name, const List<StringName> &p_theme_types);
-	bool has_theme_item_in_types(Theme::DataType p_data_type, const StringName &p_name, const List<StringName> &p_theme_types);
+	Variant get_theme_item(Theme::DataType p_data_type, const StringName &p_name, const Node *p_for_node, const StringName &p_theme_type);
+	bool has_theme_item(Theme::DataType p_data_type, const StringName &p_name, const Node *p_for_node, const StringName &p_theme_type);
 
 	float get_theme_default_base_scale();
 	Ref<Font> get_theme_default_font();

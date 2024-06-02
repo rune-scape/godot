@@ -796,9 +796,8 @@ Ref<Font> Label3D::_get_font_or_default() const {
 		return font_override;
 	}
 
-	const StringName theme_name = "font";
-	List<StringName> theme_types;
-	ThemeDB::get_singleton()->get_native_type_dependencies(get_class_name(), &theme_types);
+	const StringName theme_name = SNAME("font");
+	const Vector<StringName> theme_types = ThemeDB::get_singleton()->get_native_type_dependencies(get_class_name());
 
 	ThemeContext *global_context = ThemeDB::get_singleton()->get_default_theme_context();
 	List<Ref<Theme>> themes = global_context->get_themes();
