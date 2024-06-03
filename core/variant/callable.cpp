@@ -289,6 +289,7 @@ void Callable::operator=(const Callable &p_callable) {
 
 		if (custom->ref_count.unref()) {
 			memdelete(custom);
+			custom = nullptr;
 		}
 	}
 
@@ -380,6 +381,7 @@ Callable::~Callable() {
 	if (is_custom()) {
 		if (custom->ref_count.unref()) {
 			memdelete(custom);
+			custom = nullptr;
 		}
 	}
 }
