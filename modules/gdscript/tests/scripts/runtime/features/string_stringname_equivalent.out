@@ -6,6 +6,11 @@ Compare !=: false
 Concat: abcdef
 Concat: abcdef
 Concat: abcdef
+a
+b
+c
+b
+c
 String matched StringName literal
 StringName matched String literal
 String matched StringName
