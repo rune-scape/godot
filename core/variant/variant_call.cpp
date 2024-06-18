@@ -2039,6 +2039,18 @@ static void _register_variant_builtin_methods_math() {
 	bind_method(Color, to_abgr64, sarray(), varray());
 	bind_method(Color, to_rgba64, sarray(), varray());
 	bind_method(Color, to_html, sarray("with_alpha"), varray(true));
+	bind_methodv(Color, get_hsv_hue, &Color::get_h, sarray(), varray());
+	bind_methodv(Color, get_hsv_saturation, &Color::get_s, sarray(), varray());
+	bind_methodv(Color, get_hsv_value, &Color::get_v, sarray(), varray());
+	bind_methodv(Color, get_hsl_hue, &Color::get_hsl_h, sarray(), varray());
+	bind_methodv(Color, get_hsl_saturation, &Color::get_hsl_s, sarray(), varray());
+	bind_methodv(Color, get_hsl_lightness, &Color::get_hsl_l, sarray(), varray());
+	bind_methodv(Color, get_ok_hsv_hue, &Color::get_ok_hsv_h, sarray(), varray());
+	bind_methodv(Color, get_ok_hsv_saturation, &Color::get_ok_hsv_s, sarray(), varray());
+	bind_methodv(Color, get_ok_hsv_value, &Color::get_ok_hsv_v, sarray(), varray());
+	bind_methodv(Color, get_ok_hsl_hue, &Color::get_ok_hsl_h, sarray(), varray());
+	bind_methodv(Color, get_ok_hsl_saturation, &Color::get_ok_hsl_s, sarray(), varray());
+	bind_methodv(Color, get_ok_hsl_lightness, &Color::get_ok_hsl_l, sarray(), varray());
 
 	bind_method(Color, clamp, sarray("min", "max"), varray(Color(0, 0, 0, 0), Color(1, 1, 1, 1)));
 	bind_method(Color, inverted, sarray(), varray());
@@ -2058,6 +2070,8 @@ static void _register_variant_builtin_methods_math() {
 	bind_static_method(Color, html_is_valid, sarray("color"), varray());
 	bind_static_method(Color, from_string, sarray("str", "default"), varray());
 	bind_static_method(Color, from_hsv, sarray("h", "s", "v", "alpha"), varray(1.0));
+	bind_static_method(Color, from_hsl, sarray("h", "s", "l", "alpha"), varray(1.0));
+	bind_static_method(Color, from_ok_hsv, sarray("h", "s", "v", "alpha"), varray(1.0));
 	bind_static_method(Color, from_ok_hsl, sarray("h", "s", "l", "alpha"), varray(1.0));
 
 	bind_static_method(Color, from_rgbe9995, sarray("rgbe"), varray());
