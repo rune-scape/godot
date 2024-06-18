@@ -1706,8 +1706,8 @@ void GDScriptAnalyzer::resolve_function_signature(GDScriptParser::FunctionNode *
 		if (!p_is_lambda && get_function_signature(p_function, false, base_type, function_name, parent_return_type, parameters_types, default_par_count, method_flags, &native_base)) {
 			bool valid = p_function->is_static == method_flags.has_flag(METHOD_FLAG_STATIC);
 
-			if (p_function->return_type != nullptr) {
-				// Check return type covariance.
+			if (p_function->return_type != nullptr && !parent_return_type.is_variant() && !(parent_return_type.kind == GDScriptParser::DataType::BUILTIN && parent_return_type.builtin_type == Variant::NIL)) {
+				// Check return type covariance if parent has a non-Variant return type.
 				GDScriptParser::DataType return_type = p_function->get_datatype();
 				if (return_type.is_variant()) {
 					// `is_type_compatible()` returns `true` if one of the types is `Variant`.
