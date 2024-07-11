@@ -1129,193 +1129,6 @@ void TextEdit::_notification(int p_what) {
 			int draw_amount = visible_rows + 1;
 			draw_amount += draw_placeholder ? placeholder_wrapped_rows.size() - 1 : get_line_wrap_count(first_vis_line + 1);
 
-			// Draw minimap.
-			if (draw_minimap) {
-				int minimap_visible_lines = get_minimap_visible_lines();
-				int minimap_line_height = (minimap_char_size.y + minimap_line_spacing);
-				int tab_size = text.get_tab_size();
-
-				// Calculate viewport size and y offset.
-				int viewport_height = (draw_amount - 1) * minimap_line_height;
-				int control_height = _get_control_height() - viewport_height;
-				int viewport_offset_y = std::round(get_scroll_pos_for_line(first_vis_line + 1) * control_height) / ((v_scroll->get_max() <= minimap_visible_lines) ? (minimap_visible_lines - draw_amount) : (v_scroll->get_max() - draw_amount));
-
-				// Calculate the first line.
-				int num_lines_before = std::round((viewport_offset_y) / minimap_line_height);
-				int minimap_line = (v_scroll->get_max() <= minimap_visible_lines) ? -1 : first_vis_line;
-				if (minimap_line >= 0) {
-					minimap_line -= get_next_visible_line_index_offset_from(first_vis_line, 0, -num_lines_before).x;
-					minimap_line -= (minimap_line > 0 && smooth_scroll_enabled ? 1 : 0);
-				}
-				int minimap_draw_amount = minimap_visible_lines + get_line_wrap_count(minimap_line + 1);
-
-				// Draw the minimap.
-
-				// Add visual feedback when dragging or hovering the visible area rectangle.
-				Color viewport_color = theme_cache.caret_color;
-				if (dragging_minimap) {
-					viewport_color.a = 0.25;
-				} else if (hovering_minimap) {
-					viewport_color.a = 0.175;
-				} else {
-					viewport_color.a = 0.1;
-				}
-
-				if (rtl) {
-					RS::get_singleton()->canvas_item_add_rect(text_ci, Rect2(size.width - (xmargin_end + 2) - minimap_width, viewport_offset_y, minimap_width, viewport_height), viewport_color);
-				} else {
-					RS::get_singleton()->canvas_item_add_rect(text_ci, Rect2((xmargin_end + 2), viewport_offset_y, minimap_width, viewport_height), viewport_color);
-				}
-
-				for (int i = 0; i < minimap_draw_amount; i++) {
-					minimap_line++;
-
-					if (minimap_line < 0 || minimap_line >= (int)text.size()) {
-						break;
-					}
-
-					while (_is_line_hidden(minimap_line)) {
-						minimap_line++;
-						if (minimap_line < 0 || minimap_line >= (int)text.size()) {
-							break;
-						}
-					}
-
-					if (minimap_line < 0 || minimap_line >= (int)text.size()) {
-						break;
-					}
-
-					const Vector<Pair<int64_t, Color>> color_map = _get_line_syntax_highlighting(minimap_line);
-
-					Color line_background_color = text.get_line_background_color(minimap_line);
-
-					// Make non-default background colors more visible, such as error markers.
-					// If a line background color is being applied, like in an error marker, the alpha is set to 1.0.
-					// Else, it stays zero.
-					line_background_color.a = 1.0 * (line_background_color != Color(0, 0, 0, 0));
-
-					Color current_color = editable ? theme_cache.font_color : theme_cache.font_readonly_color;
-
-					const Vector<String> wrap_rows = get_line_wrapped_text(minimap_line);
-					int line_wrap_amount = get_line_wrap_count(minimap_line);
-					int last_wrap_column = 0;
-
-					int first_indent_line = 0;
-					float wrap_indent_line = 0.0;
-					if (text.is_indent_wrapped_lines()) {
-						wrap_indent_line = _get_wrapped_indent_level(minimap_line, first_indent_line);
-						wrap_indent_line = MIN(wrap_indent_line, (minimap_width / minimap_char_size.x) * 0.6);
-					}
-					for (int line_wrap_index = 0; line_wrap_index < line_wrap_amount + 1; line_wrap_index++) {
-						if (line_wrap_index != 0) {
-							i++;
-							if (i >= minimap_draw_amount) {
-								break;
-							}
-						}
-
-						const String &str = wrap_rows[line_wrap_index];
-						int indent_px = line_wrap_index > first_indent_line ? wrap_indent_line : 0.0;
-						if (indent_px >= wrap_at_column) {
-							indent_px = 0;
-						}
-						indent_px = minimap_char_size.x * indent_px;
-
-						if (line_wrap_index > 0) {
-							last_wrap_column += wrap_rows[line_wrap_index - 1].length();
-						}
-
-						if (highlight_current_line && highlighted_lines.has(Pair<int, int>(minimap_line, line_wrap_index))) {
-							if (rtl) {
-								RS::get_singleton()->canvas_item_add_rect(text_ci, Rect2(size.width - (xmargin_end + 2) - minimap_width, i * 3, minimap_width, 2), theme_cache.current_line_color);
-							} else {
-								RS::get_singleton()->canvas_item_add_rect(text_ci, Rect2((xmargin_end + 2), i * 3, minimap_width, 2), theme_cache.current_line_color);
-							}
-						} else if (line_background_color.a > 0) {
-							if (rtl) {
-								RS::get_singleton()->canvas_item_add_rect(text_ci, Rect2(size.width - (xmargin_end + 2) - minimap_width, i * 3, minimap_width, 2), line_background_color);
-							} else {
-								RS::get_singleton()->canvas_item_add_rect(text_ci, Rect2((xmargin_end + 2), i * 3, minimap_width, 2), line_background_color);
-							}
-						}
-
-						Color next_color = current_color;
-						int characters = 0;
-						int tab_alignment = 0;
-						int xpos = xmargin_end + 2 + indent_px;
-						for (int j = 0; j < str.length(); j++) {
-							bool next_is_whitespace = false;
-							bool next_is_tab = false;
-							// Get the number of characters to draw together.
-							for (characters = 0; j + characters < str.length(); characters++) {
-								int next_char_index = j + characters;
-
-								for (const Pair<int64_t, Color> &color_data : color_map) {
-									if (last_wrap_column + next_char_index >= color_data.first) {
-										next_color = color_data.second;
-										if (!editable) {
-											next_color.a = theme_cache.font_readonly_color.a;
-										}
-										next_color.a *= 0.6;
-									} else {
-										break;
-									}
-								}
-								if (characters == 0) {
-									current_color = next_color;
-								}
-								if (next_color != current_color) {
-									break;
-								}
-								next_is_whitespace = is_whitespace(str[next_char_index]);
-								if (next_is_whitespace) {
-									if (str[next_char_index] == '\t') {
-										next_is_tab = true;
-									}
-									break;
-								}
-								bool out_of_bounds = xpos + minimap_char_size.x * characters >= xmargin_end + minimap_width;
-								if (out_of_bounds) {
-									break;
-								}
-							}
-							if (!next_is_whitespace && characters == 0) {
-								break;
-							}
-
-							if (characters > 0) {
-								if (rtl) {
-									RS::get_singleton()->canvas_item_add_rect(text_ci, Rect2(Point2(size.width - xpos - minimap_char_size.x * characters, minimap_line_height * i), Point2(minimap_char_size.x * characters, minimap_char_size.y)), current_color);
-								} else {
-									RS::get_singleton()->canvas_item_add_rect(text_ci, Rect2(Point2(xpos, minimap_line_height * i), Point2(minimap_char_size.x * characters, minimap_char_size.y)), current_color);
-								}
-							}
-
-							j += characters - 1;
-							xpos += minimap_char_size.x * characters;
-							tab_alignment += characters;
-
-							if (next_is_whitespace) {
-								if (next_is_tab) {
-									tab_alignment %= tab_size;
-									xpos += minimap_char_size.x * (tab_size - tab_alignment);
-									tab_alignment = 0;
-								} else {
-									xpos += minimap_char_size.x;
-									tab_alignment += 1;
-								}
-								j += 1;
-							}
-
-							if (xpos >= xmargin_end + minimap_width) {
-								// Out of bounds.
-								break;
-							}
-						}
-					}
-				}
-			}
-
 			int top_limit_y = style->get_margin(SIDE_TOP);
 			int bottom_limit_y = get_size().height - style->get_margin(SIDE_BOTTOM);
 
@@ -1365,6 +1178,13 @@ void TextEdit::_notification(int p_what) {
 					_get_wrapped_indent_level(line, first_indent_line);
 					indent_ofs = MIN(text.get_indent_offset(line, rtl), wrap_at_column * 0.6);
 				}
+
+				int line_ofs_y = style->get_margin(SIDE_TOP);
+
+				line_ofs_y += i * row_height + theme_cache.line_spacing / 2;
+				line_ofs_y -= first_visible_line_wrap_ofs * row_height;
+				line_ofs_y -= _get_v_scroll_offset() * row_height;
+
 				for (int line_wrap_index = 0; line_wrap_index <= line_wrap_amount; line_wrap_index++) {
 					if (line_wrap_index != 0) {
 						i++;
@@ -1375,12 +1195,7 @@ void TextEdit::_notification(int p_what) {
 
 					const String &str = wrap_rows[line_wrap_index];
 					int char_margin = xmargin_beg - first_visible_col;
-
-					int ofs_y = style->get_margin(SIDE_TOP);
-
-					ofs_y += i * row_height + theme_cache.line_spacing / 2;
-					ofs_y -= first_visible_line_wrap_ofs * row_height;
-					ofs_y -= _get_v_scroll_offset() * row_height;
+					int ofs_y = line_ofs_y + row_height * line_wrap_index;
 
 					bool clipped = false;
 					if (ofs_y + row_height < top_limit_y) {
@@ -1416,73 +1231,6 @@ void TextEdit::_notification(int p_what) {
 						// Only do these if we are on the first wrapped part of a line.
 
 						cache_entry.y_offset = ofs_y;
-
-						int gutter_offset = left_margin;
-						for (int g = 0; g < gutters.size(); g++) {
-							const GutterInfo &gutter = gutters[g];
-
-							if (!gutter.draw || gutter.width <= 0) {
-								continue;
-							}
-
-							switch (gutter.type) {
-								case GUTTER_TYPE_STRING: {
-									const String &txt = get_line_gutter_text(line, g);
-									if (txt.is_empty()) {
-										break;
-									}
-
-									Ref<TextLine> tl;
-									tl.instantiate();
-									tl->add_string(txt, theme_cache.font, theme_cache.font_size, _get_locale());
-
-									int yofs = ofs_y + (row_height - tl->get_size().y) / 2;
-									if (theme_cache.outline_size > 0 && theme_cache.outline_color.a > 0) {
-										tl->draw_outline(text_ci, Point2(gutter_offset, yofs), theme_cache.outline_size, theme_cache.outline_color);
-									}
-									tl->draw(text_ci, Point2(gutter_offset, yofs), get_line_gutter_item_color(line, g));
-								} break;
-								case GUTTER_TYPE_ICON: {
-									const Ref<Texture2D> icon = get_line_gutter_icon(line, g);
-									if (icon.is_null()) {
-										break;
-									}
-
-									Rect2 gutter_rect = Rect2(Point2i(gutter_offset, ofs_y), Size2i(gutter.width, row_height));
-
-									int horizontal_padding = gutter_rect.size.x / 6;
-									int vertical_padding = gutter_rect.size.y / 6;
-
-									gutter_rect.position += Point2(horizontal_padding, vertical_padding);
-									gutter_rect.size -= Point2(horizontal_padding, vertical_padding) * 2;
-
-									// Correct icon aspect ratio.
-									float icon_ratio = icon->get_width() / icon->get_height();
-									float gutter_ratio = gutter_rect.size.x / gutter_rect.size.y;
-									if (gutter_ratio > icon_ratio) {
-										gutter_rect.size.x = std::floor(icon->get_width() * (gutter_rect.size.y / icon->get_height()));
-									} else {
-										gutter_rect.size.y = std::floor(icon->get_height() * (gutter_rect.size.x / icon->get_width()));
-									}
-									if (rtl) {
-										gutter_rect.position.x = size.width - gutter_rect.position.x - gutter_rect.size.x;
-									}
-
-									icon->draw_rect(text_ci, gutter_rect, false, get_line_gutter_item_color(line, g));
-								} break;
-								case GUTTER_TYPE_CUSTOM: {
-									if (gutter.custom_draw_callback.is_valid()) {
-										Rect2i gutter_rect = Rect2i(Point2i(gutter_offset, ofs_y), Size2i(gutter.width, row_height));
-										if (rtl) {
-											gutter_rect.position.x = size.width - gutter_rect.position.x - gutter_rect.size.x;
-										}
-										gutter.custom_draw_callback.call(line, g, Rect2(gutter_rect));
-									}
-								} break;
-							}
-
-							gutter_offset += gutter.width;
-						}
 					}
 
 					// Draw line.
@@ -1935,6 +1683,261 @@ void TextEdit::_notification(int p_what) {
 
 				if (!draw_placeholder) {
 					line_drawing_cache[line] = cache_entry;
+				}
+
+				// Draw gutter.
+				int gutter_offset = left_margin;
+				for (int g = 0; g < gutters.size(); g++) {
+					const GutterInfo &gutter = gutters[g];
+
+					if (!gutter.draw || gutter.width <= 0) {
+						continue;
+					}
+
+					switch (gutter.type) {
+						case GUTTER_TYPE_STRING: {
+							const String &txt = get_line_gutter_text(line, g);
+							if (txt.is_empty()) {
+								break;
+							}
+
+							Ref<TextLine> tl;
+							tl.instantiate();
+							tl->add_string(txt, theme_cache.font, theme_cache.font_size, _get_locale());
+
+							int yofs = line_ofs_y + (row_height - tl->get_size().y) / 2;
+							if (theme_cache.outline_size > 0 && theme_cache.outline_color.a > 0) {
+								tl->draw_outline(text_ci, Point2(gutter_offset, yofs), theme_cache.outline_size, theme_cache.outline_color);
+							}
+							tl->draw(text_ci, Point2(gutter_offset, yofs), get_line_gutter_item_color(line, g));
+						} break;
+						case GUTTER_TYPE_ICON: {
+							const Ref<Texture2D> icon = get_line_gutter_icon(line, g);
+							if (icon.is_null()) {
+								break;
+							}
+
+							Rect2 gutter_rect = Rect2(Point2i(gutter_offset, line_ofs_y), Size2i(gutter.width, row_height));
+
+							int horizontal_padding = gutter_rect.size.x / 6;
+							int vertical_padding = gutter_rect.size.y / 6;
+
+							gutter_rect.position += Point2(horizontal_padding, vertical_padding);
+							gutter_rect.size -= Point2(horizontal_padding, vertical_padding) * 2;
+
+							// Correct icon aspect ratio.
+							float icon_ratio = icon->get_width() / icon->get_height();
+							float gutter_ratio = gutter_rect.size.x / gutter_rect.size.y;
+							if (gutter_ratio > icon_ratio) {
+								gutter_rect.size.x = std::floor(icon->get_width() * (gutter_rect.size.y / icon->get_height()));
+							} else {
+								gutter_rect.size.y = std::floor(icon->get_height() * (gutter_rect.size.x / icon->get_width()));
+							}
+							if (rtl) {
+								gutter_rect.position.x = size.width - gutter_rect.position.x - gutter_rect.size.x;
+							}
+
+							icon->draw_rect(text_ci, gutter_rect, false, get_line_gutter_item_color(line, g));
+						} break;
+						case GUTTER_TYPE_CUSTOM: {
+							if (gutter.custom_draw_callback.is_valid()) {
+								Rect2i gutter_rect = Rect2i(Point2i(gutter_offset, line_ofs_y), Size2i(gutter.width, row_height));
+								if (rtl) {
+									gutter_rect.position.x = size.width - gutter_rect.position.x - gutter_rect.size.x;
+								}
+								gutter.custom_draw_callback.call(line, g, Rect2(gutter_rect));
+							}
+						} break;
+					}
+
+					gutter_offset += gutter.width;
+				}
+			}
+
+			// Draw minimap.
+			if (draw_minimap) {
+				int minimap_visible_lines = get_minimap_visible_lines();
+				int minimap_line_height = (minimap_char_size.y + minimap_line_spacing);
+				int tab_size = text.get_tab_size();
+
+				// Calculate viewport size and y offset.
+				int viewport_height = (draw_amount - 1) * minimap_line_height;
+				int control_height = _get_control_height() - viewport_height;
+				int viewport_offset_y = std::round(get_scroll_pos_for_line(first_vis_line + 1) * control_height) / ((v_scroll->get_max() <= minimap_visible_lines) ? (minimap_visible_lines - draw_amount) : (v_scroll->get_max() - draw_amount));
+
+				// Calculate the first line.
+				int num_lines_before = std::round((viewport_offset_y) / minimap_line_height);
+				int minimap_line = (v_scroll->get_max() <= minimap_visible_lines) ? -1 : first_vis_line;
+				if (minimap_line >= 0) {
+					minimap_line -= get_next_visible_line_index_offset_from(first_vis_line, 0, -num_lines_before).x;
+					minimap_line -= (minimap_line > 0 && smooth_scroll_enabled ? 1 : 0);
+				}
+				int minimap_draw_amount = minimap_visible_lines + get_line_wrap_count(minimap_line + 1);
+
+				// Draw the minimap.
+
+				// Add visual feedback when dragging or hovering the visible area rectangle.
+				Color viewport_color = theme_cache.caret_color;
+				if (dragging_minimap) {
+					viewport_color.a = 0.25;
+				} else if (hovering_minimap) {
+					viewport_color.a = 0.175;
+				} else {
+					viewport_color.a = 0.1;
+				}
+
+				if (rtl) {
+					RS::get_singleton()->canvas_item_add_rect(text_ci, Rect2(size.width - (xmargin_end + 2) - minimap_width, viewport_offset_y, minimap_width, viewport_height), viewport_color);
+				} else {
+					RS::get_singleton()->canvas_item_add_rect(text_ci, Rect2((xmargin_end + 2), viewport_offset_y, minimap_width, viewport_height), viewport_color);
+				}
+
+				for (int i = 0; i < minimap_draw_amount; i++) {
+					minimap_line++;
+
+					if (minimap_line < 0 || minimap_line >= (int)text.size()) {
+						break;
+					}
+
+					while (_is_line_hidden(minimap_line)) {
+						minimap_line++;
+						if (minimap_line < 0 || minimap_line >= (int)text.size()) {
+							break;
+						}
+					}
+
+					if (minimap_line < 0 || minimap_line >= (int)text.size()) {
+						break;
+					}
+
+					const Vector<Pair<int64_t, Color>> color_map = _get_line_syntax_highlighting(minimap_line);
+
+					Color line_background_color = text.get_line_background_color(minimap_line);
+
+					// Make non-default background colors more visible, such as error markers.
+					// If a line background color is being applied, like in an error marker, the alpha is set to 1.0.
+					// Else, it stays zero.
+					line_background_color.a = 1.0 * (line_background_color != Color(0, 0, 0, 0));
+
+					Color current_color = editable ? theme_cache.font_color : theme_cache.font_readonly_color;
+
+					const Vector<String> wrap_rows = get_line_wrapped_text(minimap_line);
+					int line_wrap_amount = get_line_wrap_count(minimap_line);
+					int last_wrap_column = 0;
+
+					int first_indent_line = 0;
+					float wrap_indent_line = 0.0;
+					if (text.is_indent_wrapped_lines()) {
+						wrap_indent_line = _get_wrapped_indent_level(minimap_line, first_indent_line);
+						wrap_indent_line = MIN(wrap_indent_line, (minimap_width / minimap_char_size.x) * 0.6);
+					}
+					for (int line_wrap_index = 0; line_wrap_index < line_wrap_amount + 1; line_wrap_index++) {
+						if (line_wrap_index != 0) {
+							i++;
+							if (i >= minimap_draw_amount) {
+								break;
+							}
+						}
+
+						const String &str = wrap_rows[line_wrap_index];
+						int indent_px = line_wrap_index > first_indent_line ? wrap_indent_line : 0.0;
+						if (indent_px >= wrap_at_column) {
+							indent_px = 0;
+						}
+						indent_px = minimap_char_size.x * indent_px;
+
+						if (line_wrap_index > 0) {
+							last_wrap_column += wrap_rows[line_wrap_index - 1].length();
+						}
+
+						if (highlight_current_line && highlighted_lines.has(Pair<int, int>(minimap_line, line_wrap_index))) {
+							if (rtl) {
+								RS::get_singleton()->canvas_item_add_rect(text_ci, Rect2(size.width - (xmargin_end + 2) - minimap_width, i * 3, minimap_width, 2), theme_cache.current_line_color);
+							} else {
+								RS::get_singleton()->canvas_item_add_rect(text_ci, Rect2((xmargin_end + 2), i * 3, minimap_width, 2), theme_cache.current_line_color);
+							}
+						} else if (line_background_color.a > 0) {
+							if (rtl) {
+								RS::get_singleton()->canvas_item_add_rect(text_ci, Rect2(size.width - (xmargin_end + 2) - minimap_width, i * 3, minimap_width, 2), line_background_color);
+							} else {
+								RS::get_singleton()->canvas_item_add_rect(text_ci, Rect2((xmargin_end + 2), i * 3, minimap_width, 2), line_background_color);
+							}
+						}
+
+						Color next_color = current_color;
+						int characters = 0;
+						int tab_alignment = 0;
+						int xpos = xmargin_end + 2 + indent_px;
+						for (int j = 0; j < str.length(); j++) {
+							bool next_is_whitespace = false;
+							bool next_is_tab = false;
+							// Get the number of characters to draw together.
+							for (characters = 0; j + characters < str.length(); characters++) {
+								int next_char_index = j + characters;
+
+								for (const Pair<int64_t, Color> &color_data : color_map) {
+									if (last_wrap_column + next_char_index >= color_data.first) {
+										next_color = color_data.second;
+										if (!editable) {
+											next_color.a = theme_cache.font_readonly_color.a;
+										}
+										next_color.a *= 0.6;
+									} else {
+										break;
+									}
+								}
+								if (characters == 0) {
+									current_color = next_color;
+								}
+								if (next_color != current_color) {
+									break;
+								}
+								next_is_whitespace = is_whitespace(str[next_char_index]);
+								if (next_is_whitespace) {
+									if (str[next_char_index] == '\t') {
+										next_is_tab = true;
+									}
+									break;
+								}
+								bool out_of_bounds = xpos + minimap_char_size.x * characters >= xmargin_end + minimap_width;
+								if (out_of_bounds) {
+									break;
+								}
+							}
+							if (!next_is_whitespace && characters == 0) {
+								break;
+							}
+
+							if (characters > 0) {
+								if (rtl) {
+									RS::get_singleton()->canvas_item_add_rect(text_ci, Rect2(Point2(size.width - xpos - minimap_char_size.x * characters, minimap_line_height * i), Point2(minimap_char_size.x * characters, minimap_char_size.y)), current_color);
+								} else {
+									RS::get_singleton()->canvas_item_add_rect(text_ci, Rect2(Point2(xpos, minimap_line_height * i), Point2(minimap_char_size.x * characters, minimap_char_size.y)), current_color);
+								}
+							}
+
+							j += characters - 1;
+							xpos += minimap_char_size.x * characters;
+							tab_alignment += characters;
+
+							if (next_is_whitespace) {
+								if (next_is_tab) {
+									tab_alignment %= tab_size;
+									xpos += minimap_char_size.x * (tab_size - tab_alignment);
+									tab_alignment = 0;
+								} else {
+									xpos += minimap_char_size.x;
+									tab_alignment += 1;
+								}
+								j += 1;
+							}
+
+							if (xpos >= xmargin_end + minimap_width) {
+								// Out of bounds.
+								break;
+							}
+						}
+					}
 				}
 			}
 
