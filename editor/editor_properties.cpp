@@ -2714,7 +2714,7 @@ void EditorPropertyNodePath::_set_read_only(bool p_read_only) {
 Variant EditorPropertyNodePath::_get_cache_value(const StringName &p_prop, bool &r_valid) const {
 	if (p_prop == get_edited_property()) {
 		r_valid = true;
-		return const_cast<EditorPropertyNodePath *>(this)->get_edited_object()->get(get_edited_property(), &r_valid);
+		return get_edited_object()->get(get_edited_property(), &r_valid);
 	}
 	return Variant();
 }
@@ -2822,7 +2822,7 @@ void EditorPropertyNodePath::_text_submitted(const String &p_text) {
 }
 
 const NodePath EditorPropertyNodePath::_get_node_path() const {
-	const Node *base_node = const_cast<EditorPropertyNodePath *>(this)->get_base_node();
+	const Node *base_node = get_base_node();
 
 	Variant val = get_edited_property_value();
 	Node *n = Object::cast_to<Node>(val);
@@ -2941,7 +2941,7 @@ void EditorPropertyNodePath::_notification(int p_what) {
 	}
 }
 
-Node *EditorPropertyNodePath::get_base_node() {
+Node *EditorPropertyNodePath::get_base_node() const {
 	Node *base_node = Object::cast_to<Node>(get_edited_object());
 
 	if (!base_node) {

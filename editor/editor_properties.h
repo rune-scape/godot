@@ -659,7 +659,7 @@ class EditorPropertyNodePath : public EditorProperty {
 	Vector<StringName> valid_types;
 	void _node_selected(const NodePath &p_path);
 	void _node_assign();
-	Node *get_base_node();
+	Node *get_base_node() const;
 	void _update_menu();
 	void _menu_option(int p_idx);
 	void _accept_text();

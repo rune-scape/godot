@@ -162,7 +162,7 @@ public:
 	void set_read_only(bool p_read_only);
 	bool is_read_only() const;
 
-	Object *get_edited_object();
+	Object *get_edited_object() const;
 	StringName get_edited_property() const;
 	inline Variant get_edited_property_value() const { return object->get(property); }
 	EditorInspector *get_parent_inspector() const;
