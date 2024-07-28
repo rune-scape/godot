@@ -250,7 +250,7 @@ class SceneTreeDock : public VBoxContainer {
 	void _scene_tree_gui_input(Ref<InputEvent> p_event);
 
 	void _new_scene_from(const String &p_file);
-	void _set_node_owner_recursive(Node *p_node, Node *p_owner, const HashMap<const Node *, Node *> &p_inverse_duplimap);
+	void _set_node_owner_recursive(Node *p_node, Node *p_owner, const HashMap<Node *, Node *> &p_inverse_duplimap);
 
 	bool _validate_no_foreign();
 	bool _validate_no_instance();

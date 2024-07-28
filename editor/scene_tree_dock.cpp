@@ -637,7 +637,7 @@ void SceneTreeDock::_tool_selected(int p_tool, bool p_confirm_override) {
 			selection.sort_custom<Node::Comparator>();
 
 			for (Node *node : selection) {
-				HashMap<const Node *, Node *> duplimap;
+				HashMap<Node *, Node *> duplimap;
 				Node *dup = node->duplicate_from_editor(duplimap);
 
 				ERR_CONTINUE(!dup);
@@ -853,7 +853,7 @@ void SceneTreeDock::_tool_selected(int p_tool, bool p_confirm_override) {
 
 			selection.sort_custom<Node::Comparator>();
 
-			HashMap<const Node *, Node *> add_below_map;
+			HashMap<Node *, Node *> add_below_map;
 
 			for (List<Node *>::Element *E = selection.back(); E; E = E->prev()) {
 				Node *node = E->get();
@@ -876,7 +876,7 @@ void SceneTreeDock::_tool_selected(int p_tool, bool p_confirm_override) {
 					}
 				}
 
-				HashMap<const Node *, Node *> duplimap;
+				HashMap<Node *, Node *> duplimap;
 				Node *dup = node->duplicate_from_editor(duplimap);
 
 				ERR_CONTINUE(!dup);
@@ -1172,7 +1172,7 @@ void SceneTreeDock::_tool_selected(int p_tool, bool p_confirm_override) {
 			List<Node *> selection = editor_selection->get_selected_node_list();
 			List<Node *>::Element *e = selection.front();
 			if (e) {
-				const Node *node = e->get();
+				Node *node = e->get();
 				if (node) {
 					FileSystemDock::get_singleton()->navigate_to_path(node->get_scene_file_path());
 				}
@@ -1180,7 +1180,7 @@ void SceneTreeDock::_tool_selected(int p_tool, bool p_confirm_override) {
 		} break;
 		case TOOL_OPEN_DOCUMENTATION: {
 			List<Node *> selection = editor_selection->get_selected_node_list();
-			for (const Node *node : selection) {
+			for (Node *node : selection) {
 				ScriptEditor::get_singleton()->goto_help("class_name:" + node->get_class());
 			}
 			EditorNode::get_singleton()->set_visible_editor(EditorNode::EDITOR_SCRIPT);
@@ -1802,7 +1802,7 @@ void SceneTreeDock::_fill_path_renames(Vector<StringName> base_path, Vector<Stri
 
 bool SceneTreeDock::_has_tracks_to_delete(Node *p_node, List<Node *> &p_to_delete) const {
 	// Skip if this node will be deleted.
-	for (const Node *F : p_to_delete) {
+	for (Node *F : p_to_delete) {
 		if (F == p_node || F->is_ancestor_of(p_node)) {
 			return false;
 		}
@@ -1826,7 +1826,7 @@ bool SceneTreeDock::_has_tracks_to_delete(Node *p_node, List<Node *> &p_to_delet
 					NodePath track_np = anim->track_get_path(i);
 					Node *n = root->get_node_or_null(track_np);
 					if (n) {
-						for (const Node *F : p_to_delete) {
+						for (Node *F : p_to_delete) {
 							if (F == n || F->is_ancestor_of(n)) {
 								return true;
 							}
@@ -2634,7 +2634,7 @@ void SceneTreeDock::_delete_confirm(bool p_cut) {
 
 	bool entire_scene = false;
 
-	for (const Node *E : remove_list) {
+	for (Node *E : remove_list) {
 		if (E == edited_scene) {
 			entire_scene = true;
 			break;
@@ -2653,7 +2653,7 @@ void SceneTreeDock::_delete_confirm(bool p_cut) {
 		undo_redo->add_undo_method(scene_tree, "update_tree");
 		undo_redo->add_undo_reference(edited_scene);
 	} else {
-		for (const Node *E : remove_list) {
+		for (Node *E : remove_list) {
 			// `move_child` + `get_index` doesn't really work for internal nodes.
 			ERR_FAIL_COND_MSG(E->get_internal_mode() != INTERNAL_MODE_DISABLED, "Trying to remove internal node, this is not supported.");
 		}
@@ -2920,7 +2920,7 @@ void SceneTreeDock::_create() {
 			if (parent_node_3d) {
 				Vector3 position;
 				uint32_t node_count = 0;
-				for (const Node *node : nodes) {
+				for (Node *node : nodes) {
 					const Node3D *node_3d = Object::cast_to<Node3D>(node);
 					if (node_3d) {
 						position += node_3d->get_global_position();
@@ -2937,7 +2937,7 @@ void SceneTreeDock::_create() {
 			if (parent_node_2d) {
 				Vector2 position;
 				uint32_t node_count = 0;
-				for (const Node *node : nodes) {
+				for (Node *node : nodes) {
 					const Node2D *node_2d = Object::cast_to<Node2D>(node);
 					if (node_2d) {
 						position += node_2d->get_global_position();
@@ -3193,12 +3193,12 @@ void SceneTreeDock::_new_scene_from(const String &p_file) {
 
 	Node *base = selection.front()->get();
 
-	HashMap<const Node *, Node *> duplimap;
-	HashMap<const Node *, Node *> inverse_duplimap;
+	HashMap<Node *, Node *> duplimap;
+	HashMap<Node *, Node *> inverse_duplimap;
 	Node *copy = base->duplicate_from_editor(duplimap);
 
-	for (const KeyValue<const Node *, Node *> &item : duplimap) {
-		inverse_duplimap[item.value] = const_cast<Node *>(item.key);
+	for (const KeyValue<Node *, Node *> &item : duplimap) {
+		inverse_duplimap[item.value] = item.key;
 	}
 
 	if (copy) {
@@ -3238,11 +3238,11 @@ void SceneTreeDock::_new_scene_from(const String &p_file) {
 	}
 }
 
-void SceneTreeDock::_set_node_owner_recursive(Node *p_node, Node *p_owner, const HashMap<const Node *, Node *> &p_inverse_duplimap) {
-	HashMap<const Node *, Node *>::ConstIterator E = p_inverse_duplimap.find(p_node);
+void SceneTreeDock::_set_node_owner_recursive(Node *p_node, Node *p_owner, const HashMap<Node *, Node *> &p_inverse_duplimap) {
+	HashMap<Node *, Node *>::ConstIterator E = p_inverse_duplimap.find(p_node);
 
 	if (E) {
-		const Node *original = E->value;
+		Node *original = E->value;
 		if (original->get_owner()) {
 			p_node->set_owner(p_owner);
 		}
@@ -4016,7 +4016,7 @@ List<Node *> SceneTreeDock::paste_nodes(bool p_paste_as_sibling) {
 	}
 
 	for (Node *node : node_clipboard) {
-		HashMap<const Node *, Node *> duplimap;
+		HashMap<Node *, Node *> duplimap;
 
 		Node *dup = node->duplicate_from_editor(duplimap, resource_remap);
 		ERR_CONTINUE(!dup);
@@ -4032,12 +4032,12 @@ List<Node *> SceneTreeDock::paste_nodes(bool p_paste_as_sibling) {
 			ur->add_do_method(paste_parent, "add_child", dup, true);
 		}
 
-		for (KeyValue<const Node *, Node *> &E2 : duplimap) {
+		for (KeyValue<Node *, Node *> &E2 : duplimap) {
 			Node *d = E2.value;
 			// When copying, all nodes that should have an owner assigned here were given nullptr as an owner
 			// and added to the node_clipboard_edited_scene_owned list.
 			if (d != dup && E2.key->get_owner() == nullptr) {
-				if (node_clipboard_edited_scene_owned.find(const_cast<Node *>(E2.key))) {
+				if (node_clipboard_edited_scene_owned.find(E2.key)) {
 					ur->add_do_method(d, "set_owner", edited_scene);
 				}
 			}

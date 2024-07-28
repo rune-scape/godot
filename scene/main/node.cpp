@@ -1710,9 +1710,9 @@ TypedArray<Node> Node::get_children(bool p_include_internal) const {
 }
 
 Node *Node::_get_child_by_name(const StringName &p_name) const {
-	const Node *const *node = data.children.getptr(p_name);
+	Node *const *node = data.children.getptr(p_name);
 	if (node) {
-		return const_cast<Node *>(*node);
+		return *node;
 	} else {
 		return nullptr;
 	}
@@ -1757,7 +1757,7 @@ Node *Node::get_node_or_null(const NodePath &p_path) const {
 			}
 
 		} else if (name.is_node_unique_name()) {
-			Node **unique = current->data.owned_unique_nodes.getptr(name);
+			Node *const *unique = current->data.owned_unique_nodes.getptr(name);
 			if (!unique && current->data.owner) {
 				unique = current->data.owner->data.owned_unique_nodes.getptr(name);
 			}
@@ -1767,9 +1767,9 @@ Node *Node::get_node_or_null(const NodePath &p_path) const {
 			next = *unique;
 		} else {
 			next = nullptr;
-			const Node *const *node = current->data.children.getptr(name);
+			Node *const *node = current->data.children.getptr(name);
 			if (node) {
-				next = const_cast<Node *>(*node);
+				next = *node;
 			} else {
 				return nullptr;
 			}
@@ -2134,9 +2134,9 @@ void Node::_clean_up_owner() {
 	data.OW = nullptr;
 }
 
-Node *Node::find_common_parent_with(const Node *p_node) const {
+Node *Node::find_common_parent_with(Node *p_node) const {
 	if (this == p_node) {
-		return const_cast<Node *>(p_node);
+		return p_node;
 	}
 
 	HashSet<const Node *> visited;
@@ -2148,7 +2148,7 @@ Node *Node::find_common_parent_with(const Node *p_node) const {
 		n = n->data.parent;
 	}
 
-	const Node *common_parent = p_node;
+	Node *common_parent = p_node;
 
 	while (common_parent) {
 		if (visited.has(common_parent)) {
@@ -2161,7 +2161,7 @@ Node *Node::find_common_parent_with(const Node *p_node) const {
 		return nullptr;
 	}
 
-	return const_cast<Node *>(common_parent);
+	return common_parent;
 }
 
 NodePath Node::get_path_to(const Node *p_node, bool p_use_unique_path) const {
@@ -2633,7 +2633,7 @@ bool Node::get_scene_instance_load_placeholder() const {
 	return data.use_placeholder;
 }
 
-Node *Node::_duplicate(int p_flags, HashMap<const Node *, Node *> *r_duplimap) const {
+Node *Node::_duplicate(int p_flags, HashMap<Node *, Node *> *r_duplimap) {
 	ERR_THREAD_GUARD_V(nullptr);
 	Node *node = nullptr;
 
@@ -2675,18 +2675,18 @@ Node *Node::_duplicate(int p_flags, HashMap<const Node *, Node *> *r_duplimap) c
 		node->data.editable_instance = data.editable_instance;
 	}
 
-	List<const Node *> hidden_roots;
-	List<const Node *> node_tree;
+	List<Node *> hidden_roots;
+	List<Node *> node_tree;
 	node_tree.push_front(this);
 
 	if (instantiated) {
 		// Since nodes in the instantiated hierarchy won't be duplicated explicitly, we need to make an inventory
 		// of all the nodes in the tree of the instantiated scene in order to transfer the values of the properties
 
-		Vector<const Node *> instance_roots;
+		Vector<Node *> instance_roots;
 		instance_roots.push_back(this);
 
-		for (List<const Node *>::Element *N = node_tree.front(); N; N = N->next()) {
+		for (List<Node *>::Element *N = node_tree.front(); N; N = N->next()) {
 			for (int i = 0; i < N->get()->get_child_count(); ++i) {
 				Node *descendant = N->get()->get_child(i);
 
@@ -2756,7 +2756,7 @@ Node *Node::_duplicate(int p_flags, HashMap<const Node *, Node *> *r_duplimap) c
 		}
 	}
 
-	for (const Node *&E : hidden_roots) {
+	for (Node *&E : hidden_roots) {
 		Node *parent = node->get_node(get_path_to(E->data.parent));
 		if (!parent) {
 			memdelete(node);
@@ -2781,7 +2781,7 @@ Node *Node::_duplicate(int p_flags, HashMap<const Node *, Node *> *r_duplimap) c
 
 Node *Node::duplicate(int p_flags) const {
 	ERR_THREAD_GUARD_V(nullptr);
-	Node *dupe = _duplicate(p_flags);
+	Node *dupe = const_cast<Node *>(this)->_duplicate(p_flags);
 
 	_duplicate_properties(this, this, dupe, p_flags);
 
@@ -2793,11 +2793,11 @@ Node *Node::duplicate(int p_flags) const {
 }
 
 #ifdef TOOLS_ENABLED
-Node *Node::duplicate_from_editor(HashMap<const Node *, Node *> &r_duplimap) const {
+Node *Node::duplicate_from_editor(HashMap<Node *, Node *> &r_duplimap) {
 	return duplicate_from_editor(r_duplimap, HashMap<Ref<Resource>, Ref<Resource>>());
 }
 
-Node *Node::duplicate_from_editor(HashMap<const Node *, Node *> &r_duplimap, const HashMap<Ref<Resource>, Ref<Resource>> &p_resource_remap) const {
+Node *Node::duplicate_from_editor(HashMap<Node *, Node *> &r_duplimap, const HashMap<Ref<Resource>, Ref<Resource>> &p_resource_remap) {
 	int flags = DUPLICATE_SIGNALS | DUPLICATE_GROUPS | DUPLICATE_SCRIPTS | DUPLICATE_USE_INSTANTIATION | DUPLICATE_FROM_EDITOR;
 	Node *dupe = _duplicate(flags, &r_duplimap);
 

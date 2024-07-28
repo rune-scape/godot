@@ -224,7 +224,7 @@ void SceneDebugger::_save_node(ObjectID id, const String &p_path) {
 	ERR_FAIL_NULL(node);
 
 #ifdef TOOLS_ENABLED
-	HashMap<const Node *, Node *> duplimap;
+	HashMap<Node *, Node *> duplimap;
 	Node *copy = node->duplicate_from_editor(duplimap);
 #else
 	Node *copy = node->duplicate();

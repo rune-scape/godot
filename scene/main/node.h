@@ -269,7 +269,7 @@ private:
 
 	void _duplicate_properties(const Node *p_root, const Node *p_original, Node *p_copy, int p_flags) const;
 	void _duplicate_signals(const Node *p_original, Node *p_copy) const;
-	Node *_duplicate(int p_flags, HashMap<const Node *, Node *> *r_duplimap = nullptr) const;
+	Node *_duplicate(int p_flags, HashMap<Node *, Node *> *r_duplimap = nullptr);
 
 	TypedArray<StringName> _get_groups() const;
 
@@ -454,7 +454,7 @@ public:
 
 	NodePath get_path() const;
 	NodePath get_path_to(const Node *p_node, bool p_use_unique_path = false) const;
-	Node *find_common_parent_with(const Node *p_node) const;
+	Node *find_common_parent_with(Node *p_node) const;
 
 	void add_to_group(const StringName &p_identifier, bool p_persistent = false);
 	void remove_from_group(const StringName &p_identifier);
@@ -610,8 +610,8 @@ public:
 
 	Node *duplicate(int p_flags = DUPLICATE_GROUPS | DUPLICATE_SIGNALS | DUPLICATE_SCRIPTS) const;
 #ifdef TOOLS_ENABLED
-	Node *duplicate_from_editor(HashMap<const Node *, Node *> &r_duplimap) const;
-	Node *duplicate_from_editor(HashMap<const Node *, Node *> &r_duplimap, const HashMap<Ref<Resource>, Ref<Resource>> &p_resource_remap) const;
+	Node *duplicate_from_editor(HashMap<Node *, Node *> &r_duplimap);
+	Node *duplicate_from_editor(HashMap<Node *, Node *> &r_duplimap, const HashMap<Ref<Resource>, Ref<Resource>> &p_resource_remap);
 	void remap_node_resources(Node *p_node, const HashMap<Ref<Resource>, Ref<Resource>> &p_resource_remap) const;
 	void remap_nested_resources(Ref<Resource> p_resource, const HashMap<Ref<Resource>, Ref<Resource>> &p_resource_remap) const;
 #endif
