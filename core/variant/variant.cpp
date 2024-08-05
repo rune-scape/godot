@@ -2932,16 +2932,16 @@ uint32_t Variant::recursive_hash(int recursion_count) const {
 			return 0;
 		} break;
 		case BOOL: {
-			return _data._bool ? 1 : 0;
+			return HashMapHasherDefault::hash(_data._bool);
 		} break;
 		case INT: {
-			return hash_one_uint64((uint64_t)_data._int);
+			return HashMapHasherDefault::hash(static_cast<uint64_t>(_data._int));
 		} break;
 		case FLOAT: {
-			return hash_murmur3_one_double(_data._float);
+			return HashMapHasherDefault::hash(_data._float);
 		} break;
 		case STRING: {
-			return reinterpret_cast<const String *>(_data._mem)->hash();
+			return HashMapHasherDefault::hash(*reinterpret_cast<const String *>(_data._mem));
 		} break;
 
 		// math types
@@ -2958,16 +2958,7 @@ uint32_t Variant::recursive_hash(int recursion_count) const {
 			return HashMapHasherDefault::hash(*reinterpret_cast<const Rect2i *>(_data._mem));
 		} break;
 		case TRANSFORM2D: {
-			uint32_t h = HASH_MURMUR3_SEED;
-			const Transform2D &t = *_data._transform2d;
-			h = hash_murmur3_one_real(t[0].x, h);
-			h = hash_murmur3_one_real(t[0].y, h);
-			h = hash_murmur3_one_real(t[1].x, h);
-			h = hash_murmur3_one_real(t[1].y, h);
-			h = hash_murmur3_one_real(t[2].x, h);
-			h = hash_murmur3_one_real(t[2].y, h);
-
-			return hash_fmix32(h);
+			return HashMapHasherDefault::hash(*_data._transform2d);
 		} break;
 		case VECTOR3: {
 			return HashMapHasherDefault::hash(*reinterpret_cast<const Vector3 *>(_data._mem));
@@ -2982,271 +2973,80 @@ uint32_t Variant::recursive_hash(int recursion_count) const {
 			return HashMapHasherDefault::hash(*reinterpret_cast<const Vector4i *>(_data._mem));
 		} break;
 		case PLANE: {
-			uint32_t h = HASH_MURMUR3_SEED;
-			const Plane &p = *reinterpret_cast<const Plane *>(_data._mem);
-			h = hash_murmur3_one_real(p.normal.x, h);
-			h = hash_murmur3_one_real(p.normal.y, h);
-			h = hash_murmur3_one_real(p.normal.z, h);
-			h = hash_murmur3_one_real(p.d, h);
-			return hash_fmix32(h);
+			return HashMapHasherDefault::hash(*reinterpret_cast<const Plane *>(_data._mem));
 		} break;
 		case AABB: {
 			return HashMapHasherDefault::hash(*_data._aabb);
 		} break;
 		case QUATERNION: {
-			uint32_t h = HASH_MURMUR3_SEED;
-			const Quaternion &q = *reinterpret_cast<const Quaternion *>(_data._mem);
-			h = hash_murmur3_one_real(q.x, h);
-			h = hash_murmur3_one_real(q.y, h);
-			h = hash_murmur3_one_real(q.z, h);
-			h = hash_murmur3_one_real(q.w, h);
-			return hash_fmix32(h);
+			return HashMapHasherDefault::hash(*reinterpret_cast<const Quaternion *>(_data._mem));
 		} break;
 		case BASIS: {
-			uint32_t h = HASH_MURMUR3_SEED;
-			const Basis &b = *_data._basis;
-			h = hash_murmur3_one_real(b[0].x, h);
-			h = hash_murmur3_one_real(b[0].y, h);
-			h = hash_murmur3_one_real(b[0].z, h);
-			h = hash_murmur3_one_real(b[1].x, h);
-			h = hash_murmur3_one_real(b[1].y, h);
-			h = hash_murmur3_one_real(b[1].z, h);
-			h = hash_murmur3_one_real(b[2].x, h);
-			h = hash_murmur3_one_real(b[2].y, h);
-			h = hash_murmur3_one_real(b[2].z, h);
-			return hash_fmix32(h);
+			return HashMapHasherDefault::hash(*_data._basis);
 		} break;
 		case TRANSFORM3D: {
-			uint32_t h = HASH_MURMUR3_SEED;
-			const Transform3D &t = *_data._transform3d;
-			h = hash_murmur3_one_real(t.basis[0].x, h);
-			h = hash_murmur3_one_real(t.basis[0].y, h);
-			h = hash_murmur3_one_real(t.basis[0].z, h);
-			h = hash_murmur3_one_real(t.basis[1].x, h);
-			h = hash_murmur3_one_real(t.basis[1].y, h);
-			h = hash_murmur3_one_real(t.basis[1].z, h);
-			h = hash_murmur3_one_real(t.basis[2].x, h);
-			h = hash_murmur3_one_real(t.basis[2].y, h);
-			h = hash_murmur3_one_real(t.basis[2].z, h);
-			h = hash_murmur3_one_real(t.origin.x, h);
-			h = hash_murmur3_one_real(t.origin.y, h);
-			h = hash_murmur3_one_real(t.origin.z, h);
-			return hash_fmix32(h);
+			return HashMapHasherDefault::hash(*_data._transform3d);
 		} break;
 		case PROJECTION: {
-			uint32_t h = HASH_MURMUR3_SEED;
-			const Projection &t = *_data._projection;
-			h = hash_murmur3_one_real(t.columns[0].x, h);
-			h = hash_murmur3_one_real(t.columns[0].y, h);
-			h = hash_murmur3_one_real(t.columns[0].z, h);
-			h = hash_murmur3_one_real(t.columns[0].w, h);
-			h = hash_murmur3_one_real(t.columns[1].x, h);
-			h = hash_murmur3_one_real(t.columns[1].y, h);
-			h = hash_murmur3_one_real(t.columns[1].z, h);
-			h = hash_murmur3_one_real(t.columns[1].w, h);
-			h = hash_murmur3_one_real(t.columns[2].x, h);
-			h = hash_murmur3_one_real(t.columns[2].y, h);
-			h = hash_murmur3_one_real(t.columns[2].z, h);
-			h = hash_murmur3_one_real(t.columns[2].w, h);
-			h = hash_murmur3_one_real(t.columns[3].x, h);
-			h = hash_murmur3_one_real(t.columns[3].y, h);
-			h = hash_murmur3_one_real(t.columns[3].z, h);
-			h = hash_murmur3_one_real(t.columns[3].w, h);
-			return hash_fmix32(h);
+			return HashMapHasherDefault::hash(*_data._projection);
 		} break;
 		// misc types
 		case COLOR: {
-			uint32_t h = HASH_MURMUR3_SEED;
-			const Color &c = *reinterpret_cast<const Color *>(_data._mem);
-			h = hash_murmur3_one_float(c.r, h);
-			h = hash_murmur3_one_float(c.g, h);
-			h = hash_murmur3_one_float(c.b, h);
-			h = hash_murmur3_one_float(c.a, h);
-			return hash_fmix32(h);
+			return HashMapHasherDefault::hash(*reinterpret_cast<const Color *>(_data._mem));
 		} break;
 		case RID: {
-			return hash_one_uint64(reinterpret_cast<const ::RID *>(_data._mem)->get_id());
+			return HashMapHasherDefault::hash(*reinterpret_cast<const ::RID *>(_data._mem));
 		} break;
 		case OBJECT: {
-			return hash_one_uint64(hash_make_uint64_t(_get_obj().obj));
+			return HashMapHasherDefault::hash(_get_obj().obj);
 		} break;
 		case STRING_NAME: {
-			return reinterpret_cast<const StringName *>(_data._mem)->hash();
+			return HashMapHasherDefault::hash(*reinterpret_cast<const StringName *>(_data._mem));
 		} break;
 		case NODE_PATH: {
-			return reinterpret_cast<const NodePath *>(_data._mem)->hash();
+			return HashMapHasherDefault::hash(*reinterpret_cast<const NodePath *>(_data._mem));
 		} break;
 		case DICTIONARY: {
 			return reinterpret_cast<const Dictionary *>(_data._mem)->recursive_hash(recursion_count);
-
 		} break;
 		case CALLABLE: {
-			return reinterpret_cast<const Callable *>(_data._mem)->hash();
-
+			return HashMapHasherDefault::hash(*reinterpret_cast<const Callable *>(_data._mem));
 		} break;
 		case SIGNAL: {
-			const Signal &s = *reinterpret_cast<const Signal *>(_data._mem);
-			uint32_t hash = s.get_name().hash();
-			return hash_murmur3_one_64(s.get_object_id(), hash);
+			return HashMapHasherDefault::hash(*reinterpret_cast<const Signal *>(_data._mem));
 		} break;
 		case ARRAY: {
-			const Array &arr = *reinterpret_cast<const Array *>(_data._mem);
-			return arr.recursive_hash(recursion_count);
-
+			return reinterpret_cast<const Array *>(_data._mem)->recursive_hash(recursion_count);
 		} break;
 		case PACKED_BYTE_ARRAY: {
-			const PackedByteArray &arr = PackedArrayRef<uint8_t>::get_array(_data.packed_array);
-			int len = arr.size();
-			if (likely(len)) {
-				const uint8_t *r = arr.ptr();
-				return hash_murmur3_buffer((uint8_t *)&r[0], len);
-			} else {
-				return hash_murmur3_one_64(0);
-			}
-
+			return HashMapHasherDefault::hash(PackedArrayRef<uint8_t>::get_array(_data.packed_array));
 		} break;
 		case PACKED_INT32_ARRAY: {
-			const PackedInt32Array &arr = PackedArrayRef<int32_t>::get_array(_data.packed_array);
-			int len = arr.size();
-			if (likely(len)) {
-				const int32_t *r = arr.ptr();
-				return hash_murmur3_buffer((uint8_t *)&r[0], len * sizeof(int32_t));
-			} else {
-				return hash_murmur3_one_64(0);
-			}
-
+			return HashMapHasherDefault::hash(PackedArrayRef<int32_t>::get_array(_data.packed_array));
 		} break;
 		case PACKED_INT64_ARRAY: {
-			const PackedInt64Array &arr = PackedArrayRef<int64_t>::get_array(_data.packed_array);
-			int len = arr.size();
-			if (likely(len)) {
-				const int64_t *r = arr.ptr();
-				return hash_murmur3_buffer((uint8_t *)&r[0], len * sizeof(int64_t));
-			} else {
-				return hash_murmur3_one_64(0);
-			}
-
+			return HashMapHasherDefault::hash(PackedArrayRef<int64_t>::get_array(_data.packed_array));
 		} break;
 		case PACKED_FLOAT32_ARRAY: {
-			const PackedFloat32Array &arr = PackedArrayRef<float>::get_array(_data.packed_array);
-			int len = arr.size();
-
-			if (likely(len)) {
-				const float *r = arr.ptr();
-				uint32_t h = HASH_MURMUR3_SEED;
-				for (int32_t i = 0; i < len; i++) {
-					h = hash_murmur3_one_float(r[i], h);
-				}
-				return hash_fmix32(h);
-			} else {
-				return hash_murmur3_one_float(0.0);
-			}
-
+			return HashMapHasherDefault::hash(PackedArrayRef<float>::get_array(_data.packed_array));
 		} break;
 		case PACKED_FLOAT64_ARRAY: {
-			const PackedFloat64Array &arr = PackedArrayRef<double>::get_array(_data.packed_array);
-			int len = arr.size();
-
-			if (likely(len)) {
-				const double *r = arr.ptr();
-				uint32_t h = HASH_MURMUR3_SEED;
-				for (int32_t i = 0; i < len; i++) {
-					h = hash_murmur3_one_double(r[i], h);
-				}
-				return hash_fmix32(h);
-			} else {
-				return hash_murmur3_one_double(0.0);
-			}
-
+			return HashMapHasherDefault::hash(PackedArrayRef<double>::get_array(_data.packed_array));
 		} break;
 		case PACKED_STRING_ARRAY: {
-			uint32_t hash = HASH_MURMUR3_SEED;
-			const PackedStringArray &arr = PackedArrayRef<String>::get_array(_data.packed_array);
-			int len = arr.size();
-
-			if (likely(len)) {
-				const String *r = arr.ptr();
-
-				for (int i = 0; i < len; i++) {
-					hash = hash_murmur3_one_32(r[i].hash(), hash);
-				}
-				hash = hash_fmix32(hash);
-			}
-
-			return hash;
+			return HashMapHasherDefault::hash(PackedArrayRef<String>::get_array(_data.packed_array));
 		} break;
 		case PACKED_VECTOR2_ARRAY: {
-			uint32_t hash = HASH_MURMUR3_SEED;
-			const PackedVector2Array &arr = PackedArrayRef<Vector2>::get_array(_data.packed_array);
-			int len = arr.size();
-
-			if (likely(len)) {
-				const Vector2 *r = arr.ptr();
-
-				for (int i = 0; i < len; i++) {
-					hash = hash_murmur3_one_real(r[i].x, hash);
-					hash = hash_murmur3_one_real(r[i].y, hash);
-				}
-				hash = hash_fmix32(hash);
-			}
-
-			return hash;
+			return HashMapHasherDefault::hash(PackedArrayRef<Vector2>::get_array(_data.packed_array));
 		} break;
 		case PACKED_VECTOR3_ARRAY: {
-			uint32_t hash = HASH_MURMUR3_SEED;
-			const PackedVector3Array &arr = PackedArrayRef<Vector3>::get_array(_data.packed_array);
-			int len = arr.size();
-
-			if (likely(len)) {
-				const Vector3 *r = arr.ptr();
-
-				for (int i = 0; i < len; i++) {
-					hash = hash_murmur3_one_real(r[i].x, hash);
-					hash = hash_murmur3_one_real(r[i].y, hash);
-					hash = hash_murmur3_one_real(r[i].z, hash);
-				}
-				hash = hash_fmix32(hash);
-			}
-
-			return hash;
+			return HashMapHasherDefault::hash(PackedArrayRef<Vector3>::get_array(_data.packed_array));
 		} break;
 		case PACKED_COLOR_ARRAY: {
-			uint32_t hash = HASH_MURMUR3_SEED;
-			const PackedColorArray &arr = PackedArrayRef<Color>::get_array(_data.packed_array);
-			int len = arr.size();
-
-			if (likely(len)) {
-				const Color *r = arr.ptr();
-
-				for (int i = 0; i < len; i++) {
-					hash = hash_murmur3_one_float(r[i].r, hash);
-					hash = hash_murmur3_one_float(r[i].g, hash);
-					hash = hash_murmur3_one_float(r[i].b, hash);
-					hash = hash_murmur3_one_float(r[i].a, hash);
-				}
-				hash = hash_fmix32(hash);
-			}
-
-			return hash;
+			return HashMapHasherDefault::hash(PackedArrayRef<Color>::get_array(_data.packed_array));
 		} break;
 		case PACKED_VECTOR4_ARRAY: {
-			uint32_t hash = HASH_MURMUR3_SEED;
-			const PackedVector4Array &arr = PackedArrayRef<Vector4>::get_array(_data.packed_array);
-			int len = arr.size();
-
-			if (likely(len)) {
-				const Vector4 *r = arr.ptr();
-
-				for (int i = 0; i < len; i++) {
-					hash = hash_murmur3_one_real(r[i].x, hash);
-					hash = hash_murmur3_one_real(r[i].y, hash);
-					hash = hash_murmur3_one_real(r[i].z, hash);
-					hash = hash_murmur3_one_real(r[i].w, hash);
-				}
-				hash = hash_fmix32(hash);
-			}
-
-			return hash;
+			return HashMapHasherDefault::hash(PackedArrayRef<Vector4>::get_array(_data.packed_array));
 		} break;
 		default: {
 		}
