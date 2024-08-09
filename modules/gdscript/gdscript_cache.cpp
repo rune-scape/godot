@@ -155,10 +155,7 @@ void GDScriptCache::move_script(const String &p_from, const String &p_to) {
 		return;
 	}
 
-	if (singleton->parser_map.has(p_from) && !p_from.is_empty()) {
-		singleton->parser_map[p_to] = singleton->parser_map[p_from];
-	}
-	singleton->parser_map.erase(p_from);
+	remove_parser(p_from);
 
 	if (singleton->parser_inverse_dependencies.has(p_from) && !p_from.is_empty()) {
 		singleton->parser_inverse_dependencies[p_to] = singleton->parser_inverse_dependencies[p_from];
