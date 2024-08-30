@@ -62,6 +62,7 @@ class GDScript : public Script {
 	GDCLASS(GDScript, Script);
 	bool tool = false;
 	bool valid = false;
+	bool shallow = true;
 	bool reloading = false;
 
 	struct MemberInfo {
