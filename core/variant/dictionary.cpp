@@ -42,7 +42,7 @@
 struct DictionaryPrivate {
 	SafeRefCount refcount;
 	Variant *read_only = nullptr; // If enabled, a pointer is used to a temporary value that is used to return read-only values.
-	HashMap<Variant, Variant, VariantHasher, StringLikeVariantComparator> variant_map;
+	HashMap<Variant, Variant, HashMapHasherDefault, StringLikeVariantComparator> variant_map;
 };
 
 void Dictionary::get_key_list(List<Variant> *p_keys) const {
@@ -112,7 +112,7 @@ const Variant &Dictionary::operator[](const Variant &p_key) const {
 }
 
 const Variant *Dictionary::getptr(const Variant &p_key) const {
-	HashMap<Variant, Variant, VariantHasher, StringLikeVariantComparator>::ConstIterator E(_p->variant_map.find(p_key));
+	HashMap<Variant, Variant, HashMapHasherDefault, StringLikeVariantComparator>::ConstIterator E(_p->variant_map.find(p_key));
 	if (!E) {
 		return nullptr;
 	}
@@ -120,7 +120,7 @@ const Variant *Dictionary::getptr(const Variant &p_key) const {
 }
 
 Variant *Dictionary::getptr(const Variant &p_key) {
-	HashMap<Variant, Variant, VariantHasher, StringLikeVariantComparator>::Iterator E(_p->variant_map.find(p_key));
+	HashMap<Variant, Variant, HashMapHasherDefault, StringLikeVariantComparator>::Iterator E(_p->variant_map.find(p_key));
 	if (!E) {
 		return nullptr;
 	}
@@ -133,7 +133,7 @@ Variant *Dictionary::getptr(const Variant &p_key) {
 }
 
 Variant Dictionary::get_valid(const Variant &p_key) const {
-	HashMap<Variant, Variant, VariantHasher, StringLikeVariantComparator>::ConstIterator E(_p->variant_map.find(p_key));
+	HashMap<Variant, Variant, HashMapHasherDefault, StringLikeVariantComparator>::ConstIterator E(_p->variant_map.find(p_key));
 
 	if (!E) {
 		return Variant();
@@ -218,7 +218,7 @@ bool Dictionary::recursive_equal(const Dictionary &p_dictionary, int recursion_c
 	}
 	recursion_count++;
 	for (const KeyValue<Variant, Variant> &this_E : _p->variant_map) {
-		HashMap<Variant, Variant, VariantHasher, StringLikeVariantComparator>::ConstIterator other_E(p_dictionary._p->variant_map.find(this_E.key));
+		HashMap<Variant, Variant, HashMapHasherDefault, StringLikeVariantComparator>::ConstIterator other_E(p_dictionary._p->variant_map.find(this_E.key));
 		if (!other_E || !this_E.value.hash_compare(other_E->value, recursion_count, false)) {
 			return false;
 		}
@@ -337,7 +337,7 @@ const Variant *Dictionary::next(const Variant *p_key) const {
 		}
 		return nullptr;
 	}
-	HashMap<Variant, Variant, VariantHasher, StringLikeVariantComparator>::Iterator E = _p->variant_map.find(*p_key);
+	HashMap<Variant, Variant, HashMapHasherDefault, StringLikeVariantComparator>::Iterator E = _p->variant_map.find(*p_key);
 
 	if (!E) {
 		return nullptr;

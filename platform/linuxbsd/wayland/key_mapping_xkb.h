@@ -43,7 +43,8 @@
 class KeyMappingXKB {
 	struct HashMapHasherKeys {
 		static _FORCE_INLINE_ uint32_t hash(Key p_key) { return hash_fmix32(static_cast<uint32_t>(p_key)); }
-		static _FORCE_INLINE_ uint32_t hash(unsigned p_key) { return hash_fmix32(p_key); }
+		static _FORCE_INLINE_ uint32_t hash(unsigned int p_key) { return hash_fmix32(p_key); }
+		static _FORCE_INLINE_ uint32_t hash(int p_key) { return hash_fmix32(p_key); }
 	};
 
 	static inline HashMap<xkb_keycode_t, Key, HashMapHasherKeys> xkb_keycode_map;

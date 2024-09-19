@@ -34,6 +34,7 @@
 #include "core/math/aabb.h"
 #include "core/math/basis.h"
 #include "core/math/plane.h"
+#include "core/templates/hashfuncs.h"
 #include "core/templates/vector.h"
 
 struct [[nodiscard]] Transform3D {
@@ -268,6 +269,23 @@ _FORCE_INLINE_ Plane Transform3D::xform_inv_fast(const Plane &p_plane, const Tra
 
 	real_t d = normal.dot(point);
 	return Plane(normal, d);
+}
+
+uint32_t HashMapHasherDefault::hash(const Transform3D &p_xform) {
+	uint32_t h = HASH_MURMUR3_SEED;
+	h = hash_murmur3_one_real(p_xform.basis[0].x, h);
+	h = hash_murmur3_one_real(p_xform.basis[0].y, h);
+	h = hash_murmur3_one_real(p_xform.basis[0].z, h);
+	h = hash_murmur3_one_real(p_xform.basis[1].x, h);
+	h = hash_murmur3_one_real(p_xform.basis[1].y, h);
+	h = hash_murmur3_one_real(p_xform.basis[1].z, h);
+	h = hash_murmur3_one_real(p_xform.basis[2].x, h);
+	h = hash_murmur3_one_real(p_xform.basis[2].y, h);
+	h = hash_murmur3_one_real(p_xform.basis[2].z, h);
+	h = hash_murmur3_one_real(p_xform.origin.x, h);
+	h = hash_murmur3_one_real(p_xform.origin.y, h);
+	h = hash_murmur3_one_real(p_xform.origin.z, h);
+	return hash_fmix32(h);
 }
 
 #endif // TRANSFORM_3D_H

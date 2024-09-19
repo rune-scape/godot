@@ -33,6 +33,7 @@
 
 #include "core/object/object_id.h"
 #include "core/string/string_name.h"
+#include "core/templates/hashfuncs.h"
 #include "core/templates/list.h"
 
 class Object;
@@ -204,5 +205,14 @@ struct CallableComparator {
 
 	bool operator()(const Variant &p_l, const Variant &p_r) const;
 };
+
+uint32_t HashMapHasherDefault::hash(const Callable &p_callable) {
+	return p_callable.hash();
+}
+
+uint32_t HashMapHasherDefault::hash(const Signal &p_sig) {
+	uint32_t hash = p_sig.get_name().hash();
+	return hash_murmur3_one_64(p_sig.get_object_id(), hash);
+}
 
 #endif // CALLABLE_H

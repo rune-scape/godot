@@ -55,6 +55,7 @@
 #include "core/os/keyboard.h"
 #include "core/string/node_path.h"
 #include "core/string/ustring.h"
+#include "core/templates/hashfuncs.h"
 #include "core/templates/paged_allocator.h"
 #include "core/templates/rid.h"
 #include "core/variant/array.h"
@@ -825,13 +826,145 @@ Vector<Variant> varray(VarArgs... p_args) {
 	return v;
 }
 
-struct VariantHasher {
-	static _FORCE_INLINE_ uint32_t hash(const Variant &p_variant) { return p_variant.hash(); }
-};
+uint32_t HashMapHasherDefault::hash(const Variant &p_var) {
+	return p_var.hash();
+}
+uint32_t HashMapHasherDefault::hash(const PackedByteArray &p_array) {
+	int len = p_array.size();
+	if (likely(len)) {
+		return hash_murmur3_buffer(reinterpret_cast<const uint8_t *>(p_array.ptr()), len);
+	} else {
+		return hash_murmur3_one_64(0);
+	}
+}
+uint32_t HashMapHasherDefault::hash(const PackedInt32Array &p_array) {
+	int len = p_array.size();
+	if (likely(len)) {
+		return hash_murmur3_buffer(reinterpret_cast<const uint8_t *>(p_array.ptr()), len * sizeof(int32_t));
+	} else {
+		return hash_murmur3_one_64(0);
+	}
+}
+uint32_t HashMapHasherDefault::hash(const PackedInt64Array &p_array) {
+	int len = p_array.size();
+	if (likely(len)) {
+		return hash_murmur3_buffer(reinterpret_cast<const uint8_t *>(p_array.ptr()), len * sizeof(int64_t));
+	} else {
+		return hash_murmur3_one_64(0);
+	}
+}
+uint32_t HashMapHasherDefault::hash(const PackedFloat32Array &p_array) {
+	int len = p_array.size();
 
-struct VariantComparator {
-	static _FORCE_INLINE_ bool compare(const Variant &p_lhs, const Variant &p_rhs) { return p_lhs.hash_compare(p_rhs); }
-};
+	if (likely(len)) {
+		const float *r = p_array.ptr();
+		uint32_t h = HASH_MURMUR3_SEED;
+		for (int32_t i = 0; i < len; i++) {
+			h = hash_murmur3_one_float(r[i], h);
+		}
+		return hash_fmix32(h);
+	} else {
+		return hash_murmur3_one_float(0.0f);
+	}
+}
+uint32_t HashMapHasherDefault::hash(const PackedFloat64Array &p_array) {
+	int len = p_array.size();
+
+	if (likely(len)) {
+		const double *r = p_array.ptr();
+		uint32_t h = HASH_MURMUR3_SEED;
+		for (int32_t i = 0; i < len; i++) {
+			h = hash_murmur3_one_double(r[i], h);
+		}
+		return hash_fmix32(h);
+	} else {
+		return hash_murmur3_one_double(0.0);
+	}
+}
+uint32_t HashMapHasherDefault::hash(const PackedStringArray &p_array) {
+	uint32_t hash = HASH_MURMUR3_SEED;
+	int len = p_array.size();
+
+	if (likely(len)) {
+		const String *r = p_array.ptr();
+
+		for (int i = 0; i < len; i++) {
+			hash = hash_murmur3_one_32(r[i].hash(), hash);
+		}
+		hash = hash_fmix32(hash);
+	}
+
+	return hash;
+}
+uint32_t HashMapHasherDefault::hash(const PackedVector2Array &p_array) {
+	uint32_t hash = HASH_MURMUR3_SEED;
+	int len = p_array.size();
+
+	if (likely(len)) {
+		const Vector2 *r = p_array.ptr();
+
+		for (int i = 0; i < len; i++) {
+			hash = hash_murmur3_one_real(r[i].x, hash);
+			hash = hash_murmur3_one_real(r[i].y, hash);
+		}
+		hash = hash_fmix32(hash);
+	}
+
+	return hash;
+}
+uint32_t HashMapHasherDefault::hash(const PackedVector3Array &p_array) {
+	uint32_t hash = HASH_MURMUR3_SEED;
+	int len = p_array.size();
+
+	if (likely(len)) {
+		const Vector3 *r = p_array.ptr();
+
+		for (int i = 0; i < len; i++) {
+			hash = hash_murmur3_one_real(r[i].x, hash);
+			hash = hash_murmur3_one_real(r[i].y, hash);
+			hash = hash_murmur3_one_real(r[i].z, hash);
+		}
+		hash = hash_fmix32(hash);
+	}
+
+	return hash;
+}
+uint32_t HashMapHasherDefault::hash(const PackedColorArray &p_array) {
+	uint32_t hash = HASH_MURMUR3_SEED;
+	int len = p_array.size();
+
+	if (likely(len)) {
+		const Color *r = p_array.ptr();
+
+		for (int i = 0; i < len; i++) {
+			hash = hash_murmur3_one_float(r[i].r, hash);
+			hash = hash_murmur3_one_float(r[i].g, hash);
+			hash = hash_murmur3_one_float(r[i].b, hash);
+			hash = hash_murmur3_one_float(r[i].a, hash);
+		}
+		hash = hash_fmix32(hash);
+	}
+
+	return hash;
+}
+uint32_t HashMapHasherDefault::hash(const PackedVector4Array &p_array) {
+	uint32_t hash = HASH_MURMUR3_SEED;
+	int len = p_array.size();
+
+	if (likely(len)) {
+		const Vector4 *r = p_array.ptr();
+
+		for (int i = 0; i < len; i++) {
+			hash = hash_murmur3_one_real(r[i].x, hash);
+			hash = hash_murmur3_one_real(r[i].y, hash);
+			hash = hash_murmur3_one_real(r[i].z, hash);
+			hash = hash_murmur3_one_real(r[i].w, hash);
+		}
+		hash = hash_fmix32(hash);
+	}
+
+	return hash;
+}
 
 struct StringLikeVariantComparator {
 	static bool compare(const Variant &p_lhs, const Variant &p_rhs);

@@ -32,6 +32,7 @@
 #define DICTIONARY_H
 
 #include "core/string/ustring.h"
+#include "core/templates/hashfuncs.h"
 #include "core/templates/list.h"
 #include "core/variant/array.h"
 
@@ -97,5 +98,9 @@ public:
 	Dictionary();
 	~Dictionary();
 };
+
+uint32_t HashMapHasherDefault::hash(const Dictionary &p_dict) {
+	return p_dict.hash();
+}
 
 #endif // DICTIONARY_H

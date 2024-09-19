@@ -31,22 +31,8 @@
 #ifndef HASHFUNCS_H
 #define HASHFUNCS_H
 
-#include "core/math/aabb.h"
 #include "core/math/math_defs.h"
 #include "core/math/math_funcs.h"
-#include "core/math/rect2.h"
-#include "core/math/rect2i.h"
-#include "core/math/vector2.h"
-#include "core/math/vector2i.h"
-#include "core/math/vector3.h"
-#include "core/math/vector3i.h"
-#include "core/math/vector4.h"
-#include "core/math/vector4i.h"
-#include "core/object/object_id.h"
-#include "core/string/node_path.h"
-#include "core/string/string_name.h"
-#include "core/string/ustring.h"
-#include "core/templates/rid.h"
 #include "core/typedefs.h"
 
 /**
@@ -58,31 +44,83 @@
  * @param C String
  * @return 32-bits hashcode
  */
-static _FORCE_INLINE_ uint32_t hash_djb2(const char *p_cstr) {
-	const unsigned char *chr = (const unsigned char *)p_cstr;
-	uint32_t hash = 5381;
-	uint32_t c = *chr++;
+
+template <typename HashT = uint32_t, typename T>
+static _FORCE_INLINE_ HashT hash_djb2_cstr_impl(const T *p_str, HashT p_prev = 5381) {
+	HashT hash = p_prev;
+	HashT c = *p_str++;
 
 	while (c) {
-		hash = ((hash << 5) + hash) ^ c; /* hash * 33 ^ c */
-		c = *chr++;
+		hash = ((hash << 5) + hash) + c; /* hash * 33 + c */
+		c = *p_str++;
 	}
 
 	return hash;
 }
 
-static _FORCE_INLINE_ uint32_t hash_djb2_buffer(const uint8_t *p_buff, int p_len, uint32_t p_prev = 5381) {
-	uint32_t hash = p_prev;
+template <typename HashT = uint32_t>
+static _FORCE_INLINE_ HashT hash_djb2(const char *p_cstr) {
+	return hash_djb2_cstr_impl<HashT>(reinterpret_cast<const uint8_t *>(p_cstr));
+}
+
+template <typename HashT = uint32_t>
+static _FORCE_INLINE_ HashT hash_djb2(const wchar_t *p_wstr) {
+	// Avoid negative values on platforms where wchar_t is signed. Account for different sizes.
+	using wide_unsigned = std::conditional<sizeof(wchar_t) == 2, uint16_t, uint32_t>::type;
+	return hash_djb2_cstr_impl<HashT>(reinterpret_cast<const wide_unsigned *>(p_wstr));
+}
+
+template <typename HashT = uint32_t>
+static _FORCE_INLINE_ HashT hash_djb2(const char16_t *p_ustr) {
+	return hash_djb2_cstr_impl<HashT>(p_ustr);
+}
+
+template <typename HashT = uint32_t>
+static _FORCE_INLINE_ HashT hash_djb2(const char32_t *p_ustr) {
+	return hash_djb2_cstr_impl<HashT>(p_ustr);
+}
+
+template <typename HashT = uint32_t, typename T>
+static _FORCE_INLINE_ HashT hash_djb2_buffer_impl(const T *p_buff, int p_len, HashT p_prev = 5381) {
+	HashT hash = p_prev;
 
 	for (int i = 0; i < p_len; i++) {
-		hash = ((hash << 5) + hash) ^ p_buff[i]; /* hash * 33 + c */
+		hash = ((hash << 5) + hash) + p_buff[i]; /* hash * 33 + c */
 	}
 
 	return hash;
 }
 
-static _FORCE_INLINE_ uint32_t hash_djb2_one_32(uint32_t p_in, uint32_t p_prev = 5381) {
-	return ((p_prev << 5) + p_prev) ^ p_in;
+template <typename HashT = uint32_t>
+static _FORCE_INLINE_ HashT hash_djb2_buffer(const uint8_t *p_buff, int p_len, HashT p_prev = 5381) {
+	return hash_djb2_buffer_impl(p_buff, p_len, p_prev);
+}
+
+template <typename HashT = uint32_t>
+static _FORCE_INLINE_ HashT hash_djb2_buffer(const char *p_buff, int p_len, HashT p_prev = 5381) {
+	return hash_djb2_buffer_impl(reinterpret_cast<const uint8_t *>(p_buff), p_len, p_prev);
+}
+
+template <typename HashT = uint32_t>
+static _FORCE_INLINE_ HashT hash_djb2_buffer(const wchar_t *p_buff, int p_len, HashT p_prev = 5381) {
+	// Avoid negative values on platforms where wchar_t is signed. Account for different sizes.
+	using wide_unsigned = std::conditional<sizeof(wchar_t) == 2, uint16_t, uint32_t>::type;
+	return hash_djb2_buffer_impl(reinterpret_cast<const wide_unsigned *>(p_buff), p_len, p_prev);
+}
+
+template <typename HashT = uint32_t>
+static _FORCE_INLINE_ HashT hash_djb2_buffer(const char16_t *p_buff, int p_len, HashT p_prev = 5381) {
+	return hash_djb2_buffer_impl(p_buff, p_len, p_prev);
+}
+
+template <typename HashT = uint32_t>
+static _FORCE_INLINE_ HashT hash_djb2_buffer(const char32_t *p_buff, int p_len, HashT p_prev = 5381) {
+	return hash_djb2_buffer_impl(p_buff, p_len, p_prev);
+}
+
+template <typename HashT = uint32_t>
+static _FORCE_INLINE_ HashT hash_djb2_one_32(uint32_t p_in, HashT p_prev = 5381) {
+	return hash_djb2_buffer_impl(&p_in, 1, p_prev);
 }
 
 /**
@@ -296,94 +334,115 @@ static _FORCE_INLINE_ uint64_t hash_make_uint64_t(T p_in) {
 template <typename T>
 class Ref;
 
+class Variant;
+class Object;
+class ObjectID;
+
+class CharString;
+class String;
+class StringName;
+
+struct [[nodiscard]] Vector2;
+struct [[nodiscard]] Vector2i;
+struct [[nodiscard]] Rect2;
+struct [[nodiscard]] Rect2i;
+struct [[nodiscard]] Vector3;
+struct [[nodiscard]] Vector3i;
+struct [[nodiscard]] Vector4;
+struct [[nodiscard]] Vector4i;
+struct [[nodiscard]] Plane;
+struct [[nodiscard]] AABB;
+struct [[nodiscard]] Quaternion;
+struct [[nodiscard]] Basis;
+struct [[nodiscard]] Transform2D;
+struct [[nodiscard]] Transform3D;
+struct [[nodiscard]] Projection;
+struct [[nodiscard]] Color;
+class NodePath;
+class RID;
+class Callable;
+class Signal;
+class Dictionary;
+class Array;
+
+template <typename T>
+class Vector;
+
+typedef Vector<uint8_t> PackedByteArray;
+typedef Vector<int32_t> PackedInt32Array;
+typedef Vector<int64_t> PackedInt64Array;
+typedef Vector<float> PackedFloat32Array;
+typedef Vector<double> PackedFloat64Array;
+typedef Vector<String> PackedStringArray;
+typedef Vector<Vector2> PackedVector2Array;
+typedef Vector<Vector3> PackedVector3Array;
+typedef Vector<Color> PackedColorArray;
+typedef Vector<Vector4> PackedVector4Array;
+
 struct HashMapHasherDefault {
 	// Generic hash function for any type.
-	template <typename T>
-	static _FORCE_INLINE_ uint32_t hash(const T *p_pointer) { return hash_one_uint64((uint64_t)p_pointer); }
+	static _FORCE_INLINE_ uint32_t hash(const Object *p_pointer) { return hash_one_uint64((uint64_t)p_pointer); }
 
 	template <typename T>
-	static _FORCE_INLINE_ uint32_t hash(const Ref<T> &p_ref) { return hash_one_uint64((uint64_t)p_ref.operator->()); }
+	static _FORCE_INLINE_ uint32_t hash(const Ref<T> &p_ref) { return hash_one_uint64((uint64_t)p_ref.ptr()); }
 
-	static _FORCE_INLINE_ uint32_t hash(const String &p_string) { return p_string.hash(); }
-	static _FORCE_INLINE_ uint32_t hash(const char *p_cstr) { return hash_djb2(p_cstr); }
-	static _FORCE_INLINE_ uint32_t hash(const wchar_t p_wchar) { return hash_fmix32(p_wchar); }
-	static _FORCE_INLINE_ uint32_t hash(const char16_t p_uchar) { return hash_fmix32(p_uchar); }
-	static _FORCE_INLINE_ uint32_t hash(const char32_t p_uchar) { return hash_fmix32(p_uchar); }
-	static _FORCE_INLINE_ uint32_t hash(const RID &p_rid) { return hash_one_uint64(p_rid.get_id()); }
-	static _FORCE_INLINE_ uint32_t hash(const CharString &p_char_string) { return hash_djb2(p_char_string.get_data()); }
-	static _FORCE_INLINE_ uint32_t hash(const StringName &p_string_name) { return p_string_name.hash(); }
-	static _FORCE_INLINE_ uint32_t hash(const NodePath &p_path) { return p_path.hash(); }
-	static _FORCE_INLINE_ uint32_t hash(const ObjectID &p_id) { return hash_one_uint64(p_id); }
+	static _FORCE_INLINE_ uint32_t hash(const Variant &p_var);
+	static _FORCE_INLINE_ uint32_t hash(const Transform2D &p_xform);
+	static _FORCE_INLINE_ uint32_t hash(const Transform3D &p_xform);
+	static _FORCE_INLINE_ uint32_t hash(const Basis &p_basis);
+	static _FORCE_INLINE_ uint32_t hash(const Quaternion &p_quat);
+	static _FORCE_INLINE_ uint32_t hash(const Plane &p_plane);
+	static _FORCE_INLINE_ uint32_t hash(const Projection &p_proj);
+	static _FORCE_INLINE_ uint32_t hash(const AABB &p_aabb);
+	static _FORCE_INLINE_ uint32_t hash(const Color &p_color);
+	static _FORCE_INLINE_ uint32_t hash(const NodePath &p_nodepath);
+	static _FORCE_INLINE_ uint32_t hash(const Dictionary &p_dict);
+	static _FORCE_INLINE_ uint32_t hash(const Callable &p_callable);
+	static _FORCE_INLINE_ uint32_t hash(const Signal &p_sig);
+	static _FORCE_INLINE_ uint32_t hash(const Array &p_array);
+	static _FORCE_INLINE_ uint32_t hash(const PackedByteArray &p_array);
+	static _FORCE_INLINE_ uint32_t hash(const PackedInt32Array &p_array);
+	static _FORCE_INLINE_ uint32_t hash(const PackedInt64Array &p_array);
+	static _FORCE_INLINE_ uint32_t hash(const PackedFloat32Array &p_array);
+	static _FORCE_INLINE_ uint32_t hash(const PackedFloat64Array &p_array);
+	static _FORCE_INLINE_ uint32_t hash(const PackedStringArray &p_array);
+	static _FORCE_INLINE_ uint32_t hash(const PackedVector2Array &p_array);
+	static _FORCE_INLINE_ uint32_t hash(const PackedVector3Array &p_array);
+	static _FORCE_INLINE_ uint32_t hash(const PackedColorArray &p_array);
+	static _FORCE_INLINE_ uint32_t hash(const PackedVector4Array &p_array);
+	static _FORCE_INLINE_ uint32_t hash(const CharString &p_char_string);
+	static _FORCE_INLINE_ uint32_t hash(const String &p_string);
+	static _FORCE_INLINE_ uint32_t hash(const StringName &p_string_name);
+	static _FORCE_INLINE_ uint32_t hash(const Vector2 &p_vec);
+	static _FORCE_INLINE_ uint32_t hash(const Vector2i &p_vec);
+	static _FORCE_INLINE_ uint32_t hash(const Rect2 &p_rect);
+	static _FORCE_INLINE_ uint32_t hash(const Rect2i &p_rect);
+	static _FORCE_INLINE_ uint32_t hash(const Vector3 &p_vec);
+	static _FORCE_INLINE_ uint32_t hash(const Vector3i &p_vec);
+	static _FORCE_INLINE_ uint32_t hash(const Vector4 &p_vec);
+	static _FORCE_INLINE_ uint32_t hash(const Vector4i &p_vec);
+	static _FORCE_INLINE_ uint32_t hash(const RID &p_rid);
+	static _FORCE_INLINE_ uint32_t hash(const ObjectID &p_id);
 
-	static _FORCE_INLINE_ uint32_t hash(const uint64_t p_int) { return hash_one_uint64(p_int); }
+	static _FORCE_INLINE_ uint32_t hash(const bool p_bool) { return p_bool ? 1 : 0; }
 	static _FORCE_INLINE_ uint32_t hash(const int64_t p_int) { return hash_one_uint64(p_int); }
-	static _FORCE_INLINE_ uint32_t hash(const float p_float) { return hash_murmur3_one_float(p_float); }
+	static _FORCE_INLINE_ uint32_t hash(const int32_t p_int) { return hash_one_uint64(p_int); }
+	static _FORCE_INLINE_ uint32_t hash(const int16_t p_int) { return hash_one_uint64(p_int); }
+	static _FORCE_INLINE_ uint32_t hash(const int8_t p_int) { return hash_one_uint64(p_int); }
+	static _FORCE_INLINE_ uint32_t hash(const uint64_t p_int) { return hash_one_uint64(p_int); }
+	static _FORCE_INLINE_ uint32_t hash(const uint32_t p_int) { return hash_one_uint64(p_int); }
+	static _FORCE_INLINE_ uint32_t hash(const uint16_t p_int) { return hash_one_uint64(p_int); }
+	static _FORCE_INLINE_ uint32_t hash(const uint8_t p_int) { return hash_one_uint64(p_int); }
+	static _FORCE_INLINE_ uint32_t hash(const float p_float) { return hash_murmur3_one_double(p_float); }
 	static _FORCE_INLINE_ uint32_t hash(const double p_double) { return hash_murmur3_one_double(p_double); }
-	static _FORCE_INLINE_ uint32_t hash(const uint32_t p_int) { return hash_fmix32(p_int); }
-	static _FORCE_INLINE_ uint32_t hash(const int32_t p_int) { return hash_fmix32(p_int); }
-	static _FORCE_INLINE_ uint32_t hash(const uint16_t p_int) { return hash_fmix32(p_int); }
-	static _FORCE_INLINE_ uint32_t hash(const int16_t p_int) { return hash_fmix32(p_int); }
-	static _FORCE_INLINE_ uint32_t hash(const uint8_t p_int) { return hash_fmix32(p_int); }
-	static _FORCE_INLINE_ uint32_t hash(const int8_t p_int) { return hash_fmix32(p_int); }
-	static _FORCE_INLINE_ uint32_t hash(const Vector2i &p_vec) {
-		uint32_t h = hash_murmur3_one_32(p_vec.x);
-		h = hash_murmur3_one_32(p_vec.y, h);
-		return hash_fmix32(h);
-	}
-	static _FORCE_INLINE_ uint32_t hash(const Vector3i &p_vec) {
-		uint32_t h = hash_murmur3_one_32(p_vec.x);
-		h = hash_murmur3_one_32(p_vec.y, h);
-		h = hash_murmur3_one_32(p_vec.z, h);
-		return hash_fmix32(h);
-	}
-	static _FORCE_INLINE_ uint32_t hash(const Vector4i &p_vec) {
-		uint32_t h = hash_murmur3_one_32(p_vec.x);
-		h = hash_murmur3_one_32(p_vec.y, h);
-		h = hash_murmur3_one_32(p_vec.z, h);
-		h = hash_murmur3_one_32(p_vec.w, h);
-		return hash_fmix32(h);
-	}
-	static _FORCE_INLINE_ uint32_t hash(const Vector2 &p_vec) {
-		uint32_t h = hash_murmur3_one_real(p_vec.x);
-		h = hash_murmur3_one_real(p_vec.y, h);
-		return hash_fmix32(h);
-	}
-	static _FORCE_INLINE_ uint32_t hash(const Vector3 &p_vec) {
-		uint32_t h = hash_murmur3_one_real(p_vec.x);
-		h = hash_murmur3_one_real(p_vec.y, h);
-		h = hash_murmur3_one_real(p_vec.z, h);
-		return hash_fmix32(h);
-	}
-	static _FORCE_INLINE_ uint32_t hash(const Vector4 &p_vec) {
-		uint32_t h = hash_murmur3_one_real(p_vec.x);
-		h = hash_murmur3_one_real(p_vec.y, h);
-		h = hash_murmur3_one_real(p_vec.z, h);
-		h = hash_murmur3_one_real(p_vec.w, h);
-		return hash_fmix32(h);
-	}
-	static _FORCE_INLINE_ uint32_t hash(const Rect2i &p_rect) {
-		uint32_t h = hash_murmur3_one_32(p_rect.position.x);
-		h = hash_murmur3_one_32(p_rect.position.y, h);
-		h = hash_murmur3_one_32(p_rect.size.x, h);
-		h = hash_murmur3_one_32(p_rect.size.y, h);
-		return hash_fmix32(h);
-	}
-	static _FORCE_INLINE_ uint32_t hash(const Rect2 &p_rect) {
-		uint32_t h = hash_murmur3_one_real(p_rect.position.x);
-		h = hash_murmur3_one_real(p_rect.position.y, h);
-		h = hash_murmur3_one_real(p_rect.size.x, h);
-		h = hash_murmur3_one_real(p_rect.size.y, h);
-		return hash_fmix32(h);
-	}
-	static _FORCE_INLINE_ uint32_t hash(const AABB &p_aabb) {
-		uint32_t h = hash_murmur3_one_real(p_aabb.position.x);
-		h = hash_murmur3_one_real(p_aabb.position.y, h);
-		h = hash_murmur3_one_real(p_aabb.position.z, h);
-		h = hash_murmur3_one_real(p_aabb.size.x, h);
-		h = hash_murmur3_one_real(p_aabb.size.y, h);
-		h = hash_murmur3_one_real(p_aabb.size.z, h);
-		return hash_fmix32(h);
-	}
+	static _FORCE_INLINE_ uint32_t hash(const char *p_cstr) { return hash_djb2(p_cstr); }
+	static _FORCE_INLINE_ uint32_t hash(const wchar_t *p_wstr) { return hash_djb2(p_wstr); }
+	static _FORCE_INLINE_ uint32_t hash(const char16_t *p_ustr) { return hash_djb2(p_ustr); }
+	static _FORCE_INLINE_ uint32_t hash(const char32_t *p_ustr) { return hash_djb2(p_ustr); }
+	static _FORCE_INLINE_ uint32_t hash(const char p_char) { return hash_one_uint64(p_char); }
+	static _FORCE_INLINE_ uint32_t hash(const wchar_t p_wchar) { return hash_one_uint64(p_wchar); }
+	static _FORCE_INLINE_ uint32_t hash(const char16_t p_uchar) { return hash_one_uint64(p_uchar); }
+	static _FORCE_INLINE_ uint32_t hash(const char32_t p_uchar) { return hash_one_uint64(p_uchar); }
 };
 
 // TODO: Fold this into HashMapHasherDefault once C++20 concepts are allowed
@@ -410,20 +469,6 @@ template <>
 struct HashMapComparatorDefault<double> {
 	static bool compare(const double &p_lhs, const double &p_rhs) {
 		return (p_lhs == p_rhs) || (Math::is_nan(p_lhs) && Math::is_nan(p_rhs));
-	}
-};
-
-template <>
-struct HashMapComparatorDefault<Vector2> {
-	static bool compare(const Vector2 &p_lhs, const Vector2 &p_rhs) {
-		return ((p_lhs.x == p_rhs.x) || (Math::is_nan(p_lhs.x) && Math::is_nan(p_rhs.x))) && ((p_lhs.y == p_rhs.y) || (Math::is_nan(p_lhs.y) && Math::is_nan(p_rhs.y)));
-	}
-};
-
-template <>
-struct HashMapComparatorDefault<Vector3> {
-	static bool compare(const Vector3 &p_lhs, const Vector3 &p_rhs) {
-		return ((p_lhs.x == p_rhs.x) || (Math::is_nan(p_lhs.x) && Math::is_nan(p_rhs.x))) && ((p_lhs.y == p_rhs.y) || (Math::is_nan(p_lhs.y) && Math::is_nan(p_rhs.y))) && ((p_lhs.z == p_rhs.z) || (Math::is_nan(p_lhs.z) && Math::is_nan(p_rhs.z)));
 	}
 };
 

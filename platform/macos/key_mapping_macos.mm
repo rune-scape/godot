@@ -39,7 +39,8 @@
 struct HashMapHasherKeys {
 	static _FORCE_INLINE_ uint32_t hash(const Key p_key) { return hash_fmix32(static_cast<uint32_t>(p_key)); }
 	static _FORCE_INLINE_ uint32_t hash(const char32_t p_uchar) { return hash_fmix32(p_uchar); }
-	static _FORCE_INLINE_ uint32_t hash(const unsigned p_key) { return hash_fmix32(p_key); }
+	static _FORCE_INLINE_ uint32_t hash(const unsigned int p_key) { return hash_fmix32(p_key); }
+	static _FORCE_INLINE_ uint32_t hash(const int p_key) { return hash_fmix32(p_key); }
 };
 
 HashSet<unsigned int> numpad_keys;
