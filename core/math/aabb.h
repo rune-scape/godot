@@ -33,6 +33,7 @@
 
 #include "core/math/plane.h"
 #include "core/math/vector3.h"
+#include "core/templates/hashfuncs.h"
 
 /**
  * AABB (Axis Aligned Bounding Box)
@@ -491,6 +492,16 @@ AABB AABB::quantized(real_t p_unit) const {
 	AABB ret = *this;
 	ret.quantize(p_unit);
 	return ret;
+}
+
+uint32_t HashMapHasherDefault::hash(const AABB &p_aabb) {
+	uint32_t h = hash_murmur3_one_real(p_aabb.position.x);
+	h = hash_murmur3_one_real(p_aabb.position.y, h);
+	h = hash_murmur3_one_real(p_aabb.position.z, h);
+	h = hash_murmur3_one_real(p_aabb.size.x, h);
+	h = hash_murmur3_one_real(p_aabb.size.y, h);
+	h = hash_murmur3_one_real(p_aabb.size.z, h);
+	return hash_fmix32(h);
 }
 
 #endif // AABB_H

@@ -32,13 +32,8 @@
 
 #include "core/templates/hash_map.h"
 
-struct HashMapHasherKeys {
-	static _FORCE_INLINE_ uint32_t hash(const Key p_key) { return hash_fmix32(static_cast<uint32_t>(p_key)); }
-	static _FORCE_INLINE_ uint32_t hash(const CFIndex p_key) { return hash_fmix32(p_key); }
-};
-
-HashMap<CFIndex, Key, HashMapHasherKeys> keyusage_map;
-HashMap<CFIndex, KeyLocation, HashMapHasherKeys> location_map;
+HashMap<CFIndex, Key> keyusage_map;
+HashMap<CFIndex, KeyLocation> location_map;
 
 void KeyMappingIOS::initialize() {
 	if (@available(iOS 13.4, *)) {

@@ -33,6 +33,7 @@
 
 #include "core/error/error_macros.h"
 #include "core/math/math_funcs.h"
+#include "core/templates/hashfuncs.h"
 
 class String;
 struct Vector2i;
@@ -323,6 +324,19 @@ _FORCE_INLINE_ Vector2 operator*(int32_t p_scalar, const Vector2 &p_vec) {
 _FORCE_INLINE_ Vector2 operator*(int64_t p_scalar, const Vector2 &p_vec) {
 	return p_vec * p_scalar;
 }
+
+uint32_t HashMapHasherDefault::hash(const Vector2 &p_vec) {
+	uint32_t h = hash_murmur3_one_real(p_vec.x);
+	h = hash_murmur3_one_real(p_vec.y, h);
+	return hash_fmix32(h);
+}
+
+template <>
+struct HashMapComparatorDefault<Vector2> {
+	static bool compare(const Vector2 &p_lhs, const Vector2 &p_rhs) {
+		return ((p_lhs.x == p_rhs.x) || (Math::is_nan(p_lhs.x) && Math::is_nan(p_rhs.x))) && ((p_lhs.y == p_rhs.y) || (Math::is_nan(p_lhs.y) && Math::is_nan(p_rhs.y)));
+	}
+};
 
 typedef Vector2 Size2;
 typedef Vector2 Point2;

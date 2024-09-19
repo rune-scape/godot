@@ -36,17 +36,11 @@
 #import <Carbon/Carbon.h>
 #import <Cocoa/Cocoa.h>
 
-struct HashMapHasherKeys {
-	static _FORCE_INLINE_ uint32_t hash(const Key p_key) { return hash_fmix32(static_cast<uint32_t>(p_key)); }
-	static _FORCE_INLINE_ uint32_t hash(const char32_t p_uchar) { return hash_fmix32(p_uchar); }
-	static _FORCE_INLINE_ uint32_t hash(const unsigned p_key) { return hash_fmix32(p_key); }
-};
-
 HashSet<unsigned int> numpad_keys;
-HashMap<unsigned int, Key, HashMapHasherKeys> keysym_map;
-HashMap<Key, unsigned int, HashMapHasherKeys> keysym_map_inv;
-HashMap<Key, char32_t, HashMapHasherKeys> keycode_map;
-HashMap<unsigned int, KeyLocation, HashMapHasherKeys> location_map;
+HashMap<unsigned int, Key> keysym_map;
+HashMap<Key, unsigned int> keysym_map_inv;
+HashMap<Key, char32_t> keycode_map;
+HashMap<unsigned int, KeyLocation> location_map;
 
 void KeyMappingMacOS::initialize() {
 	numpad_keys.insert(0x41); //kVK_ANSI_KeypadDecimal

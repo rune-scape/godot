@@ -33,6 +33,7 @@
 
 #include "core/error/error_macros.h"
 #include "core/math/vector2i.h"
+#include "core/templates/hashfuncs.h"
 
 class String;
 struct Rect2;
@@ -237,5 +238,13 @@ struct [[nodiscard]] Rect2i {
 			size(p_size) {
 	}
 };
+
+uint32_t HashMapHasherDefault::hash(const Rect2i &p_rect) {
+	uint32_t h = hash_murmur3_one_32(p_rect.position.x);
+	h = hash_murmur3_one_32(p_rect.position.y, h);
+	h = hash_murmur3_one_32(p_rect.size.x, h);
+	h = hash_murmur3_one_32(p_rect.size.y, h);
+	return hash_fmix32(h);
+}
 
 #endif // RECT2I_H

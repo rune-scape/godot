@@ -32,6 +32,7 @@
 #define PLANE_H
 
 #include "core/math/vector3.h"
+#include "core/templates/hashfuncs.h"
 
 class Variant;
 
@@ -131,6 +132,15 @@ bool Plane::operator==(const Plane &p_plane) const {
 
 bool Plane::operator!=(const Plane &p_plane) const {
 	return normal != p_plane.normal || d != p_plane.d;
+}
+
+uint32_t HashMapHasherDefault::hash(const Plane &p_plane) {
+	uint32_t h = HASH_MURMUR3_SEED;
+	h = hash_murmur3_one_real(p_plane.normal.x, h);
+	h = hash_murmur3_one_real(p_plane.normal.y, h);
+	h = hash_murmur3_one_real(p_plane.normal.z, h);
+	h = hash_murmur3_one_real(p_plane.d, h);
+	return hash_fmix32(h);
 }
 
 #endif // PLANE_H

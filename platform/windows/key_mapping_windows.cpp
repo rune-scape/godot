@@ -36,17 +36,11 @@
 // See WinUser.h and the below for documentation:
 // https://docs.microsoft.com/en-us/windows/win32/inputdev/virtual-key-codes
 
-struct HashMapHasherKeys {
-	static _FORCE_INLINE_ uint32_t hash(const Key p_key) { return hash_fmix32(static_cast<uint32_t>(p_key)); }
-	static _FORCE_INLINE_ uint32_t hash(const char32_t p_uchar) { return hash_fmix32(p_uchar); }
-	static _FORCE_INLINE_ uint32_t hash(const unsigned p_key) { return hash_fmix32(p_key); }
-};
-
-HashMap<unsigned int, Key, HashMapHasherKeys> vk_map;
-HashMap<unsigned int, Key, HashMapHasherKeys> scansym_map;
-HashMap<Key, unsigned int, HashMapHasherKeys> scansym_map_inv;
-HashMap<unsigned int, Key, HashMapHasherKeys> scansym_map_ext;
-HashMap<unsigned int, KeyLocation, HashMapHasherKeys> location_map;
+HashMap<unsigned int, Key> vk_map;
+HashMap<unsigned int, Key> scansym_map;
+HashMap<Key, unsigned int> scansym_map_inv;
+HashMap<unsigned int, Key> scansym_map_ext;
+HashMap<unsigned int, KeyLocation> location_map;
 
 void KeyMappingWindows::initialize() {
 	// VK_LBUTTON (0x01)

@@ -31,6 +31,7 @@
 #ifndef RID_H
 #define RID_H
 
+#include "core/templates/hashfuncs.h"
 #include "core/typedefs.h"
 
 class RID_AllocBase;
@@ -72,5 +73,9 @@ public:
 
 	_ALWAYS_INLINE_ RID() {}
 };
+
+uint32_t HashMapHasherDefault::hash(const RID &p_rid) {
+	return hash_one_uint64(p_rid.get_id());
+}
 
 #endif // RID_H

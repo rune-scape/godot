@@ -33,6 +33,7 @@
 
 #include "core/string/string_name.h"
 #include "core/string/ustring.h"
+#include "core/templates/hashfuncs.h"
 
 class NodePath {
 	struct Data {
@@ -96,5 +97,9 @@ public:
 	NodePath() {}
 	~NodePath();
 };
+
+uint32_t HashMapHasherDefault::hash(const NodePath &p_nodepath) {
+	return p_nodepath.hash();
+}
 
 #endif // NODE_PATH_H

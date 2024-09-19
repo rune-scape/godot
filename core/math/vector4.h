@@ -33,6 +33,7 @@
 
 #include "core/error/error_macros.h"
 #include "core/math/math_defs.h"
+#include "core/templates/hashfuncs.h"
 #include "core/typedefs.h"
 
 class String;
@@ -301,6 +302,14 @@ _FORCE_INLINE_ Vector4 operator*(int32_t p_scalar, const Vector4 &p_vec) {
 
 _FORCE_INLINE_ Vector4 operator*(int64_t p_scalar, const Vector4 &p_vec) {
 	return p_vec * p_scalar;
+}
+
+uint32_t HashMapHasherDefault::hash(const Vector4 &p_vec) {
+	uint32_t h = hash_murmur3_one_real(p_vec.x);
+	h = hash_murmur3_one_real(p_vec.y, h);
+	h = hash_murmur3_one_real(p_vec.z, h);
+	h = hash_murmur3_one_real(p_vec.w, h);
+	return hash_fmix32(h);
 }
 
 #endif // VECTOR4_H

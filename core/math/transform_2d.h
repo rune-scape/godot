@@ -34,6 +34,7 @@
 #include "core/math/math_funcs.h"
 #include "core/math/rect2.h"
 #include "core/math/vector2.h"
+#include "core/templates/hashfuncs.h"
 #include "core/templates/vector.h"
 
 class String;
@@ -245,6 +246,17 @@ Vector<Vector2> Transform2D::xform_inv(const Vector<Vector2> &p_array) const {
 		w[i] = xform_inv(r[i]);
 	}
 	return array;
+}
+
+uint32_t HashMapHasherDefault::hash(const Transform2D &p_xform) {
+	uint32_t h = HASH_MURMUR3_SEED;
+	h = hash_murmur3_one_real(p_xform[0].x, h);
+	h = hash_murmur3_one_real(p_xform[0].y, h);
+	h = hash_murmur3_one_real(p_xform[1].x, h);
+	h = hash_murmur3_one_real(p_xform[1].y, h);
+	h = hash_murmur3_one_real(p_xform[2].x, h);
+	h = hash_murmur3_one_real(p_xform[2].y, h);
+	return hash_fmix32(h);
 }
 
 #endif // TRANSFORM_2D_H

@@ -32,6 +32,7 @@
 #define COLOR_H
 
 #include "core/math/math_funcs.h"
+#include "core/templates/hashfuncs.h"
 
 class String;
 
@@ -286,6 +287,15 @@ bool Color::operator<(const Color &p_color) const {
 
 _FORCE_INLINE_ Color operator*(float p_scalar, const Color &p_color) {
 	return p_color * p_scalar;
+}
+
+uint32_t HashMapHasherDefault::hash(const Color &p_color) {
+	uint32_t h = HASH_MURMUR3_SEED;
+	h = hash_murmur3_one_float(p_color.r, h);
+	h = hash_murmur3_one_float(p_color.g, h);
+	h = hash_murmur3_one_float(p_color.b, h);
+	h = hash_murmur3_one_float(p_color.a, h);
+	return hash_fmix32(h);
 }
 
 #endif // COLOR_H

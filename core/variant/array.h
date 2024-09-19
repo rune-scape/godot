@@ -31,6 +31,7 @@
 #ifndef ARRAY_H
 #define ARRAY_H
 
+#include "core/templates/hashfuncs.h"
 #include "core/typedefs.h"
 
 #include <climits>
@@ -198,5 +199,9 @@ public:
 	Array();
 	~Array();
 };
+
+uint32_t HashMapHasherDefault::hash(const Array &p_array) {
+	return p_array.hash();
+}
 
 #endif // ARRAY_H

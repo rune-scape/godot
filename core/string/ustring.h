@@ -35,6 +35,7 @@
 
 #include "core/string/char_utils.h"
 #include "core/templates/cowdata.h"
+#include "core/templates/hashfuncs.h"
 #include "core/templates/vector.h"
 #include "core/typedefs.h"
 #include "core/variant/array.h"
@@ -639,6 +640,13 @@ _FORCE_INLINE_ Vector<String> sarray(P... p_args) {
 	Vector<String> arr;
 	sarray_add_str(arr, p_args...);
 	return arr;
+}
+
+uint32_t HashMapHasherDefault::hash(const String &p_string) {
+	return p_string.hash();
+}
+uint32_t HashMapHasherDefault::hash(const CharString &p_char_string) {
+	return String::hash(p_char_string.get_data());
 }
 
 #endif // USTRING_GODOT_H

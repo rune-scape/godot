@@ -31,6 +31,7 @@
 #ifndef OBJECT_ID_H
 #define OBJECT_ID_H
 
+#include "core/templates/hashfuncs.h"
 #include "core/typedefs.h"
 
 // Class to store an object ID (int64)
@@ -59,5 +60,9 @@ public:
 	_ALWAYS_INLINE_ explicit ObjectID(const uint64_t p_id) { id = p_id; }
 	_ALWAYS_INLINE_ explicit ObjectID(const int64_t p_id) { id = p_id; }
 };
+
+uint32_t HashMapHasherDefault::hash(const ObjectID &p_id) {
+	return hash_one_uint64(p_id);
+}
 
 #endif // OBJECT_ID_H

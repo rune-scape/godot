@@ -33,6 +33,7 @@
 
 #include "core/math/quaternion.h"
 #include "core/math/vector3.h"
+#include "core/templates/hashfuncs.h"
 
 struct [[nodiscard]] Basis {
 	Vector3 rows[3] = {
@@ -321,6 +322,20 @@ real_t Basis::determinant() const {
 	return rows[0][0] * (rows[1][1] * rows[2][2] - rows[2][1] * rows[1][2]) -
 			rows[1][0] * (rows[0][1] * rows[2][2] - rows[2][1] * rows[0][2]) +
 			rows[2][0] * (rows[0][1] * rows[1][2] - rows[1][1] * rows[0][2]);
+}
+
+uint32_t HashMapHasherDefault::hash(const Basis &p_basis) {
+	uint32_t h = HASH_MURMUR3_SEED;
+	h = hash_murmur3_one_real(p_basis[0].x, h);
+	h = hash_murmur3_one_real(p_basis[0].y, h);
+	h = hash_murmur3_one_real(p_basis[0].z, h);
+	h = hash_murmur3_one_real(p_basis[1].x, h);
+	h = hash_murmur3_one_real(p_basis[1].y, h);
+	h = hash_murmur3_one_real(p_basis[1].z, h);
+	h = hash_murmur3_one_real(p_basis[2].x, h);
+	h = hash_murmur3_one_real(p_basis[2].y, h);
+	h = hash_murmur3_one_real(p_basis[2].z, h);
+	return hash_fmix32(h);
 }
 
 #endif // BASIS_H
