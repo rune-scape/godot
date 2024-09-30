@@ -303,7 +303,7 @@ struct GDScriptUtilityFunctionsDefinitions {
 
 				for (const KeyValue<StringName, GDScript::MemberInfo> &E : base->member_indices) {
 					if (!d.has(E.key)) {
-						d[E.key] = ins->members[E.value.index];
+						d[E.key] = ins->members[E.value.index].value;
 					}
 				}
 				*r_ret = d;
@@ -382,7 +382,7 @@ struct GDScriptUtilityFunctionsDefinitions {
 
 		for (KeyValue<StringName, GDScript::MemberInfo> &E : gd_ref->member_indices) {
 			if (d.has(E.key)) {
-				ins->members.write[E.value.index] = d[E.key];
+				ins->members.write[E.value.index].value = d[E.key];
 			}
 		}
 	}
@@ -607,6 +607,91 @@ struct GDScriptUtilityFunctionsDefinitions {
 		r_error.argument = 1;
 		r_error.expected = Variant::NIL;
 	}
+
+	static inline void get_member_set_signal(Variant *r_ret, const Variant **p_args, int p_arg_count, Callable::CallError &r_error) {
+		VALIDATE_ARG_COUNT(2);
+
+#define FAIL_INVALID_BASE_ERROR                                                                        \
+	*r_ret = RTR("Invalid base for member set signal, should be a GDScript or instance of GDScript."); \
+	r_error.error = Callable::CallError::CALL_ERROR_INVALID_ARGUMENT;                                  \
+	r_error.argument = 0;                                                                              \
+	r_error.expected = Variant::OBJECT;                                                                \
+	return;
+
+		if (!p_args[1]->is_string()) {
+			*r_ret = RTR("Invalid member name for member set signal, should be a String or StringName.");
+			r_error.error = Callable::CallError::CALL_ERROR_INVALID_ARGUMENT;
+			r_error.argument = 1;
+			r_error.expected = Variant::NIL;
+			return;
+		}
+
+		if (p_args[0]->get_type() != Variant::OBJECT) {
+			FAIL_INVALID_BASE_ERROR
+		}
+
+		bool was_type_freed = false;
+		Object *base = p_args[0]->get_validated_object_with_check(was_type_freed);
+		if (was_type_freed) {
+			*r_ret = RTR("Base is a previously freed instance.");
+			r_error.error = Callable::CallError::CALL_ERROR_INVALID_ARGUMENT;
+			r_error.argument = 1;
+			r_error.expected = Variant::NIL;
+			return;
+		}
+
+		if (!base) {
+			FAIL_INVALID_BASE_ERROR
+		}
+
+		StringName member_name = p_args[1]->operator StringName();
+		ScriptInstance *inst = base->get_script_instance();
+		if (inst && inst->get_language() == GDScriptLanguage::get_singleton()) {
+			GDScriptInstance *gdinst = static_cast<GDScriptInstance *>(inst);
+			if (HashMap<StringName, GDScript::MemberInfo>::ConstIterator E = gdinst->script->member_indices.find(member_name)) {
+				*r_ret = GDScript::_get_member_set_signal(base, gdinst->members.write[E->value.index], E->value, member_name);
+				return;
+			}
+
+			GDScript *script = gdinst->script.ptr();
+			while (script) {
+				if (HashMap<StringName, GDScript::MemberInfo>::ConstIterator E = script->static_variables_indices.find(member_name)) {
+					*r_ret = GDScript::_get_member_set_signal(script, script->static_variables.write[E->value.index], E->value, member_name);
+					return;
+				}
+
+				script = script->_base;
+			}
+
+			*r_ret = RTR(vformat("Could not find member %s on base %s.", member_name, base));
+			r_error.error = Callable::CallError::CALL_ERROR_INVALID_ARGUMENT;
+			r_error.argument = 1;
+			r_error.expected = Variant::NIL;
+			return;
+		}
+
+		GDScript *script = Object::cast_to<GDScript>(base);
+		if (script) {
+			while (script) {
+				if (HashMap<StringName, GDScript::MemberInfo>::ConstIterator E = script->static_variables_indices.find(member_name)) {
+					*r_ret = GDScript::_get_member_set_signal(script, script->static_variables.write[E->value.index], E->value, member_name);
+					return;
+				}
+
+				script = script->_base;
+			}
+
+			*r_ret = RTR(vformat("Could not find member %s on base %s.", member_name, base));
+			r_error.error = Callable::CallError::CALL_ERROR_INVALID_ARGUMENT;
+			r_error.argument = 1;
+			r_error.expected = Variant::NIL;
+			return;
+		}
+
+		FAIL_INVALID_BASE_ERROR
+
+#undef FAIL_INVALID_BASE_ERROR
+	}
 };
 
 struct GDScriptUtilityFunctionInfo {
@@ -725,6 +810,7 @@ void GDScriptUtilityFunctions::register_functions() {
 	REGISTER_FUNC_NO_ARGS(get_stack, false, Variant::ARRAY);
 	REGISTER_FUNC(len, true, Variant::INT, VARARG("var"));
 	REGISTER_FUNC(is_instance_of, true, Variant::BOOL, VARARG("value"), VARARG("type"));
+	REGISTER_FUNC(get_member_set_signal, false, Variant::SIGNAL, ARG("base", Variant::OBJECT), ARG("member_name", Variant::STRING_NAME));
 }
 
 void GDScriptUtilityFunctions::unregister_functions() {

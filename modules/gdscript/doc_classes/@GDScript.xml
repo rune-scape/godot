@@ -81,6 +81,13 @@
 				Converts a [param dictionary] (created with [method inst_to_dict]) back to an Object instance. Can be useful for deserializing.
 			</description>
 		</method>
+		<method name="get_member_set_signal">
+			<return type="Signal" />
+			<param index="0" name="base" type="Object" />
+			<param index="1" name="member_name" type="StringName" />
+			<description>
+			</description>
+		</method>
 		<method name="get_stack">
 			<return type="Array" />
 			<description>
@@ -172,6 +179,18 @@
 				This function is a simplified version of [method ResourceLoader.load], which can be used for more advanced scenarios.
 				[b]Note:[/b] Files have to be imported into the engine first to load them using this function. If you want to load [Image]s at run-time, you may use [method Image.load]. If you want to import audio files, you can use the snippet described in [member AudioStreamMP3.data].
 				[b]Note:[/b] If [member ProjectSettings.editor/export/convert_text_resources_to_binary] is [code]true[/code], [method @GDScript.load] will not be able to read converted files in an exported project. If you rely on run-time loading of files present within the PCK, set [member ProjectSettings.editor/export/convert_text_resources_to_binary] to [code]false[/code].
+			</description>
+		</method>
+		<method name="onset">
+			<return type="Signal" />
+			<param index="0" name="member_expression" type="Variant" />
+			<description>
+				Returns a [Signal] that emits when [param member_expression] variable on base is set. The member expression is not evaluated
+				[codeblock]
+				# Observe variable being set
+				onset(obj.x).connect(func(old, new): print("x was set, old:", old, ", new: ", new))
+				[/codeblock]
+				[b]Note:[/b] [method onset] is a keyword, not a function. So you cannot access it as a [Callable].
 			</description>
 		</method>
 		<method name="preload">

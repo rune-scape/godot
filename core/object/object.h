@@ -634,8 +634,6 @@ private:
 	mutable const StringName *_class_name_ptr = nullptr;
 
 	void _add_user_signal(const String &p_name, const Array &p_args = Array());
-	bool _has_user_signal(const StringName &p_name) const;
-	void _remove_user_signal(const StringName &p_name);
 	Error _emit_signal(const Variant **p_args, int p_argcount, Callable::CallError &r_error);
 	TypedArray<Dictionary> _get_signal_list() const;
 	TypedArray<Dictionary> _get_signal_connection_list(const StringName &p_signal) const;
@@ -909,6 +907,8 @@ public:
 	void set_script_and_instance(const Variant &p_script, ScriptInstance *p_instance);
 
 	void add_user_signal(const MethodInfo &p_signal);
+	bool has_user_signal(const StringName &p_name) const;
+	void remove_user_signal(const StringName &p_name);
 
 	template <typename... VarArgs>
 	Error emit_signal(const StringName &p_name, VarArgs... p_args) {

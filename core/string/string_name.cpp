@@ -224,15 +224,7 @@ int StringName::length() const {
 }
 
 bool StringName::is_empty() const {
-	if (_data) {
-		if (_data->cname) {
-			return _data->cname[0] == 0;
-		} else {
-			return _data->name.is_empty();
-		}
-	}
-
-	return true;
+	return !_data;
 }
 
 StringName &StringName::operator=(const StringName &p_name) {

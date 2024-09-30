@@ -112,6 +112,7 @@ class GDScriptAnalyzer {
 	void reduce_lambda(GDScriptParser::LambdaNode *p_lambda);
 	void reduce_literal(GDScriptParser::LiteralNode *p_literal);
 	void reduce_preload(GDScriptParser::PreloadNode *p_preload);
+	void reduce_onset(GDScriptParser::OnSetNode *p_onset);
 	void reduce_self(GDScriptParser::SelfNode *p_self);
 	void reduce_subscript(GDScriptParser::SubscriptNode *p_subscript, bool p_can_be_pseudo_type = false);
 	void reduce_ternary_op(GDScriptParser::TernaryOpNode *p_ternary_op, bool p_is_root = false);

@@ -317,6 +317,7 @@ public:
 			LITERAL,
 			MATCH,
 			MATCH_BRANCH,
+			ONSET,
 			PARAMETER,
 			PASS,
 			PATTERN,
@@ -972,6 +973,19 @@ public:
 		}
 	};
 
+	struct OnSetNode : public ExpressionNode {
+		ExpressionNode *member_expr = nullptr;
+		ExpressionNode *base = nullptr;
+		ExpressionNode *member_name_expr = nullptr;
+		StringName member_name;
+
+		bool is_member_name_dynamic = false;
+
+		OnSetNode() {
+			type = ONSET;
+		}
+	};
+
 	struct ParameterNode : public AssignableNode {
 		ParameterNode() {
 			type = PARAMETER;
@@ -1549,6 +1563,7 @@ private:
 	ExpressionNode *parse_call(ExpressionNode *p_previous_operand, bool p_can_assign);
 	ExpressionNode *parse_get_node(ExpressionNode *p_previous_operand, bool p_can_assign);
 	ExpressionNode *parse_preload(ExpressionNode *p_previous_operand, bool p_can_assign);
+	ExpressionNode *parse_onset(ExpressionNode *p_previous_operand, bool p_can_assign);
 	ExpressionNode *parse_grouping(ExpressionNode *p_previous_operand, bool p_can_assign);
 	ExpressionNode *parse_cast(ExpressionNode *p_previous_operand, bool p_can_assign);
 	ExpressionNode *parse_await(ExpressionNode *p_previous_operand, bool p_can_assign);

@@ -392,10 +392,6 @@ void (*type_init_function_table[])(Variant *) = {
 #define OPCODE(m_op) \
 	m_op:
 #define OPCODE_WHILE(m_test)
-#define OPCODES_END \
-	OPSEXIT:
-#define OPCODES_OUT \
-	OPSOUT:
 #define OPCODE_SWITCH(m_test) goto *switch_table_ops[m_test];
 #ifdef DEBUG_ENABLED
 #define DISPATCH_OPCODE          \
@@ -404,14 +400,10 @@ void (*type_init_function_table[])(Variant *) = {
 #else
 #define DISPATCH_OPCODE goto *switch_table_ops[_code_ptr[ip]]
 #endif
-#define OPCODE_BREAK goto OPSEXIT
-#define OPCODE_OUT goto OPSOUT
 #else
 #define OPCODES_TABLE
 #define OPCODE(m_op) case m_op:
 #define OPCODE_WHILE(m_test) while (m_test)
-#define OPCODES_END
-#define OPCODES_OUT
 #define DISPATCH_OPCODE continue
 #ifdef _MSC_VER
 #define OPCODE_SWITCH(m_test)       \
@@ -420,9 +412,14 @@ void (*type_init_function_table[])(Variant *) = {
 #else
 #define OPCODE_SWITCH(m_test) switch (m_test)
 #endif
-#define OPCODE_BREAK break
-#define OPCODE_OUT break
 #endif
+
+#define OPCODES_END \
+	OPSEXIT:
+#define OPCODES_OUT \
+	OPSOUT:
+#define OPCODE_BREAK goto OPSEXIT
+#define OPCODE_OUT goto OPSOUT
 
 // Helpers for VariantInternal methods in macros.
 #define OP_GET_BOOL get_bool
@@ -645,10 +642,6 @@ Variant GDScriptFunction::call(GDScriptInstance *p_instance, const Variant **p_a
 	{                                                                                               \
 		int address = _code_ptr[ip + 1 + (m_code_ofs)];                                             \
 		int address_type = (address & ADDR_TYPE_MASK) >> ADDR_BITS;                                 \
-		if (unlikely(address_type < 0 || address_type >= ADDR_TYPE_MAX)) {                          \
-			err_text = "Bad address type.";                                                         \
-			OPCODE_BREAK;                                                                           \
-		}                                                                                           \
 		int address_index = address & ADDR_MASK;                                                    \
 		if (unlikely(address_index < 0 || address_index >= variant_address_limits[address_type])) { \
 			if (address_type == ADDR_TYPE_MEMBER && !p_instance) {                                  \
@@ -658,22 +651,113 @@ Variant GDScriptFunction::call(GDScriptInstance *p_instance, const Variant **p_a
 			}                                                                                       \
 			OPCODE_BREAK;                                                                           \
 		}                                                                                           \
-		m_v = &variant_addresses[address_type][address_index];                                      \
+		switch (address_type) {                                                                     \
+			case ADDR_TYPE_STACK:                                                                   \
+				m_v = &stack[address_index];                                                        \
+				break;                                                                              \
+			case ADDR_TYPE_CONSTANT:                                                                \
+				m_v = &_constants_ptr[address_index];                                               \
+				break;                                                                              \
+			case ADDR_TYPE_MEMBER:                                                                  \
+				m_v = &p_instance->members.write[address_index].value;                              \
+				break;                                                                              \
+			default:                                                                                \
+				err_text = "Bad address type.";                                                     \
+				OPCODE_BREAK;                                                                       \
+		}                                                                                           \
 		if (unlikely(!m_v))                                                                         \
 			OPCODE_BREAK;                                                                           \
+	}
+
+#define SET_VARIANT(m_code_ofs, m_val)                                                                          \
+	{                                                                                                           \
+		int address = _code_ptr[ip + 1 + (m_code_ofs)];                                                         \
+		int address_type = (address & ADDR_TYPE_MASK) >> ADDR_BITS;                                             \
+		if (unlikely(address_type < 0 || address_type >= ADDR_TYPE_MAX)) {                                      \
+			err_text = "Bad address type.";                                                                     \
+			OPCODE_BREAK;                                                                                       \
+		}                                                                                                       \
+		int address_index = address & ADDR_MASK;                                                                \
+		if (unlikely(address_index < 0 || address_index >= variant_address_limits[address_type])) {             \
+			if (address_type == ADDR_TYPE_MEMBER && !p_instance) {                                              \
+				err_text = "Cannot access member without instance.";                                            \
+			} else {                                                                                            \
+				err_text = "Bad address index.";                                                                \
+			}                                                                                                   \
+			OPCODE_BREAK;                                                                                       \
+		}                                                                                                       \
+		switch (address_type) {                                                                                 \
+			case ADDR_TYPE_STACK:                                                                               \
+				stack[address_index] = m_val;                                                                   \
+				break;                                                                                          \
+			case ADDR_TYPE_CONSTANT:                                                                            \
+				_constants_ptr[address_index] = m_val;                                                          \
+				break;                                                                                          \
+			case ADDR_TYPE_MEMBER:                                                                              \
+				if (!p_instance) {                                                                              \
+					err_text = "Cannot access member without instance.";                                        \
+					OPCODE_BREAK;                                                                               \
+				}                                                                                               \
+				GDScript::_set_member_data(p_instance->owner, p_instance->members.write[address_index], m_val); \
+				break;                                                                                          \
+			default:                                                                                            \
+				err_text = "Bad address type.";                                                                 \
+				OPCODE_BREAK;                                                                                   \
+		}                                                                                                       \
 	}
 
 #else
 #define GD_ERR_BREAK(m_cond)
 #define CHECK_SPACE(m_space)
 
-#define GET_VARIANT_PTR(m_v, m_code_ofs)                                                        \
-	Variant *m_v;                                                                               \
-	{                                                                                           \
-		int address = _code_ptr[ip + 1 + (m_code_ofs)];                                         \
-		m_v = &variant_addresses[(address & ADDR_TYPE_MASK) >> ADDR_BITS][address & ADDR_MASK]; \
-		if (unlikely(!m_v))                                                                     \
-			OPCODE_BREAK;                                                                       \
+#define GET_VARIANT_PTR(m_v, m_code_ofs)                               \
+	Variant *m_v;                                                      \
+	{                                                                  \
+		int address = _code_ptr[ip + 1 + (m_code_ofs)];                \
+		int address_type = (address & ADDR_TYPE_MASK) >> ADDR_BITS;    \
+		int address_index = address & ADDR_MASK;                       \
+		switch (address_type) {                                        \
+			case ADDR_TYPE_STACK:                                      \
+				m_v = &stack[address_index];                           \
+				break;                                                 \
+			case ADDR_TYPE_CONSTANT:                                   \
+				m_v = &_constants_ptr[address_index];                  \
+				break;                                                 \
+			case ADDR_TYPE_MEMBER:                                     \
+				m_v = &p_instance->members.write[address_index].value; \
+				break;                                                 \
+			default:                                                   \
+				err_text = "Bad address type.";                        \
+				OPCODE_BREAK;                                          \
+		}                                                              \
+		if (unlikely(!m_v)) {                                          \
+			OPCODE_BREAK;                                              \
+		}                                                              \
+	}
+
+#define SET_VARIANT(m_code_ofs, m_val)                                                                          \
+	{                                                                                                           \
+		int address = _code_ptr[ip + 1 + (m_code_ofs)];                                                         \
+		int address_type = (address & ADDR_TYPE_MASK) >> ADDR_BITS;                                             \
+		int address_index = address & ADDR_MASK;                                                                \
+		switch (address_type) {                                                                                 \
+			case ADDR_TYPE_STACK:                                                                               \
+				stack[address_index] = m_val;                                                                   \
+				break;                                                                                          \
+			case ADDR_TYPE_CONSTANT:                                                                            \
+				_constants_ptr[address_index] = m_val;                                                          \
+				break;                                                                                          \
+			case ADDR_TYPE_MEMBER:                                                                              \
+				if (!p_instance) {                                                                              \
+					err_text = "Cannot access member without instance.";                                        \
+					OPCODE_BREAK;                                                                               \
+				}                                                                                               \
+				GDScript::_set_member_data(p_instance->owner, p_instance->members.write[address_index], m_val); \
+				break;                                                                                          \
+			default:                                                                                            \
+				err_text = "Bad address type.";                                                                 \
+				OPCODE_BREAK;                                                                                   \
+		}                                                                                                       \
 	}
 
 #endif
@@ -703,8 +787,6 @@ Variant GDScriptFunction::call(GDScriptInstance *p_instance, const Variant **p_a
 	bool awaited = false;
 	int variant_address_limits[ADDR_TYPE_MAX] = { _stack_size, _constant_count, p_instance ? (int)p_instance->members.size() : 0 };
 #endif
-
-	Variant *variant_addresses[ADDR_TYPE_MAX] = { stack, _constants_ptr, p_instance ? p_instance->members.ptrw() : nullptr };
 
 #ifdef DEBUG_ENABLED
 	OPCODE_WHILE(ip < _code_size) {
@@ -1313,7 +1395,7 @@ Variant GDScriptFunction::call(GDScriptInstance *p_instance, const Variant **p_a
 				int index = _code_ptr[ip + 3];
 				GD_ERR_BREAK(index < 0 || index >= gdscript->static_variables.size());
 
-				gdscript->static_variables.write[index] = *value;
+				GDScript::_set_member_data(gdscript, gdscript->static_variables.write[index], *value);
 
 				ip += 4;
 			}
@@ -1331,7 +1413,7 @@ Variant GDScriptFunction::call(GDScriptInstance *p_instance, const Variant **p_a
 				int index = _code_ptr[ip + 3];
 				GD_ERR_BREAK(index < 0 || index >= gdscript->static_variables.size());
 
-				*target = gdscript->static_variables[index];
+				*target = gdscript->static_variables[index].value;
 
 				ip += 4;
 			}
@@ -1339,10 +1421,9 @@ Variant GDScriptFunction::call(GDScriptInstance *p_instance, const Variant **p_a
 
 			OPCODE(OPCODE_ASSIGN) {
 				CHECK_SPACE(3);
-				GET_VARIANT_PTR(dst, 0);
 				GET_VARIANT_PTR(src, 1);
 
-				*dst = *src;
+				SET_VARIANT(0, *src);
 
 				ip += 3;
 			}
@@ -1350,9 +1431,8 @@ Variant GDScriptFunction::call(GDScriptInstance *p_instance, const Variant **p_a
 
 			OPCODE(OPCODE_ASSIGN_NULL) {
 				CHECK_SPACE(2);
-				GET_VARIANT_PTR(dst, 0);
 
-				*dst = Variant();
+				SET_VARIANT(0, Variant());
 
 				ip += 2;
 			}
@@ -1360,9 +1440,8 @@ Variant GDScriptFunction::call(GDScriptInstance *p_instance, const Variant **p_a
 
 			OPCODE(OPCODE_ASSIGN_TRUE) {
 				CHECK_SPACE(2);
-				GET_VARIANT_PTR(dst, 0);
 
-				*dst = true;
+				SET_VARIANT(0, true);
 
 				ip += 2;
 			}
@@ -1370,9 +1449,8 @@ Variant GDScriptFunction::call(GDScriptInstance *p_instance, const Variant **p_a
 
 			OPCODE(OPCODE_ASSIGN_FALSE) {
 				CHECK_SPACE(2);
-				GET_VARIANT_PTR(dst, 0);
 
-				*dst = false;
+				SET_VARIANT(0, false);
 
 				ip += 2;
 			}
@@ -1380,7 +1458,6 @@ Variant GDScriptFunction::call(GDScriptInstance *p_instance, const Variant **p_a
 
 			OPCODE(OPCODE_ASSIGN_TYPED_BUILTIN) {
 				CHECK_SPACE(4);
-				GET_VARIANT_PTR(dst, 0);
 				GET_VARIANT_PTR(src, 1);
 
 				Variant::Type var_type = (Variant::Type)_code_ptr[ip + 3];
@@ -1390,8 +1467,10 @@ Variant GDScriptFunction::call(GDScriptInstance *p_instance, const Variant **p_a
 #ifdef DEBUG_ENABLED
 					if (Variant::can_convert_strict(src->get_type(), var_type)) {
 #endif // DEBUG_ENABLED
+						Variant tmp;
 						Callable::CallError ce;
-						Variant::construct(var_type, *dst, const_cast<const Variant **>(&src), 1, ce);
+						Variant::construct(var_type, tmp, const_cast<const Variant **>(&src), 1, ce);
+						SET_VARIANT(0, tmp);
 					} else {
 #ifdef DEBUG_ENABLED
 						err_text = "Trying to assign value of type '" + Variant::get_type_name(src->get_type()) +
@@ -1400,7 +1479,7 @@ Variant GDScriptFunction::call(GDScriptInstance *p_instance, const Variant **p_a
 					}
 				} else {
 #endif // DEBUG_ENABLED
-					*dst = *src;
+					SET_VARIANT(0, *src);
 				}
 
 				ip += 4;
@@ -1409,7 +1488,6 @@ Variant GDScriptFunction::call(GDScriptInstance *p_instance, const Variant **p_a
 
 			OPCODE(OPCODE_ASSIGN_TYPED_ARRAY) {
 				CHECK_SPACE(6);
-				GET_VARIANT_PTR(dst, 0);
 				GET_VARIANT_PTR(src, 1);
 
 				GET_VARIANT_PTR(script_type, 2);
@@ -1436,7 +1514,7 @@ Variant GDScriptFunction::call(GDScriptInstance *p_instance, const Variant **p_a
 					OPCODE_BREAK;
 				}
 
-				*dst = *src;
+				SET_VARIANT(0, *src);
 
 				ip += 6;
 			}
@@ -1444,7 +1522,6 @@ Variant GDScriptFunction::call(GDScriptInstance *p_instance, const Variant **p_a
 
 			OPCODE(OPCODE_ASSIGN_TYPED_DICTIONARY) {
 				CHECK_SPACE(9);
-				GET_VARIANT_PTR(dst, 0);
 				GET_VARIANT_PTR(src, 1);
 
 				GET_VARIANT_PTR(key_script_type, 2);
@@ -1480,7 +1557,7 @@ Variant GDScriptFunction::call(GDScriptInstance *p_instance, const Variant **p_a
 					OPCODE_BREAK;
 				}
 
-				*dst = *src;
+				SET_VARIANT(0, *src);
 
 				ip += 9;
 			}
@@ -1488,7 +1565,6 @@ Variant GDScriptFunction::call(GDScriptInstance *p_instance, const Variant **p_a
 
 			OPCODE(OPCODE_ASSIGN_TYPED_NATIVE) {
 				CHECK_SPACE(4);
-				GET_VARIANT_PTR(dst, 0);
 				GET_VARIANT_PTR(src, 1);
 
 #ifdef DEBUG_ENABLED
@@ -1516,7 +1592,7 @@ Variant GDScriptFunction::call(GDScriptInstance *p_instance, const Variant **p_a
 					}
 				}
 #endif // DEBUG_ENABLED
-				*dst = *src;
+				SET_VARIANT(0, *src);
 
 				ip += 4;
 			}
@@ -1524,7 +1600,6 @@ Variant GDScriptFunction::call(GDScriptInstance *p_instance, const Variant **p_a
 
 			OPCODE(OPCODE_ASSIGN_TYPED_SCRIPT) {
 				CHECK_SPACE(4);
-				GET_VARIANT_PTR(dst, 0);
 				GET_VARIANT_PTR(src, 1);
 
 #ifdef DEBUG_ENABLED
@@ -1574,7 +1649,7 @@ Variant GDScriptFunction::call(GDScriptInstance *p_instance, const Variant **p_a
 				}
 #endif // DEBUG_ENABLED
 
-				*dst = *src;
+				SET_VARIANT(0, *src);
 
 				ip += 4;
 			}

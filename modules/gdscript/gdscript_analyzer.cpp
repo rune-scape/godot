@@ -30,6 +30,9 @@
 
 #include "gdscript_analyzer.h"
 
+#include "core/error/error_macros.h"
+#include "core/object/object.h"
+#include "core/variant/variant.h"
 #include "gdscript.h"
 #include "gdscript_utility_callable.h"
 #include "gdscript_utility_functions.h"
@@ -42,6 +45,7 @@
 #include "core/object/class_db.h"
 #include "core/object/script_language.h"
 #include "core/templates/hash_map.h"
+#include "modules/gdscript/gdscript_parser.h"
 #include "scene/resources/packed_scene.h"
 
 #if defined(TOOLS_ENABLED) && !defined(DISABLE_DEPRECATED)
@@ -1562,6 +1566,7 @@ void GDScriptAnalyzer::resolve_node(GDScriptParser::Node *p_node, bool p_is_root
 		case GDScriptParser::Node::IDENTIFIER:
 		case GDScriptParser::Node::LAMBDA:
 		case GDScriptParser::Node::LITERAL:
+		case GDScriptParser::Node::ONSET:
 		case GDScriptParser::Node::PRELOAD:
 		case GDScriptParser::Node::SELF:
 		case GDScriptParser::Node::SUBSCRIPT:
@@ -2543,6 +2548,9 @@ void GDScriptAnalyzer::reduce_expression(GDScriptParser::ExpressionNode *p_expre
 			break;
 		case GDScriptParser::Node::LITERAL:
 			reduce_literal(static_cast<GDScriptParser::LiteralNode *>(p_expression));
+			break;
+		case GDScriptParser::Node::ONSET:
+			reduce_onset(static_cast<GDScriptParser::OnSetNode *>(p_expression));
 			break;
 		case GDScriptParser::Node::PRELOAD:
 			reduce_preload(static_cast<GDScriptParser::PreloadNode *>(p_expression));
@@ -4631,6 +4639,69 @@ void GDScriptAnalyzer::reduce_preload(GDScriptParser::PreloadNode *p_preload) {
 	// 'type_from_variant()' should call 'resolve_class_inheritance()' which would call 'ensure_cached_external_parser_for_class()'
 	// Better safe than sorry.
 	ensure_cached_external_parser_for_class(p_preload->get_datatype().class_type, nullptr, "Trying to resolve preload", p_preload);
+}
+
+void GDScriptAnalyzer::reduce_onset(GDScriptParser::OnSetNode *p_onset) {
+	ERR_FAIL_NULL(p_onset);
+	ERR_FAIL_NULL(p_onset->member_expr);
+
+	reduce_expression(p_onset->member_expr);
+	if (p_onset->member_expr->type == GDScriptParser::Node::SUBSCRIPT) {
+		GDScriptParser::SubscriptNode *subscript = static_cast<GDScriptParser::SubscriptNode *>(p_onset->member_expr);
+		ERR_FAIL_NULL(subscript->base);
+
+		GDScriptParser::DataType base_type = subscript->base->get_datatype();
+		p_onset->base = subscript->base;
+
+		if (subscript->is_attribute) {
+			ERR_FAIL_NULL(subscript->attribute);
+			p_onset->member_name = subscript->attribute->name;
+			p_onset->is_member_name_dynamic = false;
+		} else {
+			ERR_FAIL_NULL(subscript->index);
+			if (subscript->index->is_constant) {
+				if (subscript->index->reduced_value.is_string()) {
+					p_onset->member_name = subscript->index->reduced_value;
+					p_onset->is_member_name_dynamic = false;
+				} else {
+					push_error(R"(Member expression name be a String or StringName.)", subscript->index);
+				}
+			} else {
+				p_onset->member_name_expr = subscript->index;
+				p_onset->is_member_name_dynamic = true;
+			}
+		}
+	} else if (p_onset->member_expr->type == GDScriptParser::Node::IDENTIFIER) {
+		GDScriptParser::IdentifierNode *identifier = static_cast<GDScriptParser::IdentifierNode *>(p_onset->member_expr);
+		p_onset->member_name = identifier->name;
+		p_onset->is_member_name_dynamic = false;
+	} else {
+		push_error(R"(Member expression must be a subscript or an identifier.)", p_onset->member_expr);
+	}
+
+	if (p_onset->base) {
+		GDScriptParser::DataType base_type = p_onset->base->get_datatype();
+		if (base_type.is_hard_type() && !base_type.is_variant() && base_type.kind == GDScriptParser::DataType::NATIVE) {
+			if (base_type.kind != GDScriptParser::DataType::CLASS) {
+				push_error(R"(Member expression base must be a GDScript or instance of GDScript.)", p_onset->base);
+			}
+		} else {
+			mark_node_unsafe(p_onset->member_expr);
+		}
+	}
+
+	if (p_onset->is_member_name_dynamic) {
+		GDScriptParser::DataType name_type = p_onset->member_name_expr->get_datatype();
+		if (name_type.is_hard_type() && !name_type.is_variant()) {
+			if (name_type.kind != GDScriptParser::DataType::BUILTIN || (name_type.builtin_type != Variant::STRING && name_type.builtin_type != Variant::STRING_NAME)) {
+				push_error(R"(Member expression name must be a String or StringName.)", p_onset->base);
+			}
+		} else {
+			mark_node_unsafe(p_onset->member_expr);
+		}
+	}
+
+	p_onset->set_datatype(make_signal_type(MethodInfo(Variant::NIL, "", PropertyInfo(Variant::NIL, "old_value"), PropertyInfo(Variant::NIL, "new_value"))));
 }
 
 void GDScriptAnalyzer::reduce_self(GDScriptParser::SelfNode *p_self) {

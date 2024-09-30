@@ -1075,17 +1075,18 @@ void Object::add_user_signal(const MethodInfo &p_signal) {
 	ERR_FAIL_COND_MSG(signal_map.has(p_signal.name), "Trying to add already existing signal '" + p_signal.name + "'.");
 	SignalData s;
 	s.user = p_signal;
+	s.removable = true;
 	signal_map[p_signal.name] = s;
 }
 
-bool Object::_has_user_signal(const StringName &p_name) const {
+bool Object::has_user_signal(const StringName &p_name) const {
 	if (!signal_map.has(p_name)) {
 		return false;
 	}
 	return signal_map[p_name].user.name.length() > 0;
 }
 
-void Object::_remove_user_signal(const StringName &p_name) {
+void Object::remove_user_signal(const StringName &p_name) {
 	SignalData *s = signal_map.getptr(p_name);
 	ERR_FAIL_NULL_MSG(s, "Provided signal does not exist.");
 	ERR_FAIL_COND_MSG(!s->removable, "Signal is not removable (not added with add_user_signal).");
@@ -1247,10 +1248,6 @@ void Object::_add_user_signal(const String &p_name, const Array &p_args) {
 	}
 
 	add_user_signal(mi);
-
-	if (signal_map.has(p_name)) {
-		signal_map.getptr(p_name)->removable = true;
-	}
 }
 
 TypedArray<Dictionary> Object::_get_signal_list() const {
@@ -1301,7 +1298,7 @@ bool Object::has_signal(const StringName &p_name) const {
 		return true;
 	}
 
-	if (_has_user_signal(p_name)) {
+	if (has_user_signal(p_name)) {
 		return true;
 	}
 
@@ -1672,8 +1669,8 @@ void Object::_bind_methods() {
 	ClassDB::bind_method(D_METHOD("get_meta_list"), &Object::_get_meta_list_bind);
 
 	ClassDB::bind_method(D_METHOD("add_user_signal", "signal", "arguments"), &Object::_add_user_signal, DEFVAL(Array()));
-	ClassDB::bind_method(D_METHOD("has_user_signal", "signal"), &Object::_has_user_signal);
-	ClassDB::bind_method(D_METHOD("remove_user_signal", "signal"), &Object::_remove_user_signal);
+	ClassDB::bind_method(D_METHOD("has_user_signal", "signal"), &Object::has_user_signal);
+	ClassDB::bind_method(D_METHOD("remove_user_signal", "signal"), &Object::remove_user_signal);
 
 	{
 		MethodInfo mi;

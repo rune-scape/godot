@@ -459,6 +459,13 @@ void GDScriptLanguage::get_public_functions(List<MethodInfo> *p_functions) const
 		mi.default_arguments.push_back(String());
 		p_functions->push_back(mi);
 	}
+	{
+		MethodInfo mi;
+		mi.name = "onset";
+		mi.return_val.type = Variant::SIGNAL;
+		mi.arguments.push_back(PropertyInfo(Variant::NIL, "member_expression"));
+		p_functions->push_back(mi);
+	}
 }
 
 void GDScriptLanguage::get_public_constants(List<Pair<String, Variant>> *p_constants) const {
@@ -1448,7 +1455,7 @@ static void _find_identifiers(const GDScriptParser::CompletionContext &p_context
 	}
 
 	static const char *_keywords_with_args[] = {
-		"assert", "preload",
+		"assert", "preload", "onset",
 		nullptr
 	};
 
@@ -3833,9 +3840,9 @@ static Error _lookup_symbol_from_base(const GDScriptParser::DataType &p_base, co
 
 	// Allows class functions with the names like built-ins to be handled properly.
 	if (context.type != GDScriptParser::COMPLETION_ATTRIBUTE) {
-		// Need special checks for assert and preload as they are technically
+		// Need special checks for assert, preload, and onset as they are technically
 		// keywords, so are not registered in GDScriptUtilityFunctions.
-		if (GDScriptUtilityFunctions::function_exists(p_symbol) || "assert" == p_symbol || "preload" == p_symbol) {
+		if (GDScriptUtilityFunctions::function_exists(p_symbol) || "assert" == p_symbol || "preload" == p_symbol || "onset" == p_symbol) {
 			r_result.type = ScriptLanguage::LOOKUP_RESULT_CLASS_METHOD;
 			r_result.class_name = "@GDScript";
 			r_result.class_member = p_symbol;

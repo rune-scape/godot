@@ -1917,6 +1917,10 @@ GDScriptParser::Node *GDScriptParser::parse_statement() {
 					case Node::CALL:
 						// Fine.
 						break;
+					case Node::ONSET:
+						// `onset` is a function-like keyword.
+						push_warning(expression, GDScriptWarning::RETURN_VALUE_DISCARDED, "onset");
+						break;
 					case Node::PRELOAD:
 						// `preload` is a function-like keyword.
 						push_warning(expression, GDScriptWarning::RETURN_VALUE_DISCARDED, "preload");
@@ -3400,6 +3404,30 @@ GDScriptParser::ExpressionNode *GDScriptParser::parse_preload(ExpressionNode *p_
 	return preload;
 }
 
+GDScriptParser::ExpressionNode *GDScriptParser::parse_onset(ExpressionNode *p_previous_operand, bool p_can_assign) {
+	OnSetNode *onset = alloc_node<OnSetNode>();
+
+	push_multiline(true);
+	consume(GDScriptTokenizer::Token::PARENTHESIS_OPEN, R"(Expected "(" after "onset".)");
+
+	make_completion_context(COMPLETION_RESOURCE_PATH, onset);
+	push_completion_call(onset);
+
+	onset->member_expr = parse_expression(false);
+
+	if (onset->member_expr == nullptr) {
+		push_error(R"(Expected member expression after "(".)");
+	}
+
+	pop_completion_call();
+
+	pop_multiline();
+	consume(GDScriptTokenizer::Token::PARENTHESIS_CLOSE, R"*(Expected ")" after member expression.)*");
+	complete_extents(onset);
+
+	return onset;
+}
+
 GDScriptParser::ExpressionNode *GDScriptParser::parse_lambda(ExpressionNode *p_previous_operand, bool p_can_assign) {
 	LambdaNode *lambda = alloc_node<LambdaNode>();
 	lambda->parent_function = current_function;
@@ -3988,6 +4016,7 @@ GDScriptParser::ParseRule *GDScriptParser::get_rule(GDScriptTokenizer::Token::Ty
 		{ nullptr,                                          &GDScriptParser::parse_binary_operator,      	PREC_CONTENT_TEST }, // IN,
 		{ nullptr,                                          &GDScriptParser::parse_type_test,            	PREC_TYPE_TEST }, // IS,
 		{ nullptr,                                          nullptr,                                        PREC_NONE }, // NAMESPACE,
+		{ &GDScriptParser::parse_onset,                     nullptr,                                        PREC_NONE }, // ONSET,
 		{ &GDScriptParser::parse_preload,					nullptr,                                        PREC_NONE }, // PRELOAD,
 		{ &GDScriptParser::parse_self,                   	nullptr,                                        PREC_NONE }, // SELF,
 		{ nullptr,                                          nullptr,                                        PREC_NONE }, // SIGNAL,

@@ -72,6 +72,11 @@ class GDScript : public Script {
 		PropertyInfo property_info;
 	};
 
+	struct MemberData {
+		Variant value;
+		StringName onset_signal_name;
+	};
+
 	struct ClearData {
 		RBSet<GDScriptFunction *> functions;
 		RBSet<Ref<Script>> scripts;
@@ -102,7 +107,7 @@ class GDScript : public Script {
 
 	// Only static variables of the current class.
 	HashMap<StringName, MemberInfo> static_variables_indices;
-	Vector<Variant> static_variables; // Static variable values.
+	Vector<MemberData> static_variables; // Static variable values.
 
 	HashMap<StringName, Variant> constants;
 	HashMap<StringName, GDScriptFunction *> member_functions;
@@ -143,7 +148,7 @@ private:
 #ifdef TOOLS_ENABLED
 	// For static data storage during hot-reloading.
 	HashMap<StringName, MemberInfo> old_static_variables_indices;
-	Vector<Variant> old_static_variables;
+	Vector<MemberData> old_static_variables;
 	void _save_old_static_data();
 	void _restore_old_static_data();
 
@@ -216,6 +221,17 @@ private:
 	GDScript *_get_gdscript_from_variant(const Variant &p_variant);
 	void _collect_function_dependencies(GDScriptFunction *p_func, RBSet<GDScript *> &p_dependencies, const GDScript *p_except);
 	void _collect_dependencies(RBSet<GDScript *> &p_dependencies, const GDScript *p_except);
+	static Signal _get_member_set_signal(Object *p_base, MemberData &p_member, const MemberInfo &p_member_info, const StringName &p_member_name);
+	_FORCE_INLINE_ bool _set_member(GDScriptInstance *p_instance, Vector<MemberData> &p_members, const MemberInfo &p_member_info, const Variant &p_value);
+	_FORCE_INLINE_ static void _set_member_data(Object *p_emitter, MemberData &p_member_data, const Variant &p_value) {
+		if (!p_member_data.onset_signal_name.is_empty()) {
+			Variant old_value = p_member_data.value;
+			p_member_data.value = p_value;
+			p_emitter->emit_signal(p_member_data.onset_signal_name, old_value, p_member_data.value);
+		} else {
+			p_member_data.value = p_value;
+		}
+	}
 
 protected:
 	bool _get(const StringName &p_name, Variant &r_ret) const;
@@ -361,7 +377,7 @@ class GDScriptInstance : public ScriptInstance {
 #ifdef DEBUG_ENABLED
 	HashMap<StringName, int> member_indices_cache; //used only for hot script reloading
 #endif
-	Vector<Variant> members;
+	Vector<GDScript::MemberData> members;
 	bool base_ref_counted;
 
 	SelfList<GDScriptFunctionState>::List pending_func_states;
@@ -387,7 +403,7 @@ public:
 
 	virtual Variant callp(const StringName &p_method, const Variant **p_args, int p_argcount, Callable::CallError &r_error);
 
-	Variant debug_get_member_by_index(int p_idx) const { return members[p_idx]; }
+	Variant debug_get_member_by_index(int p_idx) const { return members[p_idx].value; }
 
 	virtual void notification(int p_notification, bool p_reversed = false);
 	String to_string(bool *r_valid);

@@ -114,6 +114,7 @@ static const char *token_names[] = {
 	"in", // IN,
 	"is", // IS,
 	"namespace", // NAMESPACE
+	"onset", // ONSET,
 	"preload", // PRELOAD,
 	"self", // SELF,
 	"signal", // SIGNAL,
@@ -516,6 +517,7 @@ GDScriptTokenizer::Token GDScriptTokenizerText::annotation() {
 	KEYWORD("namespace", Token::NAMESPACE)   \
 	KEYWORD("not", Token::NOT)               \
 	KEYWORD_GROUP('o')                       \
+	KEYWORD("onset", Token::ONSET)           \
 	KEYWORD("or", Token::OR)                 \
 	KEYWORD_GROUP('p')                       \
 	KEYWORD("pass", Token::PASS)             \

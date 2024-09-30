@@ -752,6 +752,41 @@ GDScriptCodeGenerator::Address GDScriptCompiler::_parse_expression(CodeGen &code
 
 			return result;
 		} break;
+		case GDScriptParser::Node::ONSET: {
+			const GDScriptParser::OnSetNode *onset = static_cast<const GDScriptParser::OnSetNode *>(p_expression);
+
+			Vector<GDScriptCodeGenerator::Address> args;
+			if (onset->base) {
+				GDScriptCodeGenerator::Address base_addr = _parse_expression(codegen, r_error, onset->base);
+				if (r_error) {
+					return GDScriptCodeGenerator::Address();
+				}
+				args.push_back(base_addr);
+			} else {
+				args.push_back(GDScriptCodeGenerator::Address(codegen.is_static ? GDScriptCodeGenerator::Address::CLASS : GDScriptCodeGenerator::Address::SELF));
+			}
+
+			if (onset->is_member_name_dynamic) {
+				GDScriptCodeGenerator::Address member_name_addr = _parse_expression(codegen, r_error, onset->member_name_expr);
+				if (r_error) {
+					return GDScriptCodeGenerator::Address();
+				}
+				args.push_back(member_name_addr);
+			} else {
+				args.push_back(codegen.add_constant(onset->member_name));
+			}
+
+			GDScriptCodeGenerator::Address result = codegen.add_temporary(_gdtype_from_datatype(onset->get_datatype(), codegen.script));
+			gen->write_call_gdscript_utility(result, "get_member_set_signal", args);
+
+			for (int i = 0; i < args.size(); i++) {
+				if (args[i].mode == GDScriptCodeGenerator::Address::TEMPORARY) {
+					gen->pop_temporary();
+				}
+			}
+
+			return result;
+		} break;
 		case GDScriptParser::Node::PRELOAD: {
 			const GDScriptParser::PreloadNode *preload = static_cast<const GDScriptParser::PreloadNode *>(p_expression);
 

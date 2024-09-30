@@ -126,6 +126,7 @@ public:
 			IN,
 			IS,
 			NAMESPACE,
+			ONSET,
 			PRELOAD,
 			SELF,
 			SIGNAL,
