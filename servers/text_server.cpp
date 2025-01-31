@@ -1537,20 +1537,21 @@ int64_t TextServer::shaped_text_hit_test_position(const RID &p_shaped, double p_
 					sub_off += char_adv;
 				}
 			}
-			// Place caret to the left of clicked grapheme.
-			if (p_coords >= off && p_coords < off + advance / 2) {
-				if ((glyphs[i].flags & GRAPHEME_IS_RTL) == GRAPHEME_IS_RTL) {
-					return glyphs[i].end;
+			if (p_coords >= off && p_coords < off + advance) {
+				if (p_coords < off + advance / 2) {
+					// Place caret to the left of clicked grapheme.
+					if ((glyphs[i].flags & GRAPHEME_IS_RTL) == GRAPHEME_IS_RTL) {
+						return glyphs[i].end;
+					} else {
+						return glyphs[i].start;
+					}
 				} else {
-					return glyphs[i].start;
-				}
-			}
-			// Place caret to the right of clicked grapheme.
-			if (p_coords >= off + advance / 2 && p_coords < off + advance) {
-				if ((glyphs[i].flags & GRAPHEME_IS_RTL) == GRAPHEME_IS_RTL) {
-					return glyphs[i].start;
-				} else {
-					return glyphs[i].end;
+					// Place caret to the right of clicked grapheme.
+					if ((glyphs[i].flags & GRAPHEME_IS_RTL) == GRAPHEME_IS_RTL) {
+						return glyphs[i].start;
+					} else {
+						return glyphs[i].end;
+					}
 				}
 			}
 		}
@@ -1566,7 +1567,7 @@ Vector2 TextServer::shaped_text_get_grapheme_bounds(const RID &p_shaped, int64_t
 	real_t off = 0.0f;
 	for (int i = 0; i < v_size; i++) {
 		if ((glyphs[i].count > 0) && ((glyphs[i].index != 0) || ((glyphs[i].flags & GRAPHEME_IS_SPACE) == GRAPHEME_IS_SPACE))) {
-			if (glyphs[i].start <= p_pos && glyphs[i].end >= p_pos) {
+			if (glyphs[i].start <= p_pos && glyphs[i].end > p_pos) {
 				real_t advance = 0.f;
 				for (int j = 0; j < glyphs[i].count; j++) {
 					advance += glyphs[i + j].advance;

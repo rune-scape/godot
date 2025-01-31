@@ -4489,6 +4489,7 @@ TEST_CASE("[SceneTree][CodeEdit] symbol lookup") {
 		code_edit->set_size(Size2(100, 100));
 
 		code_edit->set_text("this is some text");
+		MessageQueue::get_singleton()->flush();
 
 		Point2 caret_pos = code_edit->get_caret_draw_pos();
 		caret_pos.x += 60;

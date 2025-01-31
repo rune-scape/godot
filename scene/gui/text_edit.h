@@ -155,6 +155,8 @@ private:
 			Color background_color = Color(0, 0, 0, 0);
 			bool hidden = false;
 			int line_count = 0;
+			int wrap_indent_start_index = 0;
+			int wrap_indent_level = 0;
 			int height = 0;
 			int width = 0;
 
@@ -229,6 +231,7 @@ private:
 		int get_line_wrap_amount(int p_line) const;
 
 		Vector<Vector2i> get_line_wrap_ranges(int p_line) const;
+		int get_line_wrap_indent_level(int p_line, int p_wrap_index) const;
 		const Ref<TextParagraph> get_line_data(int p_line) const;
 
 		void set(int p_line, const String &p_text, const Array &p_bidi_override);
@@ -391,15 +394,7 @@ private:
 	Callable tooltip_callback;
 
 	/* Mouse */
-	struct LineDrawingCache {
-		int y_offset = 0;
-		Vector<int> first_visible_chars;
-		Vector<int> last_visible_chars;
-	};
-
-	HashMap<int, LineDrawingCache> line_drawing_cache;
-
-	int _get_char_pos_for_line(int p_px, int p_line, int p_wrap_index = 0) const;
+	int _get_char_pos_for_line(float p_px, int p_line, int p_wrap_index = 0) const;
 
 	/* Caret. */
 	struct Selection {
@@ -456,7 +451,8 @@ private:
 	void _reset_caret_blink_timer();
 	void _toggle_draw_caret();
 
-	int _get_column_x_offset_for_line(int p_char, int p_line, int p_column) const;
+	float _get_line_wrap_indent_size(int p_line, int p_wrap_index) const;
+	float _get_column_x_offset_for_line(int p_char, int p_line, int p_column) const;
 	bool _is_line_col_in_range(int p_line, int p_column, int p_from_line, int p_from_column, int p_to_line, int p_to_column, bool p_include_edges = true) const;
 
 	void _offset_carets_after(int p_old_line, int p_old_column, int p_new_line, int p_new_column, bool p_include_selection_begin = true, bool p_include_selection_end = true);
@@ -497,8 +493,8 @@ private:
 	TextServer::AutowrapMode autowrap_mode = TextServer::AUTOWRAP_WORD_SMART;
 
 	int wrap_at_column = 0;
-	int wrap_right_offset = 10;
 
+	int _get_wrap_right_offset();
 	void _update_wrap_at_column(bool p_force = false);
 
 	/* Viewport. */
@@ -506,9 +502,17 @@ private:
 	VScrollBar *v_scroll = nullptr;
 
 	Vector2i content_size_cache;
+	bool content_fits_vertically_on_screen = false;
 	bool fit_content_height = false;
 	bool fit_content_width = false;
 	bool scroll_past_end_of_file_enabled = false;
+
+	float _get_caret_adjust_padding();
+	float _get_visible_text_margin_left() const;
+	float _get_visible_text_margin_right() const;
+	float _get_visible_text_margin_top() const;
+	float _get_visible_text_margin_bottom() const;
+	Rect2 _get_visible_text_rect() const;
 
 	// Smooth scrolling.
 	bool smooth_scroll_enabled = false;
@@ -518,18 +522,23 @@ private:
 	// Scrolling.
 	int first_visible_line = 0;
 	int first_visible_line_wrap_ofs = 0;
-	int first_visible_col = 0;
 
 	bool scrolling = false;
 	bool updating_scrolls = false;
 
+	float _get_first_visible_line_y_offset() const;
+	float _get_first_column_x_offset() const;
+	void _stop_scrolling();
+	void _set_scrolling_to(float p_target_v_scroll, float p_animate);
 	void _update_scrollbars();
-	int _get_control_height() const;
+	float _get_control_height() const;
 
 	void _v_scroll_input();
-	void _scroll_moved(double p_to_val);
+	void _h_scroll_moved(double p_to_val);
+	void _v_scroll_moved(double p_to_val);
 
-	double _get_visible_lines_offset() const;
+	float _get_visible_line_count_float() const;
+	float _get_visible_lines_offset() const;
 	double _get_v_scroll_offset() const;
 
 	void _scroll_up(real_t p_delta, bool p_animate);
@@ -542,30 +551,34 @@ private:
 	bool draw_minimap = false;
 
 	int minimap_width = 80;
-	Point2 minimap_char_size = Point2(1, 2);
-	int minimap_line_spacing = 1;
+	float minimap_line_spacing = 1.0f;
+	float minimap_scale = 1.0f;
+	Size2 minimap_char_size = Size2(1, 2);
+	Rect2 minimap_viewport_rect;
+
+	float _get_minimap_scroll_height() const;
+	Rect2 _get_minimap_sidebar_rect(bool p_rtl) const;
 
 	// Minimap scroll.
 	bool minimap_clicked = false;
-	bool hovering_minimap = false;
+	bool hovering_minimap_sidebar = false;
+	bool hovering_minimap_viewport = false;
 	bool dragging_minimap = false;
-	bool can_drag_minimap = false;
 
-	double minimap_scroll_ratio = 0.0;
-	double minimap_scroll_click_pos = 0.0;
-
-	void _update_minimap_hover();
-	void _update_minimap_click();
-	void _update_minimap_drag();
+	float minimap_drag_initial_v_scroll = 0.0;
+	float minimap_drag_initial_y = 0.0;
 
 	/* Gutters. */
 	Vector<GutterInfo> gutters;
 	int gutters_width = 0;
-	int gutter_padding = 0;
 	Vector2i hovered_gutter = Vector2i(-1, -1); // X = gutter index, Y = row.
 
 	void _update_gutter_width();
 	Vector2i _get_hovered_gutter(const Point2 &p_mouse_pos) const;
+	void _update_hovered_gutter(const Point2 &p_mouse_pos);
+	int _get_gutter_padding() const;
+	Rect2 _get_gutter_rect(bool p_rtl) const;
+	Rect2 _get_gutter_rect_with_padding(bool p_rtl) const;
 
 	/* Syntax highlighting. */
 	Ref<SyntaxHighlighter> syntax_highlighter;
@@ -615,6 +628,8 @@ private:
 		Color word_highlighted_color = Color(1, 1, 1);
 	} theme_cache;
 
+	const Ref<StyleBox> &_get_bg_stylebox() const;
+
 	bool window_has_focus = true;
 	bool first_draw = true;
 
@@ -663,6 +678,11 @@ protected:
 #endif // DISABLE_DEPRECATED
 
 	virtual void _update_theme_item_cache() override;
+
+	/* Line length guidelines */
+	Vector<int> line_length_guideline_columns;
+	int line_length_guideline_width = 1;
+	Color line_length_guideline_color;
 
 	/* Internal API for CodeEdit, pending public API. */
 	// Brace matching.
@@ -725,7 +745,7 @@ public:
 	bool alt_input(const Ref<InputEvent> &p_gui_input);
 	virtual Size2 get_minimum_size() const override;
 	virtual bool is_text_field() const override;
-	virtual CursorShape get_cursor_shape(const Point2 &p_pos = Point2i()) const override;
+	virtual CursorShape get_cursor_shape(const Point2 &p_pos) const override;
 	virtual Variant get_drag_data(const Point2 &p_point) override;
 	virtual bool can_drop_data(const Point2 &p_point, const Variant &p_data) const override;
 	virtual void drop_data(const Point2 &p_point, const Variant &p_data) override;
@@ -1006,6 +1026,7 @@ public:
 	// Visible lines.
 	void set_line_as_first_visible(int p_line, int p_wrap_index = 0);
 	int get_first_visible_line() const;
+	int get_first_visible_line_wrap_index() const;
 
 	void set_line_as_center_visible(int p_line, int p_wrap_index = 0);
 
@@ -1027,6 +1048,8 @@ public:
 
 	void set_minimap_width(int p_minimap_width);
 	int get_minimap_width() const;
+	void set_minimap_scale(float p_minimap_scale);
+	float get_minimap_scale() const;
 
 	int get_minimap_visible_lines() const;
 
