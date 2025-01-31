@@ -584,6 +584,9 @@
 		<member name="line_folding" type="bool" setter="set_line_folding_enabled" getter="is_line_folding_enabled" default="false">
 			If [code]true[/code], lines can be folded. Otherwise, line folding methods like [method fold_line] will not work and [method can_fold_line] will always return [code]false[/code]. See [member gutters_draw_fold_gutter].
 		</member>
+		<member name="line_length_guideline_width" type="int" setter="set_line_length_guideline_width" getter="get_line_length_guideline_width" default="1">
+			Width of the line length guidelines.
+		</member>
 		<member name="line_length_guidelines" type="int[]" setter="set_line_length_guidelines" getter="get_line_length_guidelines" default="[]">
 			Draws vertical lines at the provided columns. The first entry is considered a main hard guideline and is drawn more prominently.
 		</member>

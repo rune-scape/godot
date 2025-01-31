@@ -57,6 +57,7 @@ void CodeEdit::_notification(int p_what) {
 			_update_line_number_gutter_width();
 			set_gutter_width(fold_gutter, get_line_height() / 1.2);
 			_clear_line_number_text_cache();
+			line_length_guideline_color = theme_cache.line_length_guideline_color;
 		} break;
 
 		case NOTIFICATION_TRANSLATION_CHANGED:
@@ -272,7 +273,7 @@ void CodeEdit::_draw_guidelines() {
 	const bool rtl = is_layout_rtl();
 
 	Ref<StyleBox> style = is_editable() ? theme_cache.style_normal : theme_cache.style_readonly;
-	const int xmargin_beg = style->get_margin(SIDE_LEFT) + get_total_gutter_width();
+	const Rect2 xmargin_beg = _get_vis;
 	const int xmargin_end = size.width - style->get_margin(SIDE_RIGHT) - (is_drawing_minimap() ? get_minimap_width() : 0);
 
 	for (int i = 0; i < line_length_guideline_columns.size(); i++) {
@@ -2474,12 +2475,20 @@ void CodeEdit::cancel_code_completion() {
 
 /* Line length guidelines */
 void CodeEdit::set_line_length_guidelines(TypedArray<int> p_guideline_columns) {
-	line_length_guideline_columns = p_guideline_columns;
+	line_length_guideline_columns = Variant(p_guideline_columns);
 	queue_redraw();
 }
 
 TypedArray<int> CodeEdit::get_line_length_guidelines() const {
-	return line_length_guideline_columns;
+	return Variant(line_length_guideline_columns);
+}
+
+void CodeEdit::set_line_length_guideline_width(int p_width) {
+	line_length_guideline_width = MAX(p_width, 1);
+}
+
+int CodeEdit::get_line_length_guideline_width() const {
+	return line_length_guideline_width;
 }
 
 /* Symbol lookup */
@@ -2930,6 +2939,9 @@ void CodeEdit::_bind_methods() {
 	ClassDB::bind_method(D_METHOD("set_line_length_guidelines", "guideline_columns"), &CodeEdit::set_line_length_guidelines);
 	ClassDB::bind_method(D_METHOD("get_line_length_guidelines"), &CodeEdit::get_line_length_guidelines);
 
+	ClassDB::bind_method(D_METHOD("set_line_length_guideline_width", "width"), &CodeEdit::set_line_length_guideline_width);
+	ClassDB::bind_method(D_METHOD("get_line_length_guideline_width"), &CodeEdit::get_line_length_guideline_width);
+
 	/* Symbol lookup */
 	ClassDB::bind_method(D_METHOD("set_symbol_lookup_on_click_enabled", "enable"), &CodeEdit::set_symbol_lookup_on_click_enabled);
 	ClassDB::bind_method(D_METHOD("is_symbol_lookup_on_click_enabled"), &CodeEdit::is_symbol_lookup_on_click_enabled);
@@ -2956,6 +2968,7 @@ void CodeEdit::_bind_methods() {
 	ADD_PROPERTY(PropertyInfo(Variant::BOOL, "line_folding"), "set_line_folding_enabled", "is_line_folding_enabled");
 
 	ADD_PROPERTY(PropertyInfo(Variant::PACKED_INT32_ARRAY, "line_length_guidelines"), "set_line_length_guidelines", "get_line_length_guidelines");
+	ADD_PROPERTY(PropertyInfo(Variant::INT, "line_length_guideline_width", PROPERTY_HINT_RANGE, "1,3,1,or_greater"), "set_line_length_guideline_width", "get_line_length_guideline_width");
 
 	ADD_GROUP("Gutters", "gutters_");
 	ADD_PROPERTY(PropertyInfo(Variant::BOOL, "gutters_draw_breakpoints_gutter"), "set_draw_breakpoints_gutter", "is_drawing_breakpoints_gutter");

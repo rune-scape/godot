@@ -1123,6 +1123,7 @@ void CodeTextEditor::update_editor_settings() {
 	// Appearance: Minimap
 	text_editor->set_draw_minimap(EDITOR_GET("text_editor/appearance/minimap/show_minimap"));
 	text_editor->set_minimap_width((int)EDITOR_GET("text_editor/appearance/minimap/minimap_width") * EDSCALE);
+	text_editor->set_minimap_scale((float)EDITOR_GET("text_editor/appearance/minimap/minimap_scale") * EDSCALE);
 
 	// Appearance: Lines
 	text_editor->set_line_folding_enabled(EDITOR_GET("text_editor/appearance/lines/code_folding"));
@@ -1169,6 +1170,7 @@ void CodeTextEditor::update_editor_settings() {
 			guideline_cols.append(EDITOR_GET("text_editor/appearance/guidelines/line_length_guideline_soft_column"));
 		}
 		text_editor->set_line_length_guidelines(guideline_cols);
+		text_editor->set_line_length_guideline_width(1.0f * EDSCALE);
 	} else {
 		text_editor->set_line_length_guidelines(TypedArray<int>());
 	}

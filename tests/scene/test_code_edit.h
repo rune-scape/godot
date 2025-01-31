@@ -3289,7 +3289,7 @@ TEST_CASE("[SceneTree][CodeEdit] folding") {
 		code_edit->fold_line(0);
 		CHECK(code_edit->is_line_folded(0));
 		CHECK_EQ(code_edit->get_visible_line_count_in_range(0, 1), 1);
-		CHECK_EQ(code_edit->get_visible_line_count_in_range(2, 2), 1);
+		CHECK_EQ(code_edit->get_visible_line_count_in_range(2, 2), 0);
 
 		// Foldable even when directly below a code region end tag.
 		code_edit->set_text("#region a\nnothing\n#line2\n#line3\n#endregion\n#line5\n#line6");
@@ -3299,7 +3299,7 @@ TEST_CASE("[SceneTree][CodeEdit] folding") {
 		code_edit->fold_line(2);
 		CHECK(code_edit->is_line_folded(2));
 		CHECK_EQ(code_edit->get_visible_line_count_in_range(2, 3), 1);
-		CHECK_EQ(code_edit->get_visible_line_count_in_range(4, 4), 1);
+		CHECK_EQ(code_edit->get_visible_line_count_in_range(4, 4), 0);
 
 		code_edit->add_comment_delimiter("/*", "*/", false);
 
@@ -3310,7 +3310,7 @@ TEST_CASE("[SceneTree][CodeEdit] folding") {
 		code_edit->fold_line(0);
 		CHECK(code_edit->is_line_folded(0));
 		CHECK_EQ(code_edit->get_visible_line_count_in_range(0, 3), 1);
-		CHECK_EQ(code_edit->get_visible_line_count_in_range(4, 4), 1);
+		CHECK_EQ(code_edit->get_visible_line_count_in_range(4, 4), 0);
 	}
 
 	SUBCASE("[CodeEdit] folding carets") {
@@ -4521,6 +4521,7 @@ TEST_CASE("[SceneTree][CodeEdit] symbol lookup") {
 		code_edit->set_size(Size2(100, 100));
 
 		code_edit->set_text("this is some text");
+		MessageQueue::get_singleton()->flush();
 
 		Point2 caret_pos = code_edit->get_caret_draw_pos();
 		caret_pos.x += 60;

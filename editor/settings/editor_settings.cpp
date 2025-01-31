@@ -772,6 +772,7 @@ void EditorSettings::_load_defaults(Ref<ConfigFile> p_extra_config) {
 	// Appearance: Minimap
 	_initial_set("text_editor/appearance/minimap/show_minimap", true, true);
 	EDITOR_SETTING(Variant::INT, PROPERTY_HINT_RANGE, "text_editor/appearance/minimap/minimap_width", 80, "50,250,1")
+	EDITOR_SETTING(Variant::FLOAT, PROPERTY_HINT_RANGE, "text_editor/appearance/minimap/minimap_scale", 1.0, "0.01,2.0,0.01,or_greater")
 
 	// Appearance: Lines
 	_initial_set("text_editor/appearance/lines/code_folding", true, true);

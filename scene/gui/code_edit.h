@@ -230,9 +230,6 @@ private:
 	void _filter_code_completion_candidates_impl();
 	bool _should_reset_selected_option_for_new_options(const Vector<ScriptLanguage::CodeCompletionOption> &p_new_options);
 
-	/* Line length guidelines */
-	TypedArray<int> line_length_guideline_columns;
-
 	/* Symbol lookup */
 	bool symbol_lookup_on_click_enabled = false;
 	Point2i symbol_lookup_pos; // Column and line.
@@ -504,6 +501,9 @@ public:
 	/* Line length guidelines */
 	void set_line_length_guidelines(TypedArray<int> p_guideline_columns);
 	TypedArray<int> get_line_length_guidelines() const;
+
+	void set_line_length_guideline_width(int p_width);
+	int get_line_length_guideline_width() const;
 
 	/* Symbol lookup */
 	void set_symbol_lookup_on_click_enabled(bool p_enabled);

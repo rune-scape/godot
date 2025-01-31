@@ -1313,6 +1313,9 @@
 		<member name="text_editor/appearance/minimap/minimap_width" type="int" setter="" getter="">
 			The width of the minimap in the script editor (in pixels).
 		</member>
+		<member name="text_editor/appearance/minimap/minimap_scale" type="float" setter="" getter="">
+			The scale of the minimap in the script editor (does not affect width).
+		</member>
 		<member name="text_editor/appearance/minimap/show_minimap" type="bool" setter="" getter="">
 			If [code]true[/code], draws an overview of the script near the scroll bar. The minimap can be left-clicked to scroll directly to a location in an "absolute" manner.
 		</member>
