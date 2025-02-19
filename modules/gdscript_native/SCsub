@@ -1,0 +1,9 @@
+#!/usr/bin/env python3
+from misc.utility.scons_hints import *
+
+Import("env")
+Import("env_modules")
+
+env_gdscript_native = env_modules.Clone()
+
+env_gdscript_native.add_source_files(env.modules_sources, "./*.cpp")
