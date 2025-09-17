@@ -65,7 +65,7 @@ public:
 
 	StringName get_signal() const override;
 
-	void call(const Variant **p_arguments, int p_argcount, Variant &r_return_value, Callable::CallError &r_call_error) const override;
+	void call(const Variant *const *p_arguments, int p_argcount, Variant &r_return_value, Callable::CallError &r_call_error) const override;
 
 	SignalAwaiterCallable(Object *p_target, MonoGCHandleData p_awaiter_handle, const StringName &p_signal);
 	~SignalAwaiterCallable();
@@ -93,7 +93,7 @@ public:
 
 	StringName get_signal() const override;
 
-	void call(const Variant **p_arguments, int p_argcount, Variant &r_return_value, Callable::CallError &r_call_error) const override;
+	void call(const Variant *const *p_arguments, int p_argcount, Variant &r_return_value, Callable::CallError &r_call_error) const override;
 
 	EventSignalCallable(Object *p_owner, const StringName &p_event_signal_name);
 };

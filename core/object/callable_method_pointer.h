@@ -97,7 +97,7 @@ public:
 		return sizeof...(P);
 	}
 
-	virtual void call(const Variant **p_arguments, int p_argcount, Variant &r_return_value, Callable::CallError &r_call_error) const {
+	virtual void call(const Variant *const *p_arguments, int p_argcount, Variant &r_return_value, Callable::CallError &r_call_error) const {
 		ERR_FAIL_NULL_MSG(ObjectDB::get_instance(ObjectID(data.object_id)), "Invalid Object id '" + uitos(data.object_id) + "', can't call method.");
 		if constexpr (std::is_same<R, void>::value) {
 			call_with_variant_args(data.instance, data.method, p_arguments, p_argcount, r_call_error);
@@ -166,7 +166,7 @@ public:
 		return sizeof...(P);
 	}
 
-	virtual void call(const Variant **p_arguments, int p_argcount, Variant &r_return_value, Callable::CallError &r_call_error) const override {
+	virtual void call(const Variant *const *p_arguments, int p_argcount, Variant &r_return_value, Callable::CallError &r_call_error) const override {
 		ERR_FAIL_NULL_MSG(ObjectDB::get_instance(ObjectID(data.object_id)), "Invalid Object id '" + uitos(data.object_id) + "', can't call method.");
 		if constexpr (std::is_same<R, void>::value) {
 			call_with_variant_argsc(data.instance, data.method, p_arguments, p_argcount, r_call_error);
@@ -240,7 +240,7 @@ public:
 		return sizeof...(P);
 	}
 
-	virtual void call(const Variant **p_arguments, int p_argcount, Variant &r_return_value, Callable::CallError &r_call_error) const override {
+	virtual void call(const Variant *const *p_arguments, int p_argcount, Variant &r_return_value, Callable::CallError &r_call_error) const override {
 		if constexpr (std::is_same<R, void>::value) {
 			call_with_variant_args_static(data.method, p_arguments, p_argcount, r_call_error);
 		} else {

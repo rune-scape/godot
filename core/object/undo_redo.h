@@ -46,7 +46,7 @@ public:
 
 	typedef void (*CommitNotifyCallback)(void *p_ud, const String &p_name);
 
-	typedef void (*MethodNotifyCallback)(void *p_ud, Object *p_base, const StringName &p_name, const Variant **p_args, int p_argcount);
+	typedef void (*MethodNotifyCallback)(void *p_ud, Object *p_base, const StringName &p_name, const Variant *const *p_args, int p_argcount);
 	typedef void (*PropertyNotifyCallback)(void *p_ud, Object *p_base, const StringName &p_property, const Variant &p_value);
 
 private:

@@ -112,17 +112,17 @@ TEST_CASE("[VariantUtility] Type conversion") {
 		Variant type_arg = Variant::Type::NIL;
 		args.push_back(&type_arg);
 		Callable::CallError call_error;
-		Variant::call_utility_function("type_convert", &converted, (const Variant **)args.ptr(), 2, call_error);
+		Variant::call_utility_function("type_convert", &converted, args.ptr(), 2, call_error);
 		CHECK(converted.get_type() == Variant::Type::NIL);
 		CHECK(converted == Variant());
 
 		type_arg = Variant::Type::INT;
-		Variant::call_utility_function("type_convert", &converted, (const Variant **)args.ptr(), 2, call_error);
+		Variant::call_utility_function("type_convert", &converted, args.ptr(), 2, call_error);
 		CHECK(converted.get_type() == Variant::Type::INT);
 		CHECK(converted == Variant(0));
 
 		data_arg = "123";
-		Variant::call_utility_function("type_convert", &converted, (const Variant **)args.ptr(), 2, call_error);
+		Variant::call_utility_function("type_convert", &converted, args.ptr(), 2, call_error);
 		CHECK(converted.get_type() == Variant::Type::INT);
 		CHECK(converted == Variant(123));
 	}

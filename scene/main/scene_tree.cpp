@@ -346,7 +346,7 @@ void SceneTree::_update_group_order(Group &g) {
 	g.changed = false;
 }
 
-void SceneTree::call_group_flagsp(uint32_t p_call_flags, const StringName &p_group, const StringName &p_function, const Variant **p_args, int p_argcount) {
+void SceneTree::call_group_flagsp(uint32_t p_call_flags, const StringName &p_group, const StringName &p_function, const Variant *const *p_args, int p_argcount) {
 	Vector<Node *> nodes_copy;
 
 	{
@@ -1492,7 +1492,7 @@ void SceneTree::_call_input_pause(const StringName &p_group, CallInputType p_cal
 	}
 }
 
-void SceneTree::_call_group_flags(const Variant **p_args, int p_argcount, Callable::CallError &r_error) {
+void SceneTree::_call_group_flags(const Variant *const *p_args, int p_argcount, Callable::CallError &r_error) {
 	r_error.error = Callable::CallError::CALL_OK;
 
 	ERR_FAIL_COND(p_argcount < 3);
@@ -1507,7 +1507,7 @@ void SceneTree::_call_group_flags(const Variant **p_args, int p_argcount, Callab
 	call_group_flagsp(flags, group, method, p_args + 3, p_argcount - 3);
 }
 
-void SceneTree::_call_group(const Variant **p_args, int p_argcount, Callable::CallError &r_error) {
+void SceneTree::_call_group(const Variant *const *p_args, int p_argcount, Callable::CallError &r_error) {
 	r_error.error = Callable::CallError::CALL_OK;
 
 	ERR_FAIL_COND(p_argcount < 2);

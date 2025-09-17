@@ -650,7 +650,7 @@ private:
 	void _add_user_signal(const String &p_name, const Array &p_args = Array());
 	bool _has_user_signal(const StringName &p_name) const;
 	void _remove_user_signal(const StringName &p_name);
-	Error _emit_signal(const Variant **p_args, int p_argcount, Callable::CallError &r_error);
+	Error _emit_signal(const Variant *const *p_args, int p_argcount, Callable::CallError &r_error);
 	TypedArray<Dictionary> _get_signal_list() const;
 	TypedArray<Dictionary> _get_signal_connection_list(const StringName &p_signal) const;
 	TypedArray<Dictionary> _get_incoming_connections() const;
@@ -749,8 +749,8 @@ protected:
 		return &Object::_notification;
 	}
 
-	Variant _call_bind(const Variant **p_args, int p_argcount, Callable::CallError &r_error);
-	Variant _call_deferred_bind(const Variant **p_args, int p_argcount, Callable::CallError &r_error);
+	Variant _call_bind(const Variant *const *p_args, int p_argcount, Callable::CallError &r_error);
+	Variant _call_deferred_bind(const Variant *const *p_args, int p_argcount, Callable::CallError &r_error);
 
 	virtual const StringName *_get_class_namev() const {
 		return &get_class_static();
@@ -865,8 +865,8 @@ public:
 	int get_method_argument_count(const StringName &p_method, bool *r_is_valid = nullptr) const;
 	void get_method_list(List<MethodInfo> *p_list) const;
 	Variant callv(const StringName &p_method, const Array &p_args);
-	virtual Variant callp(const StringName &p_method, const Variant **p_args, int p_argcount, Callable::CallError &r_error);
-	virtual Variant call_const(const StringName &p_method, const Variant **p_args, int p_argcount, Callable::CallError &r_error);
+	virtual Variant callp(const StringName &p_method, const Variant *const *p_args, int p_argcount, Callable::CallError &r_error);
+	virtual Variant call_const(const StringName &p_method, const Variant *const *p_args, int p_argcount, Callable::CallError &r_error);
 
 	template <typename... VarArgs>
 	Variant call(const StringName &p_method, VarArgs... p_args) {
@@ -876,7 +876,7 @@ public:
 			argptrs[i] = &args[i];
 		}
 		Callable::CallError cerr;
-		const Variant ret = callp(p_method, sizeof...(p_args) == 0 ? nullptr : (const Variant **)argptrs, sizeof...(p_args), cerr);
+		const Variant ret = callp(p_method, sizeof...(p_args) == 0 ? nullptr : argptrs, sizeof...(p_args), cerr);
 		return (cerr.error == Callable::CallError::CALL_OK) ? ret : Variant();
 	}
 
@@ -938,10 +938,10 @@ public:
 		for (uint32_t i = 0; i < sizeof...(p_args); i++) {
 			argptrs[i] = &args[i];
 		}
-		return emit_signalp(p_name, sizeof...(p_args) == 0 ? nullptr : (const Variant **)argptrs, sizeof...(p_args));
+		return emit_signalp(p_name, sizeof...(p_args) == 0 ? nullptr : argptrs, sizeof...(p_args));
 	}
 
-	MTVIRTUAL Error emit_signalp(const StringName &p_name, const Variant **p_args, int p_argcount);
+	MTVIRTUAL Error emit_signalp(const StringName &p_name, const Variant *const *p_args, int p_argcount);
 	MTVIRTUAL bool has_signal(const StringName &p_name) const;
 	MTVIRTUAL void get_signal_list(List<MethodInfo> *p_signals) const;
 	MTVIRTUAL void get_signal_connection_list(const StringName &p_signal, List<Connection> *p_connections) const;

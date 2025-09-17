@@ -163,7 +163,7 @@ public:
 		return (p_token == token) ? userdata : nullptr;
 	}
 
-	void call(const Variant **p_arguments, int p_argcount, Variant &r_return_value, Callable::CallError &r_call_error) const override {
+	void call(const Variant *const *p_arguments, int p_argcount, Variant &r_return_value, Callable::CallError &r_call_error) const override {
 		GDExtensionCallError error;
 
 		call_func(userdata, (GDExtensionConstVariantPtr *)p_arguments, p_argcount, (GDExtensionVariantPtr)&r_return_value, &error);
@@ -315,7 +315,7 @@ static void gdextension_variant_destroy(GDExtensionVariantPtr p_self) {
 static void gdextension_variant_call(GDExtensionVariantPtr p_self, GDExtensionConstStringNamePtr p_method, const GDExtensionConstVariantPtr *p_args, GDExtensionInt p_argcount, GDExtensionUninitializedVariantPtr r_return, GDExtensionCallError *r_error) {
 	Variant *self = (Variant *)p_self;
 	const StringName method = *reinterpret_cast<const StringName *>(p_method);
-	const Variant **args = (const Variant **)p_args;
+	const Variant *const *args = reinterpret_cast<const Variant *const *>(p_args);
 	Callable::CallError error;
 	memnew_placement(r_return, Variant);
 	Variant *ret = reinterpret_cast<Variant *>(r_return);
@@ -331,7 +331,7 @@ static void gdextension_variant_call(GDExtensionVariantPtr p_self, GDExtensionCo
 static void gdextension_variant_call_static(GDExtensionVariantType p_type, GDExtensionConstStringNamePtr p_method, const GDExtensionConstVariantPtr *p_args, GDExtensionInt p_argcount, GDExtensionUninitializedVariantPtr r_return, GDExtensionCallError *r_error) {
 	Variant::Type type = (Variant::Type)p_type;
 	const StringName method = *reinterpret_cast<const StringName *>(p_method);
-	const Variant **args = (const Variant **)p_args;
+	const Variant *const *args = reinterpret_cast<const Variant *const *>(p_args);
 	Callable::CallError error;
 	memnew_placement(r_return, Variant);
 	Variant *ret = reinterpret_cast<Variant *>(r_return);
@@ -822,7 +822,7 @@ static void gdextension_variant_construct(GDExtensionVariantType p_type, GDExten
 	Variant *base = reinterpret_cast<Variant *>(r_base);
 
 	Callable::CallError error;
-	Variant::construct(Variant::Type(p_type), *base, (const Variant **)p_args, p_argument_count, error);
+	Variant::construct(Variant::Type(p_type), *base, reinterpret_cast<const Variant *const *>(p_args), p_argument_count, error);
 
 	if (r_error) {
 		r_error->error = (GDExtensionCallErrorType)(error.error);
@@ -1318,7 +1318,7 @@ void gdextension_dictionary_set_typed(GDExtensionTypePtr p_self, GDExtensionVari
 static void gdextension_object_method_bind_call(GDExtensionMethodBindPtr p_method_bind, GDExtensionObjectPtr p_instance, const GDExtensionConstVariantPtr *p_args, GDExtensionInt p_arg_count, GDExtensionUninitializedVariantPtr r_return, GDExtensionCallError *r_error) {
 	const MethodBind *mb = reinterpret_cast<const MethodBind *>(p_method_bind);
 	Object *o = (Object *)p_instance;
-	const Variant **args = (const Variant **)p_args;
+	const Variant *const *args = reinterpret_cast<const Variant *const *>(p_args);
 	Callable::CallError error;
 
 	memnew_placement(r_return, Variant(mb->call(o, args, p_arg_count, error)));
@@ -1411,7 +1411,7 @@ static GDExtensionBool gdextension_object_has_script_method(GDExtensionConstObje
 static void gdextension_object_call_script_method(GDExtensionObjectPtr p_object, GDExtensionConstStringNamePtr p_method, const GDExtensionConstVariantPtr *p_args, GDExtensionInt p_argument_count, GDExtensionUninitializedVariantPtr r_return, GDExtensionCallError *r_error) {
 	Object *o = (Object *)p_object;
 	const StringName method = *reinterpret_cast<const StringName *>(p_method);
-	const Variant **args = (const Variant **)p_args;
+	const Variant *const *args = reinterpret_cast<const Variant *const *>(p_args);
 
 	Callable::CallError error; // TODO: Check `error`?
 	memnew_placement(r_return, Variant);

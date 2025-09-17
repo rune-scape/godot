@@ -101,7 +101,7 @@ MAKE_PTRCONSTRUCT(Variant);
 template <typename T, typename... P>
 class VariantConstructor {
 	template <size_t... Is>
-	static _FORCE_INLINE_ void construct_helper(T &base, const Variant **p_args, Callable::CallError &r_error, IndexSequence<Is...>) {
+	static _FORCE_INLINE_ void construct_helper(T &base, const Variant *const *p_args, Callable::CallError &r_error, IndexSequence<Is...>) {
 		r_error.error = Callable::CallError::CALL_OK;
 
 #ifdef DEBUG_ENABLED
@@ -112,7 +112,7 @@ class VariantConstructor {
 	}
 
 	template <size_t... Is>
-	static _FORCE_INLINE_ void validated_construct_helper(T &base, const Variant **p_args, IndexSequence<Is...>) {
+	static _FORCE_INLINE_ void validated_construct_helper(T &base, const Variant *const *p_args, IndexSequence<Is...>) {
 		base = T((*VariantGetInternalPtr<P>::get_ptr(p_args[Is]))...);
 	}
 
@@ -122,13 +122,13 @@ class VariantConstructor {
 	}
 
 public:
-	static void construct(Variant &r_ret, const Variant **p_args, Callable::CallError &r_error) {
+	static void construct(Variant &r_ret, const Variant *const *p_args, Callable::CallError &r_error) {
 		r_error.error = Callable::CallError::CALL_OK;
 		VariantTypeChanger<T>::change(&r_ret);
 		construct_helper(*VariantGetInternalPtr<T>::get_ptr(&r_ret), p_args, r_error, BuildIndexSequence<sizeof...(P)>{});
 	}
 
-	static inline void validated_construct(Variant *r_ret, const Variant **p_args) {
+	static inline void validated_construct(Variant *r_ret, const Variant *const *p_args) {
 		VariantTypeChanger<T>::change(r_ret);
 		validated_construct_helper(*VariantGetInternalPtr<T>::get_ptr(r_ret), p_args, BuildIndexSequence<sizeof...(P)>{});
 	}
@@ -151,7 +151,7 @@ public:
 
 class VariantConstructorObject {
 public:
-	static void construct(Variant &r_ret, const Variant **p_args, Callable::CallError &r_error) {
+	static void construct(Variant &r_ret, const Variant *const *p_args, Callable::CallError &r_error) {
 		if (p_args[0]->get_type() == Variant::NIL) {
 			VariantInternal::clear(&r_ret);
 			VariantTypeChanger<Object *>::change(&r_ret);
@@ -169,7 +169,7 @@ public:
 		}
 	}
 
-	static inline void validated_construct(Variant *r_ret, const Variant **p_args) {
+	static inline void validated_construct(Variant *r_ret, const Variant *const *p_args) {
 		VariantTypeChanger<Object *>::change(r_ret);
 		VariantInternal::object_assign(r_ret, p_args[0]);
 	}
@@ -192,7 +192,7 @@ public:
 
 class VariantConstructorNilObject {
 public:
-	static void construct(Variant &r_ret, const Variant **p_args, Callable::CallError &r_error) {
+	static void construct(Variant &r_ret, const Variant *const *p_args, Callable::CallError &r_error) {
 		if (p_args[0]->get_type() != Variant::NIL) {
 			r_error.error = Callable::CallError::CALL_ERROR_INVALID_ARGUMENT;
 			r_error.argument = 0;
@@ -204,7 +204,7 @@ public:
 		VariantInternal::object_reset_data(&r_ret);
 	}
 
-	static inline void validated_construct(Variant *r_ret, const Variant **p_args) {
+	static inline void validated_construct(Variant *r_ret, const Variant *const *p_args) {
 		VariantInternal::clear(r_ret);
 		VariantTypeChanger<Object *>::change(r_ret);
 		VariantInternal::object_reset_data(r_ret);
@@ -229,7 +229,7 @@ public:
 template <typename T>
 class VariantConstructorFromString {
 public:
-	static void construct(Variant &r_ret, const Variant **p_args, Callable::CallError &r_error) {
+	static void construct(Variant &r_ret, const Variant *const *p_args, Callable::CallError &r_error) {
 		if (!p_args[0]->is_string()) {
 			r_error.error = Callable::CallError::CALL_ERROR_INVALID_ARGUMENT;
 			r_error.argument = 0;
@@ -247,7 +247,7 @@ public:
 		}
 	}
 
-	static inline void validated_construct(Variant *r_ret, const Variant **p_args) {
+	static inline void validated_construct(Variant *r_ret, const Variant *const *p_args) {
 		VariantTypeChanger<T>::change(r_ret);
 		const String &src_str = *VariantGetInternalPtr<String>::get_ptr(p_args[0]);
 		T ret = Variant();
@@ -286,7 +286,7 @@ public:
 
 class VariantConstructorCallableArgs {
 public:
-	static void construct(Variant &r_ret, const Variant **p_args, Callable::CallError &r_error) {
+	static void construct(Variant &r_ret, const Variant *const *p_args, Callable::CallError &r_error) {
 		ObjectID object_id;
 		StringName method;
 
@@ -316,7 +316,7 @@ public:
 		*VariantGetInternalPtr<Callable>::get_ptr(&r_ret) = Callable(object_id, method);
 	}
 
-	static inline void validated_construct(Variant *r_ret, const Variant **p_args) {
+	static inline void validated_construct(Variant *r_ret, const Variant *const *p_args) {
 		VariantTypeChanger<Callable>::change(r_ret);
 		*VariantGetInternalPtr<Callable>::get_ptr(r_ret) = Callable(VariantInternal::get_object_id(p_args[0]), *VariantGetInternalPtr<StringName>::get_ptr(p_args[1]));
 	}
@@ -343,7 +343,7 @@ public:
 
 class VariantConstructorSignalArgs {
 public:
-	static void construct(Variant &r_ret, const Variant **p_args, Callable::CallError &r_error) {
+	static void construct(Variant &r_ret, const Variant *const *p_args, Callable::CallError &r_error) {
 		ObjectID object_id;
 		StringName method;
 
@@ -373,7 +373,7 @@ public:
 		*VariantGetInternalPtr<Signal>::get_ptr(&r_ret) = Signal(object_id, method);
 	}
 
-	static inline void validated_construct(Variant *r_ret, const Variant **p_args) {
+	static inline void validated_construct(Variant *r_ret, const Variant *const *p_args) {
 		VariantTypeChanger<Signal>::change(r_ret);
 		*VariantGetInternalPtr<Signal>::get_ptr(r_ret) = Signal(VariantInternal::get_object_id(p_args[0]), *VariantGetInternalPtr<StringName>::get_ptr(p_args[1]));
 	}
@@ -400,7 +400,7 @@ public:
 
 class VariantConstructorTypedDictionary {
 public:
-	static void construct(Variant &r_ret, const Variant **p_args, Callable::CallError &r_error) {
+	static void construct(Variant &r_ret, const Variant *const *p_args, Callable::CallError &r_error) {
 		if (p_args[0]->get_type() != Variant::DICTIONARY) {
 			r_error.error = Callable::CallError::CALL_ERROR_INVALID_ARGUMENT;
 			r_error.argument = 0;
@@ -444,7 +444,7 @@ public:
 		r_ret = Dictionary(base_dict, key_type, key_class_name, *p_args[3], value_type, value_class_name, *p_args[6]);
 	}
 
-	static inline void validated_construct(Variant *r_ret, const Variant **p_args) {
+	static inline void validated_construct(Variant *r_ret, const Variant *const *p_args) {
 		const Dictionary &base_dict = *VariantGetInternalPtr<Dictionary>::get_ptr(p_args[0]);
 		const uint32_t key_type = p_args[1]->operator uint32_t();
 		const StringName &key_class_name = *VariantGetInternalPtr<StringName>::get_ptr(p_args[2]);
@@ -506,7 +506,7 @@ public:
 
 class VariantConstructorTypedArray {
 public:
-	static void construct(Variant &r_ret, const Variant **p_args, Callable::CallError &r_error) {
+	static void construct(Variant &r_ret, const Variant *const *p_args, Callable::CallError &r_error) {
 		if (p_args[0]->get_type() != Variant::ARRAY) {
 			r_error.error = Callable::CallError::CALL_ERROR_INVALID_ARGUMENT;
 			r_error.argument = 0;
@@ -533,7 +533,7 @@ public:
 		r_ret = Array(base_arr, type, *p_args[2], *p_args[3]);
 	}
 
-	static inline void validated_construct(Variant *r_ret, const Variant **p_args) {
+	static inline void validated_construct(Variant *r_ret, const Variant *const *p_args) {
 		const Array &base_arr = *VariantGetInternalPtr<Array>::get_ptr(p_args[0]);
 		const uint32_t type = p_args[1]->operator uint32_t();
 		const StringName &class_name = *VariantGetInternalPtr<StringName>::get_ptr(p_args[2]);
@@ -582,7 +582,7 @@ public:
 template <typename T>
 class VariantConstructorToArray {
 public:
-	static void construct(Variant &r_ret, const Variant **p_args, Callable::CallError &r_error) {
+	static void construct(Variant &r_ret, const Variant *const *p_args, Callable::CallError &r_error) {
 		if (p_args[0]->get_type() != GetTypeInfo<T>::VARIANT_TYPE) {
 			r_error.error = Callable::CallError::CALL_ERROR_INVALID_ARGUMENT;
 			r_error.argument = 0;
@@ -601,7 +601,7 @@ public:
 		}
 	}
 
-	static inline void validated_construct(Variant *r_ret, const Variant **p_args) {
+	static inline void validated_construct(Variant *r_ret, const Variant *const *p_args) {
 		*r_ret = Array();
 		Array &dst_arr = *VariantGetInternalPtr<Array>::get_ptr(r_ret);
 		const T &src_arr = *VariantGetInternalPtr<T>::get_ptr(p_args[0]);
@@ -641,7 +641,7 @@ public:
 template <typename T>
 class VariantConstructorFromArray {
 public:
-	static void construct(Variant &r_ret, const Variant **p_args, Callable::CallError &r_error) {
+	static void construct(Variant &r_ret, const Variant *const *p_args, Callable::CallError &r_error) {
 		if (p_args[0]->get_type() != Variant::ARRAY) {
 			r_error.error = Callable::CallError::CALL_ERROR_INVALID_ARGUMENT;
 			r_error.argument = 0;
@@ -660,7 +660,7 @@ public:
 		}
 	}
 
-	static inline void validated_construct(Variant *r_ret, const Variant **p_args) {
+	static inline void validated_construct(Variant *r_ret, const Variant *const *p_args) {
 		VariantTypeChanger<T>::change(r_ret);
 		const Array &src_arr = *VariantGetInternalPtr<Array>::get_ptr(p_args[0]);
 		T &dst_arr = *VariantGetInternalPtr<T>::get_ptr(r_ret);
@@ -699,7 +699,7 @@ public:
 
 class VariantConstructorNil {
 public:
-	static void construct(Variant &r_ret, const Variant **p_args, Callable::CallError &r_error) {
+	static void construct(Variant &r_ret, const Variant *const *p_args, Callable::CallError &r_error) {
 		if (p_args[0]->get_type() != Variant::NIL) {
 			r_error.error = Callable::CallError::CALL_ERROR_INVALID_ARGUMENT;
 			r_error.argument = 0;
@@ -711,7 +711,7 @@ public:
 		VariantInternal::clear(&r_ret);
 	}
 
-	static inline void validated_construct(Variant *r_ret, const Variant **p_args) {
+	static inline void validated_construct(Variant *r_ret, const Variant *const *p_args) {
 		VariantInternal::clear(r_ret);
 	}
 	static void ptr_construct(void *base, const void **p_args) {
@@ -734,12 +734,12 @@ public:
 template <typename T>
 class VariantConstructNoArgs {
 public:
-	static void construct(Variant &r_ret, const Variant **p_args, Callable::CallError &r_error) {
+	static void construct(Variant &r_ret, const Variant *const *p_args, Callable::CallError &r_error) {
 		VariantTypeChanger<T>::change_and_reset(&r_ret);
 		r_error.error = Callable::CallError::CALL_OK;
 	}
 
-	static inline void validated_construct(Variant *r_ret, const Variant **p_args) {
+	static inline void validated_construct(Variant *r_ret, const Variant *const *p_args) {
 		VariantTypeChanger<T>::change_and_reset(r_ret);
 	}
 	static void ptr_construct(void *base, const void **p_args) {
@@ -761,12 +761,12 @@ public:
 
 class VariantConstructNoArgsNil {
 public:
-	static void construct(Variant &r_ret, const Variant **p_args, Callable::CallError &r_error) {
+	static void construct(Variant &r_ret, const Variant *const *p_args, Callable::CallError &r_error) {
 		VariantInternal::clear(&r_ret);
 		r_error.error = Callable::CallError::CALL_OK;
 	}
 
-	static inline void validated_construct(Variant *r_ret, const Variant **p_args) {
+	static inline void validated_construct(Variant *r_ret, const Variant *const *p_args) {
 		VariantInternal::clear(r_ret);
 	}
 	static void ptr_construct(void *base, const void **p_args) {
@@ -788,12 +788,12 @@ public:
 
 class VariantConstructNoArgsObject {
 public:
-	static void construct(Variant &r_ret, const Variant **p_args, Callable::CallError &r_error) {
+	static void construct(Variant &r_ret, const Variant *const *p_args, Callable::CallError &r_error) {
 		r_ret = (Object *)nullptr; // Must construct a TYPE_OBJECT containing nullptr.
 		r_error.error = Callable::CallError::CALL_OK;
 	}
 
-	static inline void validated_construct(Variant *r_ret, const Variant **p_args) {
+	static inline void validated_construct(Variant *r_ret, const Variant *const *p_args) {
 		*r_ret = (Object *)nullptr; // Must construct a TYPE_OBJECT containing nullptr.
 	}
 	static void ptr_construct(void *base, const void **p_args) {

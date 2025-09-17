@@ -339,7 +339,7 @@ Error SceneDebugger::_msg_live_node_call(const Array &p_args) {
 		args[i] = p_args[i + 2];
 		argptrs[i] = &args[i];
 	}
-	LiveEditor::get_singleton()->_node_call_func(p_args[0], p_args[1], argptrs.size() ? (const Variant **)argptrs.ptr() : nullptr, argptrs.size());
+	LiveEditor::get_singleton()->_node_call_func(p_args[0], p_args[1], argptrs.size() ? argptrs.ptr() : nullptr, argptrs.size());
 	return OK;
 }
 
@@ -353,7 +353,7 @@ Error SceneDebugger::_msg_live_res_call(const Array &p_args) {
 		args[i] = p_args[i + 2];
 		argptrs[i] = &args[i];
 	}
-	LiveEditor::get_singleton()->_res_call_func(p_args[0], p_args[1], argptrs.size() ? (const Variant **)argptrs.ptr() : nullptr, argptrs.size());
+	LiveEditor::get_singleton()->_res_call_func(p_args[0], p_args[1], argptrs.size() ? argptrs.ptr() : nullptr, argptrs.size());
 	return OK;
 }
 
@@ -1078,7 +1078,7 @@ void LiveEditor::_node_set_res_func(int p_id, const StringName &p_prop, const St
 	_node_set_func(p_id, p_prop, r);
 }
 
-void LiveEditor::_node_call_func(int p_id, const StringName &p_method, const Variant **p_args, int p_argcount) {
+void LiveEditor::_node_call_func(int p_id, const StringName &p_method, const Variant *const *p_args, int p_argcount) {
 	SceneTree *scene_tree = SceneTree::get_singleton();
 	if (!scene_tree) {
 		return;
@@ -1169,7 +1169,7 @@ void LiveEditor::_res_set_res_func(int p_id, const StringName &p_prop, const Str
 	_res_set_func(p_id, p_prop, r);
 }
 
-void LiveEditor::_res_call_func(int p_id, const StringName &p_method, const Variant **p_args, int p_argcount) {
+void LiveEditor::_res_call_func(int p_id, const StringName &p_method, const Variant *const *p_args, int p_argcount) {
 	if (!live_edit_resource_cache.has(p_id)) {
 		return;
 	}

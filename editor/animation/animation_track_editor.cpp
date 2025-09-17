@@ -234,7 +234,7 @@ bool AnimationTrackKeyEdit::_set(const StringName &p_name, const Variant &p_valu
 						if (Variant::can_convert_strict(args[idx].get_type(), t)) {
 							Variant old = args[idx];
 							Variant *ptrs[1] = { &old };
-							Variant::construct(t, args.write[idx], (const Variant **)ptrs, 1, err);
+							Variant::construct(t, args.write[idx], ptrs, 1, err);
 						} else {
 							Variant::construct(t, args.write[idx], nullptr, 0, err);
 						}
@@ -846,7 +846,7 @@ bool AnimationMultiTrackKeyEdit::_set(const StringName &p_name, const Variant &p
 								if (Variant::can_convert_strict(args[idx].get_type(), t)) {
 									Variant old = args[idx];
 									Variant *ptrs[1] = { &old };
-									Variant::construct(t, args.write[idx], (const Variant **)ptrs, 1, err);
+									Variant::construct(t, args.write[idx], ptrs, 1, err);
 								} else {
 									Variant::construct(t, args.write[idx], nullptr, 0, err);
 								}

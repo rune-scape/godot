@@ -2033,9 +2033,9 @@ Variant Control::get_drag_data(const Point2 &p_point) {
 		Variant p = p_point;
 		const Variant *vp[1] = { &p };
 		Callable::CallError ce;
-		data.forward_drag.callp((const Variant **)vp, 1, ret, ce);
+		data.forward_drag.callp(vp, 1, ret, ce);
 		if (ce.error != Callable::CallError::CALL_OK) {
-			ERR_FAIL_V_MSG(Variant(), "Error calling forwarded method from 'get_drag_data': " + Variant::get_callable_error_text(data.forward_drag, (const Variant **)vp, 1, ce) + ".");
+			ERR_FAIL_V_MSG(Variant(), "Error calling forwarded method from 'get_drag_data': " + Variant::get_callable_error_text(data.forward_drag, vp, 1, ce) + ".");
 		}
 		return ret;
 	}
@@ -2051,9 +2051,9 @@ bool Control::can_drop_data(const Point2 &p_point, const Variant &p_data) const 
 		Variant p = p_point;
 		const Variant *vp[2] = { &p, &p_data };
 		Callable::CallError ce;
-		data.forward_can_drop.callp((const Variant **)vp, 2, ret, ce);
+		data.forward_can_drop.callp(vp, 2, ret, ce);
 		if (ce.error != Callable::CallError::CALL_OK) {
-			ERR_FAIL_V_MSG(Variant(), "Error calling forwarded method from 'can_drop_data': " + Variant::get_callable_error_text(data.forward_can_drop, (const Variant **)vp, 2, ce) + ".");
+			ERR_FAIL_V_MSG(Variant(), "Error calling forwarded method from 'can_drop_data': " + Variant::get_callable_error_text(data.forward_can_drop, vp, 2, ce) + ".");
 		}
 		return ret;
 	}
@@ -2070,9 +2070,9 @@ void Control::drop_data(const Point2 &p_point, const Variant &p_data) {
 		Variant p = p_point;
 		const Variant *vp[2] = { &p, &p_data };
 		Callable::CallError ce;
-		data.forward_drop.callp((const Variant **)vp, 2, ret, ce);
+		data.forward_drop.callp(vp, 2, ret, ce);
 		if (ce.error != Callable::CallError::CALL_OK) {
-			ERR_FAIL_MSG("Error calling forwarded method from 'drop_data': " + Variant::get_callable_error_text(data.forward_drop, (const Variant **)vp, 2, ce) + ".");
+			ERR_FAIL_MSG("Error calling forwarded method from 'drop_data': " + Variant::get_callable_error_text(data.forward_drop, vp, 2, ce) + ".");
 		}
 		return;
 	}

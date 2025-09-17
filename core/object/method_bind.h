@@ -114,8 +114,8 @@ public:
 	virtual bool is_valid() const { return true; }
 #endif
 
-	virtual Variant call(Object *p_object, const Variant **p_args, int p_arg_count, Callable::CallError &r_error) const = 0;
-	virtual void validated_call(Object *p_object, const Variant **p_args, Variant *r_ret) const = 0;
+	virtual Variant call(Object *p_object, const Variant *const *p_args, int p_arg_count, Callable::CallError &r_error) const = 0;
+	virtual void validated_call(Object *p_object, const Variant *const *p_args, Variant *r_ret) const = 0;
 
 	virtual void ptrcall(Object *p_object, const void **p_args, void *r_ret) const = 0;
 
@@ -142,7 +142,7 @@ public:
 template <typename Derived, typename T, typename R, bool should_returns>
 class MethodBindVarArgBase : public MethodBind {
 protected:
-	R (T::*method)(const Variant **, int, Callable::CallError &);
+	R (T::*method)(const Variant *const *, int, Callable::CallError &);
 	MethodInfo method_info;
 
 public:
@@ -166,7 +166,7 @@ public:
 	}
 #endif // DEBUG_ENABLED
 
-	virtual void validated_call(Object *p_object, const Variant **p_args, Variant *r_ret) const override {
+	virtual void validated_call(Object *p_object, const Variant *const *p_args, Variant *r_ret) const override {
 		ERR_FAIL_MSG("Validated call can't be used with vararg methods. This is a bug.");
 	}
 
@@ -179,7 +179,7 @@ public:
 	virtual bool is_vararg() const override { return true; }
 
 	MethodBindVarArgBase(
-			R (T::*p_method)(const Variant **, int, Callable::CallError &),
+			R (T::*p_method)(const Variant *const *, int, Callable::CallError &),
 			const MethodInfo &p_method_info,
 			bool p_return_nil_is_variant) :
 			method(p_method), method_info(p_method_info) {
@@ -222,7 +222,7 @@ class MethodBindVarArgT : public MethodBindVarArgBase<MethodBindVarArgT<T>, T, v
 	friend class MethodBindVarArgBase<MethodBindVarArgT<T>, T, void, false>;
 
 public:
-	virtual Variant call(Object *p_object, const Variant **p_args, int p_arg_count, Callable::CallError &r_error) const override {
+	virtual Variant call(Object *p_object, const Variant *const *p_args, int p_arg_count, Callable::CallError &r_error) const override {
 #ifdef TOOLS_ENABLED
 		ERR_FAIL_COND_V_MSG(p_object && p_object->is_extension_placeholder() && p_object->get_class_name() == MethodBind::get_instance_class(), Variant(), vformat("Cannot call method bind '%s' on placeholder instance.", MethodBind::get_name()));
 #endif
@@ -231,7 +231,7 @@ public:
 	}
 
 	MethodBindVarArgT(
-			void (T::*p_method)(const Variant **, int, Callable::CallError &),
+			void (T::*p_method)(const Variant *const *, int, Callable::CallError &),
 			const MethodInfo &p_method_info,
 			bool p_return_nil_is_variant) :
 			MethodBindVarArgBase<MethodBindVarArgT<T>, T, void, false>(p_method, p_method_info, p_return_nil_is_variant) {
@@ -244,7 +244,7 @@ private:
 };
 
 template <typename T>
-MethodBind *create_vararg_method_bind(void (T::*p_method)(const Variant **, int, Callable::CallError &), const MethodInfo &p_info, bool p_return_nil_is_variant) {
+MethodBind *create_vararg_method_bind(void (T::*p_method)(const Variant *const *, int, Callable::CallError &), const MethodInfo &p_info, bool p_return_nil_is_variant) {
 	MethodBind *a = memnew((MethodBindVarArgT<T>)(p_method, p_info, p_return_nil_is_variant));
 	a->set_instance_class(T::get_class_static());
 	return a;
@@ -258,7 +258,7 @@ class MethodBindVarArgTR : public MethodBindVarArgBase<MethodBindVarArgTR<T, R>,
 public:
 	GODOT_GCC_WARNING_PUSH_AND_IGNORE("-Wmaybe-uninitialized") // Workaround GH-66343 raised only with UBSAN, seems to be a false positive.
 
-	virtual Variant call(Object *p_object, const Variant **p_args, int p_arg_count, Callable::CallError &r_error) const override {
+	virtual Variant call(Object *p_object, const Variant *const *p_args, int p_arg_count, Callable::CallError &r_error) const override {
 #ifdef TOOLS_ENABLED
 		ERR_FAIL_COND_V_MSG(p_object && p_object->is_extension_placeholder() && p_object->get_class_name() == MethodBind::get_instance_class(), Variant(), vformat("Cannot call method bind '%s' on placeholder instance.", MethodBind::get_name()));
 #endif
@@ -268,7 +268,7 @@ public:
 	GODOT_GCC_WARNING_POP
 
 	MethodBindVarArgTR(
-			R (T::*p_method)(const Variant **, int, Callable::CallError &),
+			R (T::*p_method)(const Variant *const *, int, Callable::CallError &),
 			const MethodInfo &p_info,
 			bool p_return_nil_is_variant) :
 			MethodBindVarArgBase<MethodBindVarArgTR<T, R>, T, R, true>(p_method, p_info, p_return_nil_is_variant) {
@@ -281,7 +281,7 @@ private:
 };
 
 template <typename T, typename R>
-MethodBind *create_vararg_method_bind(R (T::*p_method)(const Variant **, int, Callable::CallError &), const MethodInfo &p_info, bool p_return_nil_is_variant) {
+MethodBind *create_vararg_method_bind(R (T::*p_method)(const Variant *const *, int, Callable::CallError &), const MethodInfo &p_info, bool p_return_nil_is_variant) {
 	MethodBind *a = memnew((MethodBindVarArgTR<T, R>)(p_method, p_info, p_return_nil_is_variant));
 	a->set_instance_class(T::get_class_static());
 	return a;
@@ -327,7 +327,7 @@ public:
 	}
 
 #endif // DEBUG_ENABLED
-	virtual Variant call(Object *p_object, const Variant **p_args, int p_arg_count, Callable::CallError &r_error) const override {
+	virtual Variant call(Object *p_object, const Variant *const *p_args, int p_arg_count, Callable::CallError &r_error) const override {
 #ifdef TOOLS_ENABLED
 		ERR_FAIL_COND_V_MSG(p_object && p_object->is_extension_placeholder() && p_object->get_class_name() == get_instance_class(), Variant(), vformat("Cannot call method bind '%s' on placeholder instance.", MethodBind::get_name()));
 #endif
@@ -339,7 +339,7 @@ public:
 		return Variant();
 	}
 
-	virtual void validated_call(Object *p_object, const Variant **p_args, Variant *r_ret) const override {
+	virtual void validated_call(Object *p_object, const Variant *const *p_args, Variant *r_ret) const override {
 #ifdef TOOLS_ENABLED
 		ERR_FAIL_COND_MSG(p_object && p_object->is_extension_placeholder() && p_object->get_class_name() == get_instance_class(), vformat("Cannot call method bind '%s' on placeholder instance.", MethodBind::get_name()));
 #endif
@@ -411,7 +411,7 @@ public:
 	}
 
 #endif // DEBUG_ENABLED
-	virtual Variant call(Object *p_object, const Variant **p_args, int p_arg_count, Callable::CallError &r_error) const override {
+	virtual Variant call(Object *p_object, const Variant *const *p_args, int p_arg_count, Callable::CallError &r_error) const override {
 #ifdef TOOLS_ENABLED
 		ERR_FAIL_COND_V_MSG(p_object && p_object->is_extension_placeholder() && p_object->get_class_name() == get_instance_class(), Variant(), vformat("Cannot call method bind '%s' on placeholder instance.", MethodBind::get_name()));
 #endif
@@ -423,7 +423,7 @@ public:
 		return Variant();
 	}
 
-	virtual void validated_call(Object *p_object, const Variant **p_args, Variant *r_ret) const override {
+	virtual void validated_call(Object *p_object, const Variant *const *p_args, Variant *r_ret) const override {
 #ifdef TOOLS_ENABLED
 		ERR_FAIL_COND_MSG(p_object && p_object->is_extension_placeholder() && p_object->get_class_name() == get_instance_class(), vformat("Cannot call method bind '%s' on placeholder instance.", MethodBind::get_name()));
 #endif
@@ -504,7 +504,7 @@ public:
 	}
 #endif // DEBUG_ENABLED
 
-	virtual Variant call(Object *p_object, const Variant **p_args, int p_arg_count, Callable::CallError &r_error) const override {
+	virtual Variant call(Object *p_object, const Variant *const *p_args, int p_arg_count, Callable::CallError &r_error) const override {
 		Variant ret;
 #ifdef TOOLS_ENABLED
 		ERR_FAIL_COND_V_MSG(p_object && p_object->is_extension_placeholder() && p_object->get_class_name() == get_instance_class(), ret, vformat("Cannot call method bind '%s' on placeholder instance.", MethodBind::get_name()));
@@ -517,7 +517,7 @@ public:
 		return ret;
 	}
 
-	virtual void validated_call(Object *p_object, const Variant **p_args, Variant *r_ret) const override {
+	virtual void validated_call(Object *p_object, const Variant *const *p_args, Variant *r_ret) const override {
 #ifdef TOOLS_ENABLED
 		ERR_FAIL_COND_MSG(p_object && p_object->is_extension_placeholder() && p_object->get_class_name() == get_instance_class(), vformat("Cannot call method bind '%s' on placeholder instance.", MethodBind::get_name()));
 #endif
@@ -599,7 +599,7 @@ public:
 	}
 #endif // DEBUG_ENABLED
 
-	virtual Variant call(Object *p_object, const Variant **p_args, int p_arg_count, Callable::CallError &r_error) const override {
+	virtual Variant call(Object *p_object, const Variant *const *p_args, int p_arg_count, Callable::CallError &r_error) const override {
 		Variant ret;
 #ifdef TOOLS_ENABLED
 		ERR_FAIL_COND_V_MSG(p_object && p_object->is_extension_placeholder() && p_object->get_class_name() == get_instance_class(), ret, vformat("Cannot call method bind '%s' on placeholder instance.", MethodBind::get_name()));
@@ -612,7 +612,7 @@ public:
 		return ret;
 	}
 
-	virtual void validated_call(Object *p_object, const Variant **p_args, Variant *r_ret) const override {
+	virtual void validated_call(Object *p_object, const Variant *const *p_args, Variant *r_ret) const override {
 #ifdef TOOLS_ENABLED
 		ERR_FAIL_COND_MSG(p_object && p_object->is_extension_placeholder() && p_object->get_class_name() == get_instance_class(), vformat("Cannot call method bind '%s' on placeholder instance.", MethodBind::get_name()));
 #endif
@@ -684,13 +684,13 @@ public:
 	}
 
 #endif // DEBUG_ENABLED
-	virtual Variant call(Object *p_object, const Variant **p_args, int p_arg_count, Callable::CallError &r_error) const override {
+	virtual Variant call(Object *p_object, const Variant *const *p_args, int p_arg_count, Callable::CallError &r_error) const override {
 		(void)p_object; // unused
 		call_with_variant_args_static_dv(function, p_args, p_arg_count, r_error, get_default_arguments());
 		return Variant();
 	}
 
-	virtual void validated_call(Object *p_object, const Variant **p_args, Variant *r_ret) const override {
+	virtual void validated_call(Object *p_object, const Variant *const *p_args, Variant *r_ret) const override {
 		call_with_validated_variant_args_static_method(function, p_args);
 	}
 
@@ -750,13 +750,13 @@ public:
 	}
 
 #endif // DEBUG_ENABLED
-	virtual Variant call(Object *p_object, const Variant **p_args, int p_arg_count, Callable::CallError &r_error) const override {
+	virtual Variant call(Object *p_object, const Variant *const *p_args, int p_arg_count, Callable::CallError &r_error) const override {
 		Variant ret;
 		call_with_variant_args_static_ret_dv(function, p_args, p_arg_count, ret, r_error, get_default_arguments());
 		return ret;
 	}
 
-	virtual void validated_call(Object *p_object, const Variant **p_args, Variant *r_ret) const override {
+	virtual void validated_call(Object *p_object, const Variant *const *p_args, Variant *r_ret) const override {
 		call_with_validated_variant_args_static_method_ret(function, p_args, r_ret);
 	}
 

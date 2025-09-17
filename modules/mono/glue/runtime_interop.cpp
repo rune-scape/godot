@@ -542,7 +542,7 @@ bool godotsharp_callable_get_data_for_marshalling(const Callable *p_callable,
 	}
 }
 
-godot_variant godotsharp_callable_call(Callable *p_callable, const Variant **p_args, const int32_t p_arg_count, Callable::CallError *p_call_error) {
+godot_variant godotsharp_callable_call(Callable *p_callable, const Variant *const *p_args, const int32_t p_arg_count, Callable::CallError *p_call_error) {
 	godot_variant ret;
 	memnew_placement(&ret, Variant);
 
@@ -553,7 +553,7 @@ godot_variant godotsharp_callable_call(Callable *p_callable, const Variant **p_a
 	return ret;
 }
 
-void godotsharp_callable_call_deferred(Callable *p_callable, const Variant **p_args, const int32_t p_arg_count) {
+void godotsharp_callable_call_deferred(Callable *p_callable, const Variant *const *p_args, const int32_t p_arg_count) {
 	p_callable->call_deferredp(p_args, p_arg_count);
 }
 
@@ -590,7 +590,7 @@ godot_variant godotsharp_method_bind_call(MethodBind *p_method_bind, Object *p_i
 
 	Variant *ret_val = (Variant *)&ret;
 
-	*ret_val = p_method_bind->call(p_instance, (const Variant **)p_args, p_arg_count, *p_call_error);
+	*ret_val = p_method_bind->call(p_instance, p_args, p_arg_count, *p_call_error);
 
 	return ret;
 }

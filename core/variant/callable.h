@@ -69,8 +69,8 @@ public:
 
 	template <typename... VarArgs>
 	Variant call(VarArgs... p_args) const;
-	void callp(const Variant **p_arguments, int p_argcount, Variant &r_return_value, CallError &r_call_error) const;
-	void call_deferredp(const Variant **p_arguments, int p_argcount) const;
+	void callp(const Variant *const *p_arguments, int p_argcount, Variant &r_return_value, CallError &r_call_error) const;
+	void call_deferredp(const Variant *const *p_arguments, int p_argcount) const;
 	Variant callv(const Array &p_arguments) const;
 
 	template <typename... VarArgs>
@@ -80,10 +80,10 @@ public:
 		for (uint32_t i = 0; i < sizeof...(p_args); i++) {
 			argptrs[i] = &args[i];
 		}
-		return call_deferredp(sizeof...(p_args) == 0 ? nullptr : (const Variant **)argptrs, sizeof...(p_args));
+		return call_deferredp(sizeof...(p_args) == 0 ? nullptr : argptrs, sizeof...(p_args));
 	}
 
-	Error rpcp(int p_id, const Variant **p_arguments, int p_argcount, CallError &r_call_error) const;
+	Error rpcp(int p_id, const Variant *const *p_arguments, int p_argcount, CallError &r_call_error) const;
 
 	_FORCE_INLINE_ bool is_null() const {
 		return method == StringName() && object == 0;
@@ -100,7 +100,7 @@ public:
 	Callable bind(VarArgs... p_args) const;
 	Callable bindv(const Array &p_arguments);
 
-	Callable bindp(const Variant **p_arguments, int p_argcount) const;
+	Callable bindp(const Variant *const *p_arguments, int p_argcount) const;
 	Callable unbind(int p_argcount) const;
 
 	Object *get_object() const;
@@ -156,8 +156,8 @@ public:
 	virtual bool is_valid() const;
 	virtual StringName get_method() const;
 	virtual ObjectID get_object() const = 0;
-	virtual void call(const Variant **p_arguments, int p_argcount, Variant &r_return_value, Callable::CallError &r_call_error) const = 0;
-	virtual Error rpc(int p_peer_id, const Variant **p_arguments, int p_argcount, Callable::CallError &r_call_error) const;
+	virtual void call(const Variant *const *p_arguments, int p_argcount, Variant &r_return_value, Callable::CallError &r_call_error) const = 0;
+	virtual Error rpc(int p_peer_id, const Variant *const *p_arguments, int p_argcount, Callable::CallError &r_call_error) const;
 	virtual const Callable *get_base_comparator() const;
 	virtual int get_argument_count(bool &r_is_valid) const;
 	virtual int get_bound_arguments_count() const;
@@ -192,7 +192,7 @@ public:
 
 	explicit operator String() const;
 
-	Error emit(const Variant **p_arguments, int p_argcount) const;
+	Error emit(const Variant *const *p_arguments, int p_argcount) const;
 	Error connect(const Callable &p_callable, uint32_t p_flags = 0);
 	void disconnect(const Callable &p_callable);
 	bool is_connected(const Callable &p_callable) const;

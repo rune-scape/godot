@@ -204,7 +204,7 @@ Error MultiplayerAPI::decode_and_decompress_variant(Variant &r_variant, const ui
 	return OK;
 }
 
-Error MultiplayerAPI::encode_and_compress_variants(const Variant **p_variants, int p_count, uint8_t *p_buffer, int &r_len, bool *r_raw, bool p_allow_object_decoding) {
+Error MultiplayerAPI::encode_and_compress_variants(const Variant *const *p_variants, int p_count, uint8_t *p_buffer, int &r_len, bool *r_raw, bool p_allow_object_decoding) {
 	r_len = 0;
 	int size = 0;
 
@@ -344,7 +344,7 @@ Vector<int> MultiplayerAPIExtension::get_peer_ids() {
 	return ids;
 }
 
-Error MultiplayerAPIExtension::rpcp(Object *p_obj, int p_peer_id, const StringName &p_method, const Variant **p_arg, int p_argcount) {
+Error MultiplayerAPIExtension::rpcp(Object *p_obj, int p_peer_id, const StringName &p_method, const Variant *const *p_arg, int p_argcount) {
 	if (!GDVIRTUAL_IS_OVERRIDDEN(_rpc)) {
 		return ERR_UNAVAILABLE;
 	}

@@ -99,7 +99,7 @@
 
 struct GDScriptUtilityFunctionsDefinitions {
 #ifndef DISABLE_DEPRECATED
-	static inline void convert(Variant *r_ret, const Variant **p_args, int p_arg_count, Callable::CallError &r_error) {
+	static inline void convert(Variant *r_ret, const Variant *const *p_args, int p_arg_count, Callable::CallError &r_error) {
 		DEBUG_VALIDATE_ARG_COUNT(2, 2);
 		DEBUG_VALIDATE_ARG_TYPE(1, Variant::INT);
 
@@ -111,13 +111,13 @@ struct GDScriptUtilityFunctionsDefinitions {
 	}
 #endif // DISABLE_DEPRECATED
 
-	static inline void type_exists(Variant *r_ret, const Variant **p_args, int p_arg_count, Callable::CallError &r_error) {
+	static inline void type_exists(Variant *r_ret, const Variant *const *p_args, int p_arg_count, Callable::CallError &r_error) {
 		DEBUG_VALIDATE_ARG_COUNT(1, 1);
 		DEBUG_VALIDATE_ARG_TYPE(0, Variant::STRING_NAME);
 		*r_ret = ClassDB::class_exists(*p_args[0]);
 	}
 
-	static inline void _char(Variant *r_ret, const Variant **p_args, int p_arg_count, Callable::CallError &r_error) {
+	static inline void _char(Variant *r_ret, const Variant *const *p_args, int p_arg_count, Callable::CallError &r_error) {
 		DEBUG_VALIDATE_ARG_COUNT(1, 1);
 		DEBUG_VALIDATE_ARG_TYPE(0, Variant::INT);
 		const int64_t code = *p_args[0];
@@ -125,7 +125,7 @@ struct GDScriptUtilityFunctionsDefinitions {
 		*r_ret = String::chr(code);
 	}
 
-	static inline void ord(Variant *r_ret, const Variant **p_args, int p_arg_count, Callable::CallError &r_error) {
+	static inline void ord(Variant *r_ret, const Variant *const *p_args, int p_arg_count, Callable::CallError &r_error) {
 		DEBUG_VALIDATE_ARG_COUNT(1, 1);
 		DEBUG_VALIDATE_ARG_TYPE(0, Variant::STRING);
 		const String string = *p_args[0];
@@ -133,7 +133,7 @@ struct GDScriptUtilityFunctionsDefinitions {
 		*r_ret = string.get(0);
 	}
 
-	static inline void range(Variant *r_ret, const Variant **p_args, int p_arg_count, Callable::CallError &r_error) {
+	static inline void range(Variant *r_ret, const Variant *const *p_args, int p_arg_count, Callable::CallError &r_error) {
 		DEBUG_VALIDATE_ARG_COUNT(1, 3);
 		switch (p_arg_count) {
 			case 1: {
@@ -230,7 +230,7 @@ struct GDScriptUtilityFunctionsDefinitions {
 		}
 	}
 
-	static inline void load(Variant *r_ret, const Variant **p_args, int p_arg_count, Callable::CallError &r_error) {
+	static inline void load(Variant *r_ret, const Variant *const *p_args, int p_arg_count, Callable::CallError &r_error) {
 		DEBUG_VALIDATE_ARG_COUNT(1, 1);
 		DEBUG_VALIDATE_ARG_TYPE(0, Variant::STRING);
 		*r_ret = ResourceLoader::load(*p_args[0]);
@@ -238,7 +238,7 @@ struct GDScriptUtilityFunctionsDefinitions {
 
 #ifndef DISABLE_DEPRECATED
 
-	static inline void inst_to_dict(Variant *r_ret, const Variant **p_args, int p_arg_count, Callable::CallError &r_error) {
+	static inline void inst_to_dict(Variant *r_ret, const Variant *const *p_args, int p_arg_count, Callable::CallError &r_error) {
 		DEBUG_VALIDATE_ARG_COUNT(1, 1);
 		DEBUG_VALIDATE_ARG_TYPE(0, Variant::OBJECT);
 
@@ -289,7 +289,7 @@ struct GDScriptUtilityFunctionsDefinitions {
 		*r_ret = d;
 	}
 
-	static inline void dict_to_inst(Variant *r_ret, const Variant **p_args, int p_arg_count, Callable::CallError &r_error) {
+	static inline void dict_to_inst(Variant *r_ret, const Variant *const *p_args, int p_arg_count, Callable::CallError &r_error) {
 		DEBUG_VALIDATE_ARG_COUNT(1, 1);
 		DEBUG_VALIDATE_ARG_TYPE(0, Variant::DICTIONARY);
 
@@ -329,7 +329,7 @@ struct GDScriptUtilityFunctionsDefinitions {
 		}
 	}
 
-	static inline void Color8(Variant *r_ret, const Variant **p_args, int p_arg_count, Callable::CallError &r_error) {
+	static inline void Color8(Variant *r_ret, const Variant *const *p_args, int p_arg_count, Callable::CallError &r_error) {
 		DEBUG_VALIDATE_ARG_COUNT(3, 4);
 		DEBUG_VALIDATE_ARG_TYPE(0, Variant::INT);
 		DEBUG_VALIDATE_ARG_TYPE(1, Variant::INT);
@@ -346,7 +346,7 @@ struct GDScriptUtilityFunctionsDefinitions {
 
 #endif // DISABLE_DEPRECATED
 
-	static inline void print_debug(Variant *r_ret, const Variant **p_args, int p_arg_count, Callable::CallError &r_error) {
+	static inline void print_debug(Variant *r_ret, const Variant *const *p_args, int p_arg_count, Callable::CallError &r_error) {
 		String s;
 		for (int i = 0; i < p_arg_count; i++) {
 			s += p_args[i]->operator String();
@@ -361,7 +361,7 @@ struct GDScriptUtilityFunctionsDefinitions {
 		*r_ret = Variant();
 	}
 
-	static inline void print_stack(Variant *r_ret, const Variant **p_args, int p_arg_count, Callable::CallError &r_error) {
+	static inline void print_stack(Variant *r_ret, const Variant *const *p_args, int p_arg_count, Callable::CallError &r_error) {
 		DEBUG_VALIDATE_ARG_COUNT(0, 0);
 
 		ScriptLanguage *script = GDScriptLanguage::get_singleton();
@@ -371,7 +371,7 @@ struct GDScriptUtilityFunctionsDefinitions {
 		*r_ret = Variant();
 	}
 
-	static inline void get_stack(Variant *r_ret, const Variant **p_args, int p_arg_count, Callable::CallError &r_error) {
+	static inline void get_stack(Variant *r_ret, const Variant *const *p_args, int p_arg_count, Callable::CallError &r_error) {
 		DEBUG_VALIDATE_ARG_COUNT(0, 0);
 
 		ScriptLanguage *script = GDScriptLanguage::get_singleton();
@@ -386,7 +386,7 @@ struct GDScriptUtilityFunctionsDefinitions {
 		*r_ret = ret;
 	}
 
-	static inline void len(Variant *r_ret, const Variant **p_args, int p_arg_count, Callable::CallError &r_error) {
+	static inline void len(Variant *r_ret, const Variant *const *p_args, int p_arg_count, Callable::CallError &r_error) {
 		DEBUG_VALIDATE_ARG_COUNT(1, 1);
 		switch (p_args[0]->get_type()) {
 			case Variant::STRING:
@@ -451,7 +451,7 @@ struct GDScriptUtilityFunctionsDefinitions {
 		}
 	}
 
-	static inline void is_instance_of(Variant *r_ret, const Variant **p_args, int p_arg_count, Callable::CallError &r_error) {
+	static inline void is_instance_of(Variant *r_ret, const Variant *const *p_args, int p_arg_count, Callable::CallError &r_error) {
 		DEBUG_VALIDATE_ARG_COUNT(2, 2);
 
 		if (p_args[1]->get_type() == Variant::INT) {

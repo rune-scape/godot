@@ -202,7 +202,7 @@ public:
 	void clear_remote_tree_selection();
 	void stop_waiting_inspection();
 	bool match_remote_selection(const TypedArray<uint64_t> &p_ids) const;
-	static void _methods_changed(void *p_ud, Object *p_base, const StringName &p_name, const Variant **p_args, int p_argcount);
+	static void _methods_changed(void *p_ud, Object *p_base, const StringName &p_name, const Variant *const *p_args, int p_argcount);
 	static void _properties_changed(void *p_ud, Object *p_base, const StringName &p_property, const Variant &p_value);
 
 	// LiveDebug

@@ -89,8 +89,8 @@ public:
 	void create_action_for_history(const String &p_name, int p_history_id, UndoRedo::MergeMode p_mode = UndoRedo::MERGE_DISABLE, bool p_backward_undo_ops = false, bool p_mark_unsaved = true);
 	void create_action(const String &p_name = "", UndoRedo::MergeMode p_mode = UndoRedo::MERGE_DISABLE, Object *p_custom_context = nullptr, bool p_backward_undo_ops = false, bool p_mark_unsaved = true);
 
-	void add_do_methodp(Object *p_object, const StringName &p_method, const Variant **p_args, int p_argcount);
-	void add_undo_methodp(Object *p_object, const StringName &p_method, const Variant **p_args, int p_argcount);
+	void add_do_methodp(Object *p_object, const StringName &p_method, const Variant *const *p_args, int p_argcount);
+	void add_undo_methodp(Object *p_object, const StringName &p_method, const Variant *const *p_args, int p_argcount);
 
 	template <typename... VarArgs>
 	void add_do_method(Object *p_object, const StringName &p_method, VarArgs... p_args) {
@@ -100,7 +100,7 @@ public:
 			argptrs[i] = &args[i];
 		}
 
-		add_do_methodp(p_object, p_method, sizeof...(p_args) == 0 ? nullptr : (const Variant **)argptrs, sizeof...(p_args));
+		add_do_methodp(p_object, p_method, sizeof...(p_args) == 0 ? nullptr : argptrs, sizeof...(p_args));
 	}
 
 	template <typename... VarArgs>
@@ -111,11 +111,11 @@ public:
 			argptrs[i] = &args[i];
 		}
 
-		add_undo_methodp(p_object, p_method, sizeof...(p_args) == 0 ? nullptr : (const Variant **)argptrs, sizeof...(p_args));
+		add_undo_methodp(p_object, p_method, sizeof...(p_args) == 0 ? nullptr : argptrs, sizeof...(p_args));
 	}
 
-	void _add_do_method(const Variant **p_args, int p_argcount, Callable::CallError &r_error);
-	void _add_undo_method(const Variant **p_args, int p_argcount, Callable::CallError &r_error);
+	void _add_do_method(const Variant *const *p_args, int p_argcount, Callable::CallError &r_error);
+	void _add_undo_method(const Variant *const *p_args, int p_argcount, Callable::CallError &r_error);
 
 	void add_do_property(Object *p_object, const StringName &p_property, const Variant &p_value);
 	void add_undo_property(Object *p_object, const StringName &p_property, const Variant &p_value);

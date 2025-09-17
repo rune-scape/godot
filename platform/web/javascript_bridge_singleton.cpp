@@ -87,7 +87,7 @@ protected:
 public:
 	Variant getvar(const Variant &p_key, bool *r_valid = nullptr) const override;
 	void setvar(const Variant &p_key, const Variant &p_value, bool *r_valid = nullptr) override;
-	Variant callp(const StringName &p_method, const Variant **p_args, int p_argc, Callable::CallError &r_error) override;
+	Variant callp(const StringName &p_method, const Variant *const *p_args, int p_argc, Callable::CallError &r_error) override;
 	JavaScriptObjectImpl() {}
 	JavaScriptObjectImpl(int p_id) { _js_id = p_id; }
 	~JavaScriptObjectImpl() {
@@ -204,7 +204,7 @@ Variant JavaScriptObjectImpl::_js2variant(int p_type, godot_js_wrapper_ex *p_val
 }
 
 int JavaScriptObjectImpl::_variant2js(const void **p_args, int p_pos, godot_js_wrapper_ex *r_val, void **p_lock) {
-	const Variant **args = (const Variant **)p_args;
+	const Variant *const *args = (const Variant *const *)p_args;
 	const Variant *v = args[p_pos];
 	Variant::Type type = v->get_type();
 	switch (type) {
@@ -237,7 +237,7 @@ int JavaScriptObjectImpl::_variant2js(const void **p_args, int p_pos, godot_js_w
 	return type;
 }
 
-Variant JavaScriptObjectImpl::callp(const StringName &p_method, const Variant **p_args, int p_argc, Callable::CallError &r_error) {
+Variant JavaScriptObjectImpl::callp(const StringName &p_method, const Variant *const *p_args, int p_argc, Callable::CallError &r_error) {
 	godot_js_wrapper_ex exchange;
 	const String method = p_method;
 	void *lock = nullptr;
@@ -302,7 +302,7 @@ Ref<JavaScriptObject> JavaScriptBridge::get_interface(const String &p_interface)
 	return Ref<JavaScriptObject>(memnew(JavaScriptObjectImpl(js_id)));
 }
 
-Variant JavaScriptBridge::_create_object_bind(const Variant **p_args, int p_argcount, Callable::CallError &r_error) {
+Variant JavaScriptBridge::_create_object_bind(const Variant *const *p_args, int p_argcount, Callable::CallError &r_error) {
 	if (p_argcount < 1) {
 		r_error.error = Callable::CallError::CALL_ERROR_TOO_FEW_ARGUMENTS;
 		r_error.expected = 1;
@@ -317,7 +317,7 @@ Variant JavaScriptBridge::_create_object_bind(const Variant **p_args, int p_argc
 	godot_js_wrapper_ex exchange;
 	const String object = *p_args[0];
 	void *lock = nullptr;
-	const Variant **args = p_argcount > 1 ? &p_args[1] : nullptr;
+	const Variant *const *args = p_argcount > 1 ? &p_args[1] : nullptr;
 	const int type = godot_js_wrapper_create_object(object.utf8().get_data(), (void **)args, p_argcount - 1, &JavaScriptObjectImpl::_variant2js, &exchange, &lock, &JavaScriptObjectImpl::_free_lock);
 	r_error.error = Callable::CallError::CALL_OK;
 	if (type < 0) {

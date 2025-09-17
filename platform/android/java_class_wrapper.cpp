@@ -33,7 +33,7 @@
 #include "jni_utils.h"
 #include "thread_jandroid.h"
 
-bool JavaClass::_call_method(JavaObject *p_instance, const StringName &p_method, const Variant **p_args, int p_argcount, Callable::CallError &r_error, Variant &ret) {
+bool JavaClass::_call_method(JavaObject *p_instance, const StringName &p_method, const Variant *const *p_args, int p_argcount, Callable::CallError &r_error, Variant &ret) {
 	HashMap<StringName, List<MethodInfo>>::Iterator M = methods.find(p_method);
 	if (!M) {
 		return false;
@@ -755,7 +755,7 @@ bool JavaClass::_get(const StringName &p_name, Variant &r_ret) const {
 	return false;
 }
 
-Variant JavaClass::callp(const StringName &p_method, const Variant **p_args, int p_argcount, Callable::CallError &r_error) {
+Variant JavaClass::callp(const StringName &p_method, const Variant *const *p_args, int p_argcount, Callable::CallError &r_error) {
 	Variant ret;
 
 	String method = (p_method == java_constructor_name) ? "<init>" : p_method;
@@ -872,7 +872,7 @@ JavaClass::~JavaClass() {
 
 /////////////////////
 
-Variant JavaObject::callp(const StringName &p_method, const Variant **p_args, int p_argcount, Callable::CallError &r_error) {
+Variant JavaObject::callp(const StringName &p_method, const Variant *const *p_args, int p_argcount, Callable::CallError &r_error) {
 	if (instance) {
 		Ref<JavaClass> c = base_class;
 		while (c.is_valid()) {

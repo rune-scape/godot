@@ -78,7 +78,7 @@ bool JavaClass::_get(const StringName &p_name, Variant &r_ret) const {
 	return false;
 }
 
-Variant JavaClass::callp(const StringName &, const Variant **, int, Callable::CallError &) {
+Variant JavaClass::callp(const StringName &, const Variant *const *, int, Callable::CallError &) {
 	return Variant();
 }
 
@@ -100,7 +100,7 @@ JavaClass::JavaClass() {
 JavaClass::~JavaClass() {
 }
 
-Variant JavaObject::callp(const StringName &, const Variant **, int, Callable::CallError &) {
+Variant JavaObject::callp(const StringName &, const Variant *const *, int, Callable::CallError &) {
 	return Variant();
 }
 

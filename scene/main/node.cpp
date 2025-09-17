@@ -801,7 +801,7 @@ const Variant Node::get_node_rpc_config() const {
 
 /***** RPC FUNCTIONS ********/
 
-Error Node::_rpc_bind(const Variant **p_args, int p_argcount, Callable::CallError &r_error) {
+Error Node::_rpc_bind(const Variant *const *p_args, int p_argcount, Callable::CallError &r_error) {
 	if (p_argcount < 1) {
 		r_error.error = Callable::CallError::CALL_ERROR_TOO_FEW_ARGUMENTS;
 		r_error.expected = 1;
@@ -822,7 +822,7 @@ Error Node::_rpc_bind(const Variant **p_args, int p_argcount, Callable::CallErro
 	return err;
 }
 
-Error Node::_rpc_id_bind(const Variant **p_args, int p_argcount, Callable::CallError &r_error) {
+Error Node::_rpc_id_bind(const Variant *const *p_args, int p_argcount, Callable::CallError &r_error) {
 	if (p_argcount < 2) {
 		r_error.error = Callable::CallError::CALL_ERROR_TOO_FEW_ARGUMENTS;
 		r_error.expected = 2;
@@ -851,7 +851,7 @@ Error Node::_rpc_id_bind(const Variant **p_args, int p_argcount, Callable::CallE
 	return err;
 }
 
-Error Node::rpcp(int p_peer_id, const StringName &p_method, const Variant **p_arg, int p_argcount) {
+Error Node::rpcp(int p_peer_id, const StringName &p_method, const Variant *const *p_arg, int p_argcount) {
 	ERR_FAIL_COND_V(!is_inside_tree(), ERR_UNCONFIGURED);
 
 	Ref<MultiplayerAPI> api = get_multiplayer();
@@ -3583,7 +3583,7 @@ void Node::unhandled_input(const Ref<InputEvent> &p_event) {
 void Node::unhandled_key_input(const Ref<InputEvent> &p_key_event) {
 }
 
-Variant Node::_call_deferred_thread_group_bind(const Variant **p_args, int p_argcount, Callable::CallError &r_error) {
+Variant Node::_call_deferred_thread_group_bind(const Variant *const *p_args, int p_argcount, Callable::CallError &r_error) {
 	if (p_argcount < 1) {
 		r_error.error = Callable::CallError::CALL_ERROR_TOO_FEW_ARGUMENTS;
 		r_error.expected = 1;
@@ -3606,7 +3606,7 @@ Variant Node::_call_deferred_thread_group_bind(const Variant **p_args, int p_arg
 	return Variant();
 }
 
-Variant Node::_call_thread_safe_bind(const Variant **p_args, int p_argcount, Callable::CallError &r_error) {
+Variant Node::_call_thread_safe_bind(const Variant *const *p_args, int p_argcount, Callable::CallError &r_error) {
 	if (p_argcount < 1) {
 		r_error.error = Callable::CallError::CALL_ERROR_TOO_FEW_ARGUMENTS;
 		r_error.expected = 1;
@@ -3629,7 +3629,7 @@ Variant Node::_call_thread_safe_bind(const Variant **p_args, int p_argcount, Cal
 	return Variant();
 }
 
-void Node::call_deferred_thread_groupp(const StringName &p_method, const Variant **p_args, int p_argcount, bool p_show_error) {
+void Node::call_deferred_thread_groupp(const StringName &p_method, const Variant *const *p_args, int p_argcount, bool p_show_error) {
 	ERR_FAIL_COND(!is_inside_tree());
 	SceneTree::ProcessGroup *pg = (SceneTree::ProcessGroup *)data.process_group;
 	pg->call_queue.push_callp(this, p_method, p_args, p_argcount, p_show_error);
@@ -3647,7 +3647,7 @@ void Node::notify_deferred_thread_group(int p_notification) {
 	pg->call_queue.push_notification(this, p_notification);
 }
 
-void Node::call_thread_safep(const StringName &p_method, const Variant **p_args, int p_argcount, bool p_show_error) {
+void Node::call_thread_safep(const StringName &p_method, const Variant *const *p_args, int p_argcount, bool p_show_error) {
 	if (is_accessible_from_caller_thread()) {
 		Callable::CallError ce;
 		callp(p_method, p_args, p_argcount, ce);
@@ -4134,7 +4134,7 @@ void Node::get_meta_list(List<StringName> *p_list) const {
 	Object::get_meta_list(p_list);
 }
 
-Error Node::emit_signalp(const StringName &p_name, const Variant **p_args, int p_argcount) {
+Error Node::emit_signalp(const StringName &p_name, const Variant *const *p_args, int p_argcount) {
 	ERR_THREAD_GUARD_V(ERR_INVALID_PARAMETER);
 	return Object::emit_signalp(p_name, p_args, p_argcount);
 }

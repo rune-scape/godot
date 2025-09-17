@@ -640,7 +640,7 @@ double VariantUtilityFunctions::pingpong(double value, double length) {
 	return Math::pingpong(value, length);
 }
 
-Variant VariantUtilityFunctions::max(const Variant **p_args, int p_argcount, Callable::CallError &r_error) {
+Variant VariantUtilityFunctions::max(const Variant *const *p_args, int p_argcount, Callable::CallError &r_error) {
 	if (p_argcount < 2) {
 		r_error.error = Callable::CallError::CALL_ERROR_TOO_FEW_ARGUMENTS;
 		r_error.expected = 2;
@@ -684,7 +684,7 @@ int64_t VariantUtilityFunctions::maxi(int64_t x, int64_t y) {
 	return MAX(x, y);
 }
 
-Variant VariantUtilityFunctions::min(const Variant **p_args, int p_argcount, Callable::CallError &r_error) {
+Variant VariantUtilityFunctions::min(const Variant *const *p_args, int p_argcount, Callable::CallError &r_error) {
 	if (p_argcount < 2) {
 		r_error.error = Callable::CallError::CALL_ERROR_TOO_FEW_ARGUMENTS;
 		r_error.expected = 2;
@@ -933,7 +933,7 @@ Variant VariantUtilityFunctions::type_convert(const Variant &p_variant, const Va
 	return p_variant;
 }
 
-String VariantUtilityFunctions::str(const Variant **p_args, int p_arg_count, Callable::CallError &r_error) {
+String VariantUtilityFunctions::str(const Variant *const *p_args, int p_arg_count, Callable::CallError &r_error) {
 	if (p_arg_count < 1) {
 		r_error.error = Callable::CallError::CALL_ERROR_TOO_FEW_ARGUMENTS;
 		r_error.expected = 1;
@@ -958,17 +958,17 @@ String VariantUtilityFunctions::type_string(Variant::Type p_type) {
 	return Variant::get_type_name(p_type);
 }
 
-void VariantUtilityFunctions::print(const Variant **p_args, int p_arg_count, Callable::CallError &r_error) {
+void VariantUtilityFunctions::print(const Variant *const *p_args, int p_arg_count, Callable::CallError &r_error) {
 	print_line(join_string(p_args, p_arg_count));
 	r_error.error = Callable::CallError::CALL_OK;
 }
 
-void VariantUtilityFunctions::print_rich(const Variant **p_args, int p_arg_count, Callable::CallError &r_error) {
+void VariantUtilityFunctions::print_rich(const Variant *const *p_args, int p_arg_count, Callable::CallError &r_error) {
 	print_line_rich(join_string(p_args, p_arg_count));
 	r_error.error = Callable::CallError::CALL_OK;
 }
 
-void VariantUtilityFunctions::_print_verbose(const Variant **p_args, int p_arg_count, Callable::CallError &r_error) {
+void VariantUtilityFunctions::_print_verbose(const Variant *const *p_args, int p_arg_count, Callable::CallError &r_error) {
 	if (OS::get_singleton()->is_stdout_verbose()) {
 		// No need to use `print_verbose()` as this call already only happens
 		// when verbose mode is enabled. This avoids performing string argument concatenation
@@ -979,12 +979,12 @@ void VariantUtilityFunctions::_print_verbose(const Variant **p_args, int p_arg_c
 	r_error.error = Callable::CallError::CALL_OK;
 }
 
-void VariantUtilityFunctions::printerr(const Variant **p_args, int p_arg_count, Callable::CallError &r_error) {
+void VariantUtilityFunctions::printerr(const Variant *const *p_args, int p_arg_count, Callable::CallError &r_error) {
 	print_error(join_string(p_args, p_arg_count));
 	r_error.error = Callable::CallError::CALL_OK;
 }
 
-void VariantUtilityFunctions::printt(const Variant **p_args, int p_arg_count, Callable::CallError &r_error) {
+void VariantUtilityFunctions::printt(const Variant *const *p_args, int p_arg_count, Callable::CallError &r_error) {
 	String s;
 	for (int i = 0; i < p_arg_count; i++) {
 		if (i) {
@@ -997,7 +997,7 @@ void VariantUtilityFunctions::printt(const Variant **p_args, int p_arg_count, Ca
 	r_error.error = Callable::CallError::CALL_OK;
 }
 
-void VariantUtilityFunctions::prints(const Variant **p_args, int p_arg_count, Callable::CallError &r_error) {
+void VariantUtilityFunctions::prints(const Variant *const *p_args, int p_arg_count, Callable::CallError &r_error) {
 	String s;
 	for (int i = 0; i < p_arg_count; i++) {
 		if (i) {
@@ -1010,12 +1010,12 @@ void VariantUtilityFunctions::prints(const Variant **p_args, int p_arg_count, Ca
 	r_error.error = Callable::CallError::CALL_OK;
 }
 
-void VariantUtilityFunctions::printraw(const Variant **p_args, int p_arg_count, Callable::CallError &r_error) {
+void VariantUtilityFunctions::printraw(const Variant *const *p_args, int p_arg_count, Callable::CallError &r_error) {
 	print_raw(join_string(p_args, p_arg_count));
 	r_error.error = Callable::CallError::CALL_OK;
 }
 
-void VariantUtilityFunctions::push_error(const Variant **p_args, int p_arg_count, Callable::CallError &r_error) {
+void VariantUtilityFunctions::push_error(const Variant *const *p_args, int p_arg_count, Callable::CallError &r_error) {
 	if (p_arg_count < 1) {
 		r_error.error = Callable::CallError::CALL_ERROR_TOO_FEW_ARGUMENTS;
 		r_error.expected = 1;
@@ -1025,7 +1025,7 @@ void VariantUtilityFunctions::push_error(const Variant **p_args, int p_arg_count
 	r_error.error = Callable::CallError::CALL_OK;
 }
 
-void VariantUtilityFunctions::push_warning(const Variant **p_args, int p_arg_count, Callable::CallError &r_error) {
+void VariantUtilityFunctions::push_warning(const Variant *const *p_args, int p_arg_count, Callable::CallError &r_error) {
 	if (p_arg_count < 1) {
 		r_error.error = Callable::CallError::CALL_ERROR_TOO_FEW_ARGUMENTS;
 		r_error.expected = 1;
@@ -1150,7 +1150,7 @@ bool VariantUtilityFunctions::is_same(const Variant &p_a, const Variant &p_b) {
 	return p_a.identity_compare(p_b);
 }
 
-String VariantUtilityFunctions::join_string(const Variant **p_args, int p_arg_count) {
+String VariantUtilityFunctions::join_string(const Variant *const *p_args, int p_arg_count) {
 	String s;
 	for (int i = 0; i < p_arg_count; i++) {
 		String os = p_args[i]->operator String();
@@ -1168,7 +1168,7 @@ String VariantUtilityFunctions::join_string(const Variant **p_args, int p_arg_co
 #endif // DEBUG_ENABLED
 
 template <typename R, typename... P, size_t... Is>
-static _FORCE_INLINE_ void call_helperpr(R (*p_func)(P...), Variant *ret, const Variant **p_args, Callable::CallError &r_error, IndexSequence<Is...>) {
+static _FORCE_INLINE_ void call_helperpr(R (*p_func)(P...), Variant *ret, const Variant *const *p_args, Callable::CallError &r_error, IndexSequence<Is...>) {
 	r_error.error = Callable::CallError::CALL_OK;
 	VCALLR;
 	(void)p_args; // avoid gcc warning
@@ -1176,7 +1176,7 @@ static _FORCE_INLINE_ void call_helperpr(R (*p_func)(P...), Variant *ret, const 
 }
 
 template <typename R, typename... P, size_t... Is>
-static _FORCE_INLINE_ void validated_call_helperpr(R (*p_func)(P...), Variant *ret, const Variant **p_args, IndexSequence<Is...>) {
+static _FORCE_INLINE_ void validated_call_helperpr(R (*p_func)(P...), Variant *ret, const Variant *const *p_args, IndexSequence<Is...>) {
 	*ret = p_func(VariantCaster<P>::cast(*p_args[Is])...);
 	(void)p_args;
 }
@@ -1188,12 +1188,12 @@ static _FORCE_INLINE_ void ptr_call_helperpr(R (*p_func)(P...), void *ret, const
 }
 
 template <typename R, typename... P>
-static _FORCE_INLINE_ void call_helperr(R (*p_func)(P...), Variant *ret, const Variant **p_args, Callable::CallError &r_error) {
+static _FORCE_INLINE_ void call_helperr(R (*p_func)(P...), Variant *ret, const Variant *const *p_args, Callable::CallError &r_error) {
 	call_helperpr(p_func, ret, p_args, r_error, BuildIndexSequence<sizeof...(P)>{});
 }
 
 template <typename R, typename... P>
-static _FORCE_INLINE_ void validated_call_helperr(R (*p_func)(P...), Variant *ret, const Variant **p_args) {
+static _FORCE_INLINE_ void validated_call_helperr(R (*p_func)(P...), Variant *ret, const Variant *const *p_args) {
 	validated_call_helperpr(p_func, ret, p_args, BuildIndexSequence<sizeof...(P)>{});
 }
 
@@ -1220,7 +1220,7 @@ static _FORCE_INLINE_ Variant::Type get_ret_type_helperr(R (*p_func)(P...)) {
 // WITHOUT RET
 
 template <typename... P, size_t... Is>
-static _FORCE_INLINE_ void call_helperp(void (*p_func)(P...), const Variant **p_args, Callable::CallError &r_error, IndexSequence<Is...>) {
+static _FORCE_INLINE_ void call_helperp(void (*p_func)(P...), const Variant *const *p_args, Callable::CallError &r_error, IndexSequence<Is...>) {
 	r_error.error = Callable::CallError::CALL_OK;
 	VCALL;
 	(void)p_args;
@@ -1228,7 +1228,7 @@ static _FORCE_INLINE_ void call_helperp(void (*p_func)(P...), const Variant **p_
 }
 
 template <typename... P, size_t... Is>
-static _FORCE_INLINE_ void validated_call_helperp(void (*p_func)(P...), const Variant **p_args, IndexSequence<Is...>) {
+static _FORCE_INLINE_ void validated_call_helperp(void (*p_func)(P...), const Variant *const *p_args, IndexSequence<Is...>) {
 	p_func(VariantCaster<P>::cast(*p_args[Is])...);
 	(void)p_args;
 }
@@ -1240,12 +1240,12 @@ static _FORCE_INLINE_ void ptr_call_helperp(void (*p_func)(P...), const void **p
 }
 
 template <typename... P>
-static _FORCE_INLINE_ void call_helper(void (*p_func)(P...), const Variant **p_args, Callable::CallError &r_error) {
+static _FORCE_INLINE_ void call_helper(void (*p_func)(P...), const Variant *const *p_args, Callable::CallError &r_error) {
 	call_helperp(p_func, p_args, r_error, BuildIndexSequence<sizeof...(P)>{});
 }
 
 template <typename... P>
-static _FORCE_INLINE_ void validated_call_helper(void (*p_func)(P...), const Variant **p_args) {
+static _FORCE_INLINE_ void validated_call_helper(void (*p_func)(P...), const Variant *const *p_args) {
 	validated_call_helperp(p_func, p_args, BuildIndexSequence<sizeof...(P)>{});
 }
 
@@ -1269,47 +1269,47 @@ static _FORCE_INLINE_ Variant::Type get_ret_type_helper(void (*p_func)(P...)) {
 	return Variant::NIL;
 }
 
-#define FUNCBINDR(m_func, m_args, m_category)                                                                    \
-	class Func_##m_func {                                                                                        \
-	public:                                                                                                      \
-		static void call(Variant *r_ret, const Variant **p_args, int p_argcount, Callable::CallError &r_error) { \
-			call_helperr(VariantUtilityFunctions::m_func, r_ret, p_args, r_error);                               \
-		}                                                                                                        \
-		static void validated_call(Variant *r_ret, const Variant **p_args, int p_argcount) {                     \
-			validated_call_helperr(VariantUtilityFunctions::m_func, r_ret, p_args);                              \
-		}                                                                                                        \
-		static void ptrcall(void *ret, const void **p_args, int p_argcount) {                                    \
-			ptr_call_helperr(VariantUtilityFunctions::m_func, ret, p_args);                                      \
-		}                                                                                                        \
-		static int get_argument_count() {                                                                        \
-			return get_arg_count_helperr(VariantUtilityFunctions::m_func);                                       \
-		}                                                                                                        \
-		static Variant::Type get_argument_type(int p_arg) {                                                      \
-			return get_arg_type_helperr(VariantUtilityFunctions::m_func, p_arg);                                 \
-		}                                                                                                        \
-		static Variant::Type get_return_type() {                                                                 \
-			return get_ret_type_helperr(VariantUtilityFunctions::m_func);                                        \
-		}                                                                                                        \
-		static bool has_return_type() {                                                                          \
-			return true;                                                                                         \
-		}                                                                                                        \
-		static bool is_vararg() {                                                                                \
-			return false;                                                                                        \
-		}                                                                                                        \
-		static Variant::UtilityFunctionType get_type() {                                                         \
-			return m_category;                                                                                   \
-		}                                                                                                        \
-	};                                                                                                           \
+#define FUNCBINDR(m_func, m_args, m_category)                                                                          \
+	class Func_##m_func {                                                                                              \
+	public:                                                                                                            \
+		static void call(Variant *r_ret, const Variant *const *p_args, int p_argcount, Callable::CallError &r_error) { \
+			call_helperr(VariantUtilityFunctions::m_func, r_ret, p_args, r_error);                                     \
+		}                                                                                                              \
+		static void validated_call(Variant *r_ret, const Variant *const *p_args, int p_argcount) {                     \
+			validated_call_helperr(VariantUtilityFunctions::m_func, r_ret, p_args);                                    \
+		}                                                                                                              \
+		static void ptrcall(void *ret, const void **p_args, int p_argcount) {                                          \
+			ptr_call_helperr(VariantUtilityFunctions::m_func, ret, p_args);                                            \
+		}                                                                                                              \
+		static int get_argument_count() {                                                                              \
+			return get_arg_count_helperr(VariantUtilityFunctions::m_func);                                             \
+		}                                                                                                              \
+		static Variant::Type get_argument_type(int p_arg) {                                                            \
+			return get_arg_type_helperr(VariantUtilityFunctions::m_func, p_arg);                                       \
+		}                                                                                                              \
+		static Variant::Type get_return_type() {                                                                       \
+			return get_ret_type_helperr(VariantUtilityFunctions::m_func);                                              \
+		}                                                                                                              \
+		static bool has_return_type() {                                                                                \
+			return true;                                                                                               \
+		}                                                                                                              \
+		static bool is_vararg() {                                                                                      \
+			return false;                                                                                              \
+		}                                                                                                              \
+		static Variant::UtilityFunctionType get_type() {                                                               \
+			return m_category;                                                                                         \
+		}                                                                                                              \
+	};                                                                                                                 \
 	register_utility_function<Func_##m_func>(#m_func, m_args)
 
 #define FUNCBINDVR(m_func, m_args, m_category)                                                                          \
 	class Func_##m_func {                                                                                               \
 	public:                                                                                                             \
-		static void call(Variant *r_ret, const Variant **p_args, int p_argcount, Callable::CallError &r_error) {        \
+		static void call(Variant *r_ret, const Variant *const *p_args, int p_argcount, Callable::CallError &r_error) {  \
 			r_error.error = Callable::CallError::CALL_OK;                                                               \
 			*r_ret = VariantUtilityFunctions::m_func(*p_args[0], r_error);                                              \
 		}                                                                                                               \
-		static void validated_call(Variant *r_ret, const Variant **p_args, int p_argcount) {                            \
+		static void validated_call(Variant *r_ret, const Variant *const *p_args, int p_argcount) {                      \
 			Callable::CallError ce;                                                                                     \
 			*r_ret = VariantUtilityFunctions::m_func(*p_args[0], ce);                                                   \
 		}                                                                                                               \
@@ -1341,11 +1341,11 @@ static _FORCE_INLINE_ Variant::Type get_ret_type_helper(void (*p_func)(P...)) {
 #define FUNCBINDVR2(m_func, m_args, m_category)                                                                                    \
 	class Func_##m_func {                                                                                                          \
 	public:                                                                                                                        \
-		static void call(Variant *r_ret, const Variant **p_args, int p_argcount, Callable::CallError &r_error) {                   \
+		static void call(Variant *r_ret, const Variant *const *p_args, int p_argcount, Callable::CallError &r_error) {             \
 			r_error.error = Callable::CallError::CALL_OK;                                                                          \
 			*r_ret = VariantUtilityFunctions::m_func(*p_args[0], *p_args[1], r_error);                                             \
 		}                                                                                                                          \
-		static void validated_call(Variant *r_ret, const Variant **p_args, int p_argcount) {                                       \
+		static void validated_call(Variant *r_ret, const Variant *const *p_args, int p_argcount) {                                 \
 			Callable::CallError ce;                                                                                                \
 			*r_ret = VariantUtilityFunctions::m_func(*p_args[0], *p_args[1], ce);                                                  \
 		}                                                                                                                          \
@@ -1379,11 +1379,11 @@ static _FORCE_INLINE_ Variant::Type get_ret_type_helper(void (*p_func)(P...)) {
 #define FUNCBINDVR3(m_func, m_args, m_category)                                                                                                                           \
 	class Func_##m_func {                                                                                                                                                 \
 	public:                                                                                                                                                               \
-		static void call(Variant *r_ret, const Variant **p_args, int p_argcount, Callable::CallError &r_error) {                                                          \
+		static void call(Variant *r_ret, const Variant *const *p_args, int p_argcount, Callable::CallError &r_error) {                                                    \
 			r_error.error = Callable::CallError::CALL_OK;                                                                                                                 \
 			*r_ret = VariantUtilityFunctions::m_func(*p_args[0], *p_args[1], *p_args[2], r_error);                                                                        \
 		}                                                                                                                                                                 \
-		static void validated_call(Variant *r_ret, const Variant **p_args, int p_argcount) {                                                                              \
+		static void validated_call(Variant *r_ret, const Variant *const *p_args, int p_argcount) {                                                                        \
 			Callable::CallError ce;                                                                                                                                       \
 			*r_ret = VariantUtilityFunctions::m_func(*p_args[0], *p_args[1], *p_args[2], ce);                                                                             \
 		}                                                                                                                                                                 \
@@ -1414,177 +1414,177 @@ static _FORCE_INLINE_ Variant::Type get_ret_type_helper(void (*p_func)(P...)) {
 	};                                                                                                                                                                    \
 	register_utility_function<Func_##m_func>(#m_func, m_args)
 
-#define FUNCBINDVARARG(m_func, m_args, m_category)                                                               \
-	class Func_##m_func {                                                                                        \
-	public:                                                                                                      \
-		static void call(Variant *r_ret, const Variant **p_args, int p_argcount, Callable::CallError &r_error) { \
-			r_error.error = Callable::CallError::CALL_OK;                                                        \
-			*r_ret = VariantUtilityFunctions::m_func(p_args, p_argcount, r_error);                               \
-		}                                                                                                        \
-		static void validated_call(Variant *r_ret, const Variant **p_args, int p_argcount) {                     \
-			Callable::CallError c;                                                                               \
-			*r_ret = VariantUtilityFunctions::m_func(p_args, p_argcount, c);                                     \
-		}                                                                                                        \
-		static void ptrcall(void *ret, const void **p_args, int p_argcount) {                                    \
-			Vector<Variant> args;                                                                                \
-			for (int i = 0; i < p_argcount; i++) {                                                               \
-				args.push_back(PtrToArg<Variant>::convert(p_args[i]));                                           \
-			}                                                                                                    \
-			Vector<const Variant *> argsp;                                                                       \
-			for (int i = 0; i < p_argcount; i++) {                                                               \
-				argsp.push_back(&args[i]);                                                                       \
-			}                                                                                                    \
-			Variant r;                                                                                           \
-			validated_call(&r, (const Variant **)argsp.ptr(), p_argcount);                                       \
-			PtrToArg<Variant>::encode(r, ret);                                                                   \
-		}                                                                                                        \
-		static int get_argument_count() {                                                                        \
-			return 2;                                                                                            \
-		}                                                                                                        \
-		static Variant::Type get_argument_type(int p_arg) {                                                      \
-			return Variant::NIL;                                                                                 \
-		}                                                                                                        \
-		static Variant::Type get_return_type() {                                                                 \
-			return Variant::NIL;                                                                                 \
-		}                                                                                                        \
-		static bool has_return_type() {                                                                          \
-			return true;                                                                                         \
-		}                                                                                                        \
-		static bool is_vararg() {                                                                                \
-			return true;                                                                                         \
-		}                                                                                                        \
-		static Variant::UtilityFunctionType get_type() {                                                         \
-			return m_category;                                                                                   \
-		}                                                                                                        \
-	};                                                                                                           \
+#define FUNCBINDVARARG(m_func, m_args, m_category)                                                                     \
+	class Func_##m_func {                                                                                              \
+	public:                                                                                                            \
+		static void call(Variant *r_ret, const Variant *const *p_args, int p_argcount, Callable::CallError &r_error) { \
+			r_error.error = Callable::CallError::CALL_OK;                                                              \
+			*r_ret = VariantUtilityFunctions::m_func(p_args, p_argcount, r_error);                                     \
+		}                                                                                                              \
+		static void validated_call(Variant *r_ret, const Variant *const *p_args, int p_argcount) {                     \
+			Callable::CallError c;                                                                                     \
+			*r_ret = VariantUtilityFunctions::m_func(p_args, p_argcount, c);                                           \
+		}                                                                                                              \
+		static void ptrcall(void *ret, const void **p_args, int p_argcount) {                                          \
+			Vector<Variant> args;                                                                                      \
+			for (int i = 0; i < p_argcount; i++) {                                                                     \
+				args.push_back(PtrToArg<Variant>::convert(p_args[i]));                                                 \
+			}                                                                                                          \
+			Vector<const Variant *> argsp;                                                                             \
+			for (int i = 0; i < p_argcount; i++) {                                                                     \
+				argsp.push_back(&args[i]);                                                                             \
+			}                                                                                                          \
+			Variant r;                                                                                                 \
+			validated_call(&r, argsp.ptr(), p_argcount);                                                               \
+			PtrToArg<Variant>::encode(r, ret);                                                                         \
+		}                                                                                                              \
+		static int get_argument_count() {                                                                              \
+			return 2;                                                                                                  \
+		}                                                                                                              \
+		static Variant::Type get_argument_type(int p_arg) {                                                            \
+			return Variant::NIL;                                                                                       \
+		}                                                                                                              \
+		static Variant::Type get_return_type() {                                                                       \
+			return Variant::NIL;                                                                                       \
+		}                                                                                                              \
+		static bool has_return_type() {                                                                                \
+			return true;                                                                                               \
+		}                                                                                                              \
+		static bool is_vararg() {                                                                                      \
+			return true;                                                                                               \
+		}                                                                                                              \
+		static Variant::UtilityFunctionType get_type() {                                                               \
+			return m_category;                                                                                         \
+		}                                                                                                              \
+	};                                                                                                                 \
 	register_utility_function<Func_##m_func>(#m_func, m_args)
 
-#define FUNCBINDVARARGS(m_func, m_args, m_category)                                                              \
-	class Func_##m_func {                                                                                        \
-	public:                                                                                                      \
-		static void call(Variant *r_ret, const Variant **p_args, int p_argcount, Callable::CallError &r_error) { \
-			r_error.error = Callable::CallError::CALL_OK;                                                        \
-			*r_ret = VariantUtilityFunctions::m_func(p_args, p_argcount, r_error);                               \
-		}                                                                                                        \
-		static void validated_call(Variant *r_ret, const Variant **p_args, int p_argcount) {                     \
-			Callable::CallError c;                                                                               \
-			*r_ret = VariantUtilityFunctions::m_func(p_args, p_argcount, c);                                     \
-		}                                                                                                        \
-		static void ptrcall(void *ret, const void **p_args, int p_argcount) {                                    \
-			Vector<Variant> args;                                                                                \
-			for (int i = 0; i < p_argcount; i++) {                                                               \
-				args.push_back(PtrToArg<Variant>::convert(p_args[i]));                                           \
-			}                                                                                                    \
-			Vector<const Variant *> argsp;                                                                       \
-			for (int i = 0; i < p_argcount; i++) {                                                               \
-				argsp.push_back(&args[i]);                                                                       \
-			}                                                                                                    \
-			Variant r;                                                                                           \
-			validated_call(&r, (const Variant **)argsp.ptr(), p_argcount);                                       \
-			PtrToArg<String>::encode(r.operator String(), ret);                                                  \
-		}                                                                                                        \
-		static int get_argument_count() {                                                                        \
-			return 1;                                                                                            \
-		}                                                                                                        \
-		static Variant::Type get_argument_type(int p_arg) {                                                      \
-			return Variant::NIL;                                                                                 \
-		}                                                                                                        \
-		static Variant::Type get_return_type() {                                                                 \
-			return Variant::STRING;                                                                              \
-		}                                                                                                        \
-		static bool has_return_type() {                                                                          \
-			return true;                                                                                         \
-		}                                                                                                        \
-		static bool is_vararg() {                                                                                \
-			return true;                                                                                         \
-		}                                                                                                        \
-		static Variant::UtilityFunctionType get_type() {                                                         \
-			return m_category;                                                                                   \
-		}                                                                                                        \
-	};                                                                                                           \
+#define FUNCBINDVARARGS(m_func, m_args, m_category)                                                                    \
+	class Func_##m_func {                                                                                              \
+	public:                                                                                                            \
+		static void call(Variant *r_ret, const Variant *const *p_args, int p_argcount, Callable::CallError &r_error) { \
+			r_error.error = Callable::CallError::CALL_OK;                                                              \
+			*r_ret = VariantUtilityFunctions::m_func(p_args, p_argcount, r_error);                                     \
+		}                                                                                                              \
+		static void validated_call(Variant *r_ret, const Variant *const *p_args, int p_argcount) {                     \
+			Callable::CallError c;                                                                                     \
+			*r_ret = VariantUtilityFunctions::m_func(p_args, p_argcount, c);                                           \
+		}                                                                                                              \
+		static void ptrcall(void *ret, const void **p_args, int p_argcount) {                                          \
+			Vector<Variant> args;                                                                                      \
+			for (int i = 0; i < p_argcount; i++) {                                                                     \
+				args.push_back(PtrToArg<Variant>::convert(p_args[i]));                                                 \
+			}                                                                                                          \
+			Vector<const Variant *> argsp;                                                                             \
+			for (int i = 0; i < p_argcount; i++) {                                                                     \
+				argsp.push_back(&args[i]);                                                                             \
+			}                                                                                                          \
+			Variant r;                                                                                                 \
+			validated_call(&r, argsp.ptr(), p_argcount);                                                               \
+			PtrToArg<String>::encode(r.operator String(), ret);                                                        \
+		}                                                                                                              \
+		static int get_argument_count() {                                                                              \
+			return 1;                                                                                                  \
+		}                                                                                                              \
+		static Variant::Type get_argument_type(int p_arg) {                                                            \
+			return Variant::NIL;                                                                                       \
+		}                                                                                                              \
+		static Variant::Type get_return_type() {                                                                       \
+			return Variant::STRING;                                                                                    \
+		}                                                                                                              \
+		static bool has_return_type() {                                                                                \
+			return true;                                                                                               \
+		}                                                                                                              \
+		static bool is_vararg() {                                                                                      \
+			return true;                                                                                               \
+		}                                                                                                              \
+		static Variant::UtilityFunctionType get_type() {                                                               \
+			return m_category;                                                                                         \
+		}                                                                                                              \
+	};                                                                                                                 \
 	register_utility_function<Func_##m_func>(#m_func, m_args)
 
-#define FUNCBINDVARARGV_CNAME(m_func, m_func_cname, m_args, m_category)                                          \
-	class Func_##m_func {                                                                                        \
-	public:                                                                                                      \
-		static void call(Variant *r_ret, const Variant **p_args, int p_argcount, Callable::CallError &r_error) { \
-			r_error.error = Callable::CallError::CALL_OK;                                                        \
-			VariantUtilityFunctions::m_func_cname(p_args, p_argcount, r_error);                                  \
-		}                                                                                                        \
-		static void validated_call(Variant *r_ret, const Variant **p_args, int p_argcount) {                     \
-			Callable::CallError c;                                                                               \
-			VariantUtilityFunctions::m_func_cname(p_args, p_argcount, c);                                        \
-		}                                                                                                        \
-		static void ptrcall(void *ret, const void **p_args, int p_argcount) {                                    \
-			Vector<Variant> args;                                                                                \
-			for (int i = 0; i < p_argcount; i++) {                                                               \
-				args.push_back(PtrToArg<Variant>::convert(p_args[i]));                                           \
-			}                                                                                                    \
-			Vector<const Variant *> argsp;                                                                       \
-			for (int i = 0; i < p_argcount; i++) {                                                               \
-				argsp.push_back(&args[i]);                                                                       \
-			}                                                                                                    \
-			Variant r;                                                                                           \
-			validated_call(&r, (const Variant **)argsp.ptr(), p_argcount);                                       \
-		}                                                                                                        \
-		static int get_argument_count() {                                                                        \
-			return 1;                                                                                            \
-		}                                                                                                        \
-		static Variant::Type get_argument_type(int p_arg) {                                                      \
-			return Variant::NIL;                                                                                 \
-		}                                                                                                        \
-		static Variant::Type get_return_type() {                                                                 \
-			return Variant::NIL;                                                                                 \
-		}                                                                                                        \
-		static bool has_return_type() {                                                                          \
-			return false;                                                                                        \
-		}                                                                                                        \
-		static bool is_vararg() {                                                                                \
-			return true;                                                                                         \
-		}                                                                                                        \
-		static Variant::UtilityFunctionType get_type() {                                                         \
-			return m_category;                                                                                   \
-		}                                                                                                        \
-	};                                                                                                           \
+#define FUNCBINDVARARGV_CNAME(m_func, m_func_cname, m_args, m_category)                                                \
+	class Func_##m_func {                                                                                              \
+	public:                                                                                                            \
+		static void call(Variant *r_ret, const Variant *const *p_args, int p_argcount, Callable::CallError &r_error) { \
+			r_error.error = Callable::CallError::CALL_OK;                                                              \
+			VariantUtilityFunctions::m_func_cname(p_args, p_argcount, r_error);                                        \
+		}                                                                                                              \
+		static void validated_call(Variant *r_ret, const Variant *const *p_args, int p_argcount) {                     \
+			Callable::CallError c;                                                                                     \
+			VariantUtilityFunctions::m_func_cname(p_args, p_argcount, c);                                              \
+		}                                                                                                              \
+		static void ptrcall(void *ret, const void **p_args, int p_argcount) {                                          \
+			Vector<Variant> args;                                                                                      \
+			for (int i = 0; i < p_argcount; i++) {                                                                     \
+				args.push_back(PtrToArg<Variant>::convert(p_args[i]));                                                 \
+			}                                                                                                          \
+			Vector<const Variant *> argsp;                                                                             \
+			for (int i = 0; i < p_argcount; i++) {                                                                     \
+				argsp.push_back(&args[i]);                                                                             \
+			}                                                                                                          \
+			Variant r;                                                                                                 \
+			validated_call(&r, argsp.ptr(), p_argcount);                                                               \
+		}                                                                                                              \
+		static int get_argument_count() {                                                                              \
+			return 1;                                                                                                  \
+		}                                                                                                              \
+		static Variant::Type get_argument_type(int p_arg) {                                                            \
+			return Variant::NIL;                                                                                       \
+		}                                                                                                              \
+		static Variant::Type get_return_type() {                                                                       \
+			return Variant::NIL;                                                                                       \
+		}                                                                                                              \
+		static bool has_return_type() {                                                                                \
+			return false;                                                                                              \
+		}                                                                                                              \
+		static bool is_vararg() {                                                                                      \
+			return true;                                                                                               \
+		}                                                                                                              \
+		static Variant::UtilityFunctionType get_type() {                                                               \
+			return m_category;                                                                                         \
+		}                                                                                                              \
+	};                                                                                                                 \
 	register_utility_function<Func_##m_func>(#m_func, m_args)
 
 #define FUNCBINDVARARGV(m_func, m_args, m_category) FUNCBINDVARARGV_CNAME(m_func, m_func, m_args, m_category)
 
-#define FUNCBIND(m_func, m_args, m_category)                                                                     \
-	class Func_##m_func {                                                                                        \
-	public:                                                                                                      \
-		static void call(Variant *r_ret, const Variant **p_args, int p_argcount, Callable::CallError &r_error) { \
-			call_helper(VariantUtilityFunctions::m_func, p_args, r_error);                                       \
-		}                                                                                                        \
-		static void validated_call(Variant *r_ret, const Variant **p_args, int p_argcount) {                     \
-			validated_call_helper(VariantUtilityFunctions::m_func, p_args);                                      \
-		}                                                                                                        \
-		static void ptrcall(void *ret, const void **p_args, int p_argcount) {                                    \
-			ptr_call_helper(VariantUtilityFunctions::m_func, p_args);                                            \
-		}                                                                                                        \
-		static int get_argument_count() {                                                                        \
-			return get_arg_count_helper(VariantUtilityFunctions::m_func);                                        \
-		}                                                                                                        \
-		static Variant::Type get_argument_type(int p_arg) {                                                      \
-			return get_arg_type_helper(VariantUtilityFunctions::m_func, p_arg);                                  \
-		}                                                                                                        \
-		static Variant::Type get_return_type() {                                                                 \
-			return get_ret_type_helper(VariantUtilityFunctions::m_func);                                         \
-		}                                                                                                        \
-		static bool has_return_type() {                                                                          \
-			return false;                                                                                        \
-		}                                                                                                        \
-		static bool is_vararg() {                                                                                \
-			return false;                                                                                        \
-		}                                                                                                        \
-		static Variant::UtilityFunctionType get_type() {                                                         \
-			return m_category;                                                                                   \
-		}                                                                                                        \
-	};                                                                                                           \
+#define FUNCBIND(m_func, m_args, m_category)                                                                           \
+	class Func_##m_func {                                                                                              \
+	public:                                                                                                            \
+		static void call(Variant *r_ret, const Variant *const *p_args, int p_argcount, Callable::CallError &r_error) { \
+			call_helper(VariantUtilityFunctions::m_func, p_args, r_error);                                             \
+		}                                                                                                              \
+		static void validated_call(Variant *r_ret, const Variant *const *p_args, int p_argcount) {                     \
+			validated_call_helper(VariantUtilityFunctions::m_func, p_args);                                            \
+		}                                                                                                              \
+		static void ptrcall(void *ret, const void **p_args, int p_argcount) {                                          \
+			ptr_call_helper(VariantUtilityFunctions::m_func, p_args);                                                  \
+		}                                                                                                              \
+		static int get_argument_count() {                                                                              \
+			return get_arg_count_helper(VariantUtilityFunctions::m_func);                                              \
+		}                                                                                                              \
+		static Variant::Type get_argument_type(int p_arg) {                                                            \
+			return get_arg_type_helper(VariantUtilityFunctions::m_func, p_arg);                                        \
+		}                                                                                                              \
+		static Variant::Type get_return_type() {                                                                       \
+			return get_ret_type_helper(VariantUtilityFunctions::m_func);                                               \
+		}                                                                                                              \
+		static bool has_return_type() {                                                                                \
+			return false;                                                                                              \
+		}                                                                                                              \
+		static bool is_vararg() {                                                                                      \
+			return false;                                                                                              \
+		}                                                                                                              \
+		static Variant::UtilityFunctionType get_type() {                                                               \
+			return m_category;                                                                                         \
+		}                                                                                                              \
+	};                                                                                                                 \
 	register_utility_function<Func_##m_func>(#m_func, m_args)
 
 struct VariantUtilityFunctionInfo {
-	void (*call_utility)(Variant *r_ret, const Variant **p_args, int p_argcount, Callable::CallError &r_error) = nullptr;
+	void (*call_utility)(Variant *r_ret, const Variant *const *p_args, int p_argcount, Callable::CallError &r_error) = nullptr;
 	Variant::ValidatedUtilityFunction validated_call_utility = nullptr;
 	Variant::PTRUtilityFunction ptr_call_utility = nullptr;
 	Vector<String> argnames;
@@ -1787,7 +1787,7 @@ void Variant::_unregister_variant_utility_functions() {
 	utility_function_name_table.clear();
 }
 
-void Variant::call_utility_function(const StringName &p_name, Variant *r_ret, const Variant **p_args, int p_argcount, Callable::CallError &r_error) {
+void Variant::call_utility_function(const StringName &p_name, Variant *r_ret, const Variant *const *p_args, int p_argcount, Callable::CallError &r_error) {
 	const VariantUtilityFunctionInfo *bfi = utility_function_table.getptr(p_name);
 	if (!bfi) {
 		r_error.error = Callable::CallError::CALL_ERROR_INVALID_METHOD;

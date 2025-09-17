@@ -293,8 +293,8 @@ private:
 
 	TypedArray<StringName> _get_groups() const;
 
-	Error _rpc_bind(const Variant **p_args, int p_argcount, Callable::CallError &r_error);
-	Error _rpc_id_bind(const Variant **p_args, int p_argcount, Callable::CallError &r_error);
+	Error _rpc_bind(const Variant *const *p_args, int p_argcount, Callable::CallError &r_error);
+	Error _rpc_id_bind(const Variant *const *p_args, int p_argcount, Callable::CallError &r_error);
 
 	friend class SceneTree;
 
@@ -328,8 +328,8 @@ private:
 
 	static thread_local Node *current_process_thread_group;
 
-	Variant _call_deferred_thread_group_bind(const Variant **p_args, int p_argcount, Callable::CallError &r_error);
-	Variant _call_thread_safe_bind(const Variant **p_args, int p_argcount, Callable::CallError &r_error);
+	Variant _call_deferred_thread_group_bind(const Variant *const *p_args, int p_argcount, Callable::CallError &r_error);
+	Variant _call_thread_safe_bind(const Variant *const *p_args, int p_argcount, Callable::CallError &r_error);
 
 	// Editor only signal to keep the SceneTreeEditor in sync.
 #ifdef TOOLS_ENABLED
@@ -769,7 +769,7 @@ public:
 	template <typename... VarArgs>
 	Error rpc_id(int p_peer_id, const StringName &p_method, VarArgs... p_args);
 
-	Error rpcp(int p_peer_id, const StringName &p_method, const Variant **p_arg, int p_argcount);
+	Error rpcp(int p_peer_id, const StringName &p_method, const Variant *const *p_arg, int p_argcount);
 
 	Ref<MultiplayerAPI> get_multiplayer() const;
 
@@ -793,7 +793,7 @@ public:
 
 	/* THREADING */
 
-	void call_deferred_thread_groupp(const StringName &p_method, const Variant **p_args, int p_argcount, bool p_show_error = false);
+	void call_deferred_thread_groupp(const StringName &p_method, const Variant *const *p_args, int p_argcount, bool p_show_error = false);
 	template <typename... VarArgs>
 	void call_deferred_thread_group(const StringName &p_method, VarArgs... p_args) {
 		Variant args[sizeof...(p_args) + 1] = { p_args..., Variant() }; // +1 makes sure zero sized arrays are also supported.
@@ -801,12 +801,12 @@ public:
 		for (uint32_t i = 0; i < sizeof...(p_args); i++) {
 			argptrs[i] = &args[i];
 		}
-		call_deferred_thread_groupp(p_method, sizeof...(p_args) == 0 ? nullptr : (const Variant **)argptrs, sizeof...(p_args));
+		call_deferred_thread_groupp(p_method, sizeof...(p_args) == 0 ? nullptr : argptrs, sizeof...(p_args));
 	}
 	void set_deferred_thread_group(const StringName &p_property, const Variant &p_value);
 	void notify_deferred_thread_group(int p_notification);
 
-	void call_thread_safep(const StringName &p_method, const Variant **p_args, int p_argcount, bool p_show_error = false);
+	void call_thread_safep(const StringName &p_method, const Variant *const *p_args, int p_argcount, bool p_show_error = false);
 	template <typename... VarArgs>
 	void call_thread_safe(const StringName &p_method, VarArgs... p_args) {
 		Variant args[sizeof...(p_args) + 1] = { p_args..., Variant() }; // +1 makes sure zero sized arrays are also supported.
@@ -814,7 +814,7 @@ public:
 		for (uint32_t i = 0; i < sizeof...(p_args); i++) {
 			argptrs[i] = &args[i];
 		}
-		call_deferred_thread_groupp(p_method, sizeof...(p_args) == 0 ? nullptr : (const Variant **)argptrs, sizeof...(p_args));
+		call_deferred_thread_groupp(p_method, sizeof...(p_args) == 0 ? nullptr : argptrs, sizeof...(p_args));
 	}
 	void set_thread_safe(const StringName &p_property, const Variant &p_value);
 	void notify_thread_safe(int p_notification);
@@ -831,7 +831,7 @@ public:
 	virtual Variant get_meta(const StringName &p_name, const Variant &p_default = Variant()) const override;
 	virtual void get_meta_list(List<StringName> *p_list) const override;
 
-	virtual Error emit_signalp(const StringName &p_name, const Variant **p_args, int p_argcount) override;
+	virtual Error emit_signalp(const StringName &p_name, const Variant *const *p_args, int p_argcount) override;
 	virtual bool has_signal(const StringName &p_name) const override;
 	virtual void get_signal_list(List<MethodInfo> *p_signals) const override;
 	virtual void get_signal_connection_list(const StringName &p_signal, List<Connection> *p_connections) const override;
@@ -873,7 +873,7 @@ Error Node::rpc_id(int p_peer_id, const StringName &p_method, VarArgs... p_args)
 	for (uint32_t i = 0; i < sizeof...(p_args); i++) {
 		argptrs[i] = &args[i];
 	}
-	return rpcp(p_peer_id, p_method, sizeof...(p_args) == 0 ? nullptr : (const Variant **)argptrs, sizeof...(p_args));
+	return rpcp(p_peer_id, p_method, sizeof...(p_args) == 0 ? nullptr : argptrs, sizeof...(p_args));
 }
 
 #ifdef DEBUG_ENABLED

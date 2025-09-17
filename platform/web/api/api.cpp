@@ -101,7 +101,7 @@ PackedByteArray JavaScriptBridge::js_buffer_to_packed_byte_array(Ref<JavaScriptO
 	return PackedByteArray();
 }
 
-Variant JavaScriptBridge::_create_object_bind(const Variant **p_args, int p_argcount, Callable::CallError &r_error) {
+Variant JavaScriptBridge::_create_object_bind(const Variant *const *p_args, int p_argcount, Callable::CallError &r_error) {
 	if (p_argcount < 1) {
 		r_error.error = Callable::CallError::CALL_ERROR_TOO_FEW_ARGUMENTS;
 		r_error.expected = 1;

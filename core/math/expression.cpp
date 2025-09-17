@@ -1386,7 +1386,7 @@ bool Expression::_execute(const Array &p_inputs, Object *p_instance, Expression:
 			}
 
 			Callable::CallError ce;
-			Variant::construct(constructor->data_type, r_ret, (const Variant **)argp.ptr(), argp.size(), ce);
+			Variant::construct(constructor->data_type, r_ret, argp.ptr(), argp.size(), ce);
 
 			if (ce.error != Callable::CallError::CALL_OK) {
 				r_error_str = vformat(RTR("Invalid arguments to construct '%s'"), Variant::get_type_name(constructor->data_type));
@@ -1414,9 +1414,9 @@ bool Expression::_execute(const Array &p_inputs, Object *p_instance, Expression:
 
 			r_ret = Variant(); //may not return anything
 			Callable::CallError ce;
-			Variant::call_utility_function(bifunc->func, &r_ret, (const Variant **)argp.ptr(), argp.size(), ce);
+			Variant::call_utility_function(bifunc->func, &r_ret, argp.ptr(), argp.size(), ce);
 			if (ce.error != Callable::CallError::CALL_OK) {
-				r_error_str = "Builtin call failed: " + Variant::get_call_error_text(bifunc->func, (const Variant **)argp.ptr(), argp.size(), ce);
+				r_error_str = "Builtin call failed: " + Variant::get_call_error_text(bifunc->func, argp.ptr(), argp.size(), ce);
 				return true;
 			}
 
@@ -1449,9 +1449,9 @@ bool Expression::_execute(const Array &p_inputs, Object *p_instance, Expression:
 
 			Callable::CallError ce;
 			if (p_const_calls_only) {
-				base.call_const(call->method, (const Variant **)argp.ptr(), argp.size(), r_ret, ce);
+				base.call_const(call->method, argp.ptr(), argp.size(), r_ret, ce);
 			} else {
-				base.callp(call->method, (const Variant **)argp.ptr(), argp.size(), r_ret, ce);
+				base.callp(call->method, argp.ptr(), argp.size(), r_ret, ce);
 			}
 
 			if (ce.error != Callable::CallError::CALL_OK) {

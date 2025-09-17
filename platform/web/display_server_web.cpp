@@ -116,7 +116,7 @@ void DisplayServerWeb::_drop_files_js_callback(const Vector<String> &p_files) {
 	const Variant *v_args[1] = { &v_files };
 	Variant ret;
 	Callable::CallError ce;
-	ds->drop_files_callback.callp((const Variant **)&v_args, 1, ret, ce);
+	ds->drop_files_callback.callp(&v_args, 1, ret, ce);
 	if (ce.error != Callable::CallError::CALL_OK) {
 		ERR_PRINT(vformat("Failed to execute drop files callback: %s.", Variant::get_callable_error_text(ds->drop_files_callback, v_args, 1, ce)));
 	}

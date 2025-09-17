@@ -47,7 +47,7 @@ class JNISingleton : public Object {
 	Ref<JavaObject> wrapped_object;
 
 public:
-	virtual Variant callp(const StringName &p_method, const Variant **p_args, int p_argcount, Callable::CallError &r_error) override {
+	virtual Variant callp(const StringName &p_method, const Variant *const *p_args, int p_argcount, Callable::CallError &r_error) override {
 		if (wrapped_object.is_valid()) {
 			RBMap<StringName, MethodData>::Element *E = method_map.find(p_method);
 

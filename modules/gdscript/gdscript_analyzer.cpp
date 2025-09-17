@@ -3283,7 +3283,7 @@ void GDScriptAnalyzer::reduce_call(GDScriptParser::CallNode *p_call, bool p_is_a
 
 				Callable::CallError err;
 				Variant value;
-				Variant::construct(builtin_type, value, (const Variant **)args.ptr(), args.size(), err);
+				Variant::construct(builtin_type, value, args.ptr(), args.size(), err);
 
 				switch (err.error) {
 					case Callable::CallError::CALL_ERROR_INVALID_ARGUMENT:
@@ -3453,7 +3453,7 @@ void GDScriptAnalyzer::reduce_call(GDScriptParser::CallNode *p_call, bool p_is_a
 
 				Variant value;
 				Callable::CallError err;
-				GDScriptUtilityFunctions::get_function(function_name)(&value, (const Variant **)args.ptr(), args.size(), err);
+				GDScriptUtilityFunctions::get_function(function_name)(&value, args.ptr(), args.size(), err);
 
 				switch (err.error) {
 					case Callable::CallError::CALL_ERROR_INVALID_ARGUMENT:
@@ -3504,7 +3504,7 @@ void GDScriptAnalyzer::reduce_call(GDScriptParser::CallNode *p_call, bool p_is_a
 
 				Variant value;
 				Callable::CallError err;
-				Variant::call_utility_function(function_name, &value, (const Variant **)args.ptr(), args.size(), err);
+				Variant::call_utility_function(function_name, &value, args.ptr(), args.size(), err);
 
 				switch (err.error) {
 					case Callable::CallError::CALL_ERROR_INVALID_ARGUMENT:
@@ -5380,7 +5380,7 @@ Variant GDScriptAnalyzer::make_call_reduced_value(GDScriptParser::CallNode *p_ca
 
 		Vector<Variant> args;
 		args.resize(p_call->arguments.size());
-		const Variant **argptrs = (const Variant **)alloca(sizeof(const Variant *) * args.size());
+		const Variant *argptrs[MAX(1, args.size())];
 		for (int i = 0; i < p_call->arguments.size(); i++) {
 			bool is_arg_value_reduced = false;
 			Variant arg_value = make_expression_reduced_value(p_call->arguments[i], is_arg_value_reduced);

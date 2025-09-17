@@ -177,7 +177,7 @@ def generate_version(argcount, const=False, returns=False, required=False, compa
         callsiargs += " };\\\n"
         callsiargptrs += " };"
         s = s.replace("$CALLSIARGS", callsiargs + callsiargptrs)
-        s = s.replace("$CALLSIARGPASS", f"(const Variant **)vargptrs, {argcount}")
+        s = s.replace("$CALLSIARGPASS", f"vargptrs, {argcount}")
         callptrargsptr += " };"
         s = s.replace("$CALLPTRARGS", callptrargs + callptrargsptr)
         s = s.replace("$CALLPTRARGPASS", "reinterpret_cast<GDExtensionConstTypePtr *>(argptrs)")

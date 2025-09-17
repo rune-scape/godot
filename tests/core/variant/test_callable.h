@@ -77,8 +77,8 @@ public:
 	static void test_func_5(int p_foo, int p_bar) {}
 	static void test_func_6(int p_foo, int p_bar, int p_baz) {}
 
-	void test_func_7(const Variant **p_args, int p_argcount, Callable::CallError &r_error) {}
-	void test_func_8(const Variant **p_args, int p_argcount, Callable::CallError &r_error) {}
+	void test_func_7(const Variant *const *p_args, int p_argcount, Callable::CallError &r_error) {}
+	void test_func_8(const Variant *const *p_args, int p_argcount, Callable::CallError &r_error) {}
 };
 
 TEST_CASE("[Callable] Argument count") {
@@ -144,7 +144,7 @@ protected:
 	}
 
 public:
-	Variant test_func(const Variant **p_args, int p_argcount, Callable::CallError &r_error) {
+	Variant test_func(const Variant *const *p_args, int p_argcount, Callable::CallError &r_error) {
 		Array result;
 		result.resize(p_argcount);
 		for (int i = 0; i < p_argcount; i++) {

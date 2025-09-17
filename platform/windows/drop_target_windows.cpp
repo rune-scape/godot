@@ -359,7 +359,7 @@ HRESULT STDMETHODCALLTYPE DropTargetWindows::Drop(IDataObject *pDataObj, DWORD g
 	const Variant *v_args[1] = { &v_files };
 	Variant ret;
 	Callable::CallError ce;
-	window_data->drop_files_callback.callp((const Variant **)&v_args, 1, ret, ce);
+	window_data->drop_files_callback.callp(&v_args, 1, ret, ce);
 
 	if (!tmp_path.is_empty()) {
 		remove_dir_recursive(tmp_path);

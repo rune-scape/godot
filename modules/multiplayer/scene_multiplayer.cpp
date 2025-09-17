@@ -576,7 +576,7 @@ String SceneMultiplayer::get_rpc_md5(const Object *p_obj) {
 	return rpc->get_rpc_md5(p_obj);
 }
 
-Error SceneMultiplayer::rpcp(Object *p_obj, int p_peer_id, const StringName &p_method, const Variant **p_arg, int p_argcount) {
+Error SceneMultiplayer::rpcp(Object *p_obj, int p_peer_id, const StringName &p_method, const Variant *const *p_arg, int p_argcount) {
 	return rpc->rpcp(p_obj, p_peer_id, p_method, p_arg, p_argcount);
 }
 

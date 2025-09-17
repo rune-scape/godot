@@ -89,7 +89,7 @@ int GDScriptLambdaCallable::get_argument_count(bool &r_is_valid) const {
 	return function->get_argument_count() - captures.size();
 }
 
-void GDScriptLambdaCallable::call(const Variant **p_arguments, int p_argcount, Variant &r_return_value, Callable::CallError &r_call_error) const {
+void GDScriptLambdaCallable::call(const Variant *const *p_arguments, int p_argcount, Variant &r_return_value, Callable::CallError &r_call_error) const {
 	int captures_amount = captures.size();
 
 	if (function == nullptr) {
@@ -213,7 +213,7 @@ int GDScriptLambdaSelfCallable::get_argument_count(bool &r_is_valid) const {
 	return function->get_argument_count() - captures.size();
 }
 
-void GDScriptLambdaSelfCallable::call(const Variant **p_arguments, int p_argcount, Variant &r_return_value, Callable::CallError &r_call_error) const {
+void GDScriptLambdaSelfCallable::call(const Variant *const *p_arguments, int p_argcount, Variant &r_return_value, Callable::CallError &r_call_error) const {
 #ifdef DEBUG_ENABLED
 	if (object->get_script_instance() == nullptr || object->get_script_instance()->get_language() != GDScriptLanguage::get_singleton()) {
 		ERR_PRINT("Trying to call a lambda with an invalid instance.");

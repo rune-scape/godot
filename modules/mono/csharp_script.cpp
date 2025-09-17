@@ -1697,7 +1697,7 @@ int CSharpInstance::get_method_argument_count(const StringName &p_method, bool *
 	return 0;
 }
 
-Variant CSharpInstance::callp(const StringName &p_method, const Variant **p_args, int p_argcount, Callable::CallError &r_error) {
+Variant CSharpInstance::callp(const StringName &p_method, const Variant *const *p_args, int p_argcount, Callable::CallError &r_error) {
 	ERR_FAIL_COND_V(script.is_null(), Variant());
 
 	Variant ret;
@@ -2367,7 +2367,7 @@ StringName CSharpScript::get_instance_base_type() const {
 	return type_info.native_base_name;
 }
 
-CSharpInstance *CSharpScript::_create_instance(const Variant **p_args, int p_argcount, Object *p_owner, bool p_is_ref_counted, Callable::CallError &r_error) {
+CSharpInstance *CSharpScript::_create_instance(const Variant *const *p_args, int p_argcount, Object *p_owner, bool p_is_ref_counted, Callable::CallError &r_error) {
 	ERR_FAIL_COND_V_MSG(!type_info.can_instantiate(), nullptr, "Cannot instantiate C# script. Script: '" + get_path() + "'.");
 
 	/* STEP 1, CREATE */
@@ -2420,7 +2420,7 @@ CSharpInstance *CSharpScript::_create_instance(const Variant **p_args, int p_arg
 	return instance;
 }
 
-Variant CSharpScript::_new(const Variant **p_args, int p_argcount, Callable::CallError &r_error) {
+Variant CSharpScript::_new(const Variant *const *p_args, int p_argcount, Callable::CallError &r_error) {
 	if (!valid) {
 		r_error.error = Callable::CallError::CALL_ERROR_INVALID_METHOD;
 		return Variant();
@@ -2586,7 +2586,7 @@ MethodInfo CSharpScript::get_method_info(const StringName &p_method) const {
 	return mi;
 }
 
-Variant CSharpScript::callp(const StringName &p_method, const Variant **p_args, int p_argcount, Callable::CallError &r_error) {
+Variant CSharpScript::callp(const StringName &p_method, const Variant *const *p_args, int p_argcount, Callable::CallError &r_error) {
 	if (valid) {
 		Variant ret;
 		bool ok = GDMonoCache::managed_callbacks.ScriptManagerBridge_CallStatic(this, &p_method, p_args, p_argcount, &r_error, &ret);

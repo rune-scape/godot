@@ -53,7 +53,7 @@ public:
 	_FORCE_INLINE_ const StringName &get_name() const { return name; }
 	Variant _new();
 	Object *instantiate();
-	virtual Variant callp(const StringName &p_method, const Variant **p_args, int p_argcount, Callable::CallError &r_error) override;
+	virtual Variant callp(const StringName &p_method, const Variant *const *p_args, int p_argcount, Callable::CallError &r_error) override;
 	GDScriptNativeClass(const StringName &p_name);
 };
 
@@ -194,7 +194,7 @@ private:
 
 	GDScriptFunction *_super_constructor(GDScript *p_script);
 	void _super_implicit_constructor(GDScript *p_script, GDScriptInstance *p_instance, Callable::CallError &r_error);
-	GDScriptInstance *_create_instance(const Variant **p_args, int p_argcount, Object *p_owner, bool p_is_ref_counted, Callable::CallError &r_error);
+	GDScriptInstance *_create_instance(const Variant *const *p_args, int p_argcount, Object *p_owner, bool p_is_ref_counted, Callable::CallError &r_error);
 
 	String _get_debug_path() const;
 
@@ -226,7 +226,7 @@ protected:
 	bool _set(const StringName &p_name, const Variant &p_value);
 	void _get_property_list(List<PropertyInfo> *p_properties) const;
 
-	Variant callp(const StringName &p_method, const Variant **p_args, int p_argcount, Callable::CallError &r_error) override;
+	Variant callp(const StringName &p_method, const Variant *const *p_args, int p_argcount, Callable::CallError &r_error) override;
 
 	static void _bind_methods();
 
@@ -288,7 +288,7 @@ public:
 	StringName debug_get_member_by_index(int p_idx) const;
 	StringName debug_get_static_var_by_index(int p_idx) const;
 
-	Variant _new(const Variant **p_args, int p_argcount, Callable::CallError &r_error);
+	Variant _new(const Variant *const *p_args, int p_argcount, Callable::CallError &r_error);
 	virtual bool can_instantiate() const override;
 
 	virtual Ref<Script> get_base_script() const override;
@@ -397,7 +397,7 @@ public:
 
 	virtual int get_method_argument_count(const StringName &p_method, bool *r_is_valid = nullptr) const;
 
-	virtual Variant callp(const StringName &p_method, const Variant **p_args, int p_argcount, Callable::CallError &r_error);
+	virtual Variant callp(const StringName &p_method, const Variant *const *p_args, int p_argcount, Callable::CallError &r_error);
 
 	Variant debug_get_member_by_index(int p_idx) const { return members[p_idx]; }
 

@@ -389,7 +389,7 @@ private:
 	// a Variant pointer (so add * like this: *variant_pointer).
 
 	Variant(const Variant *) {}
-	Variant(const Variant **) {}
+	Variant(const Variant *const *) {}
 
 public:
 	_FORCE_INLINE_ Type get_type() const {
@@ -618,7 +618,7 @@ public:
 
 	/* Built-In Methods */
 
-	typedef void (*ValidatedBuiltInMethod)(Variant *base, const Variant **p_args, int p_argcount, Variant *r_ret);
+	typedef void (*ValidatedBuiltInMethod)(Variant *base, const Variant *const *p_args, int p_argcount, Variant *r_ret);
 	typedef void (*PTRBuiltInMethod)(void *p_base, const void **p_args, void *r_ret, int p_argcount);
 
 	static bool has_builtin_method(Variant::Type p_type, const StringName &p_method);
@@ -640,7 +640,7 @@ public:
 	static int get_builtin_method_count(Variant::Type p_type);
 	static uint32_t get_builtin_method_hash(Variant::Type p_type, const StringName &p_method);
 
-	void callp(const StringName &p_method, const Variant **p_args, int p_argcount, Variant &r_ret, Callable::CallError &r_error);
+	void callp(const StringName &p_method, const Variant *const *p_args, int p_argcount, Variant &r_ret, Callable::CallError &r_error);
 
 	template <typename... VarArgs>
 	Variant call(const StringName &p_method, VarArgs... p_args) {
@@ -651,19 +651,19 @@ public:
 		}
 		Callable::CallError cerr;
 		Variant ret;
-		callp(p_method, sizeof...(p_args) == 0 ? nullptr : (const Variant **)argptrs, sizeof...(p_args), ret, cerr);
+		callp(p_method, sizeof...(p_args) == 0 ? nullptr : argptrs, sizeof...(p_args), ret, cerr);
 		if (cerr.error != Callable::CallError::CALL_OK) {
 			_variant_call_error(p_method, cerr);
 		}
 		return ret;
 	}
 
-	void call_const(const StringName &p_method, const Variant **p_args, int p_argcount, Variant &r_ret, Callable::CallError &r_error);
-	static void call_static(Variant::Type p_type, const StringName &p_method, const Variant **p_args, int p_argcount, Variant &r_ret, Callable::CallError &r_error);
+	void call_const(const StringName &p_method, const Variant *const *p_args, int p_argcount, Variant &r_ret, Callable::CallError &r_error);
+	static void call_static(Variant::Type p_type, const StringName &p_method, const Variant *const *p_args, int p_argcount, Variant &r_ret, Callable::CallError &r_error);
 
-	static String get_call_error_text(const StringName &p_method, const Variant **p_argptrs, int p_argcount, const Callable::CallError &ce);
-	static String get_call_error_text(Object *p_base, const StringName &p_method, const Variant **p_argptrs, int p_argcount, const Callable::CallError &ce);
-	static String get_callable_error_text(const Callable &p_callable, const Variant **p_argptrs, int p_argcount, const Callable::CallError &ce);
+	static String get_call_error_text(const StringName &p_method, const Variant *const *p_argptrs, int p_argcount, const Callable::CallError &ce);
+	static String get_call_error_text(Object *p_base, const StringName &p_method, const Variant *const *p_argptrs, int p_argcount, const Callable::CallError &ce);
+	static String get_callable_error_text(const Callable &p_callable, const Variant *const *p_argptrs, int p_argcount, const Callable::CallError &ce);
 
 	//dynamic (includes Object)
 	void get_method_list(List<MethodInfo> *p_list) const;
@@ -671,7 +671,7 @@ public:
 
 	/* Constructors */
 
-	typedef void (*ValidatedConstructor)(Variant *r_base, const Variant **p_args);
+	typedef void (*ValidatedConstructor)(Variant *r_base, const Variant *const *p_args);
 	typedef void (*PTRConstructor)(void *base, const void **p_args);
 
 	static int get_constructor_count(Variant::Type p_type);
@@ -680,7 +680,7 @@ public:
 	static int get_constructor_argument_count(Variant::Type p_type, int p_constructor);
 	static Variant::Type get_constructor_argument_type(Variant::Type p_type, int p_constructor, int p_argument);
 	static String get_constructor_argument_name(Variant::Type p_type, int p_constructor, int p_argument);
-	static void construct(Variant::Type, Variant &base, const Variant **p_args, int p_argcount, Callable::CallError &r_error);
+	static void construct(Variant::Type, Variant &base, const Variant *const *p_args, int p_argcount, Callable::CallError &r_error);
 
 	static void get_constructor_list(Type p_type, List<MethodInfo> *r_list); //convenience
 
@@ -784,10 +784,10 @@ public:
 
 	void get_property_list(List<PropertyInfo> *p_list) const;
 
-	static void call_utility_function(const StringName &p_name, Variant *r_ret, const Variant **p_args, int p_argcount, Callable::CallError &r_error);
+	static void call_utility_function(const StringName &p_name, Variant *r_ret, const Variant *const *p_args, int p_argcount, Callable::CallError &r_error);
 	static bool has_utility_function(const StringName &p_name);
 
-	typedef void (*ValidatedUtilityFunction)(Variant *r_ret, const Variant **p_args, int p_argcount);
+	typedef void (*ValidatedUtilityFunction)(Variant *r_ret, const Variant *const *p_args, int p_argcount);
 	typedef void (*PTRUtilityFunction)(void *r_ret, const void **p_args, int p_argcount);
 
 	static ValidatedUtilityFunction get_validated_utility_function(const StringName &p_name);
@@ -949,7 +949,7 @@ Variant Callable::call(VarArgs... p_args) const {
 
 	Variant ret;
 	CallError ce;
-	callp(sizeof...(p_args) == 0 ? nullptr : (const Variant **)argptrs, sizeof...(p_args), ret, ce);
+	callp(sizeof...(p_args) == 0 ? nullptr : argptrs, sizeof...(p_args), ret, ce);
 	return ret;
 }
 
@@ -960,7 +960,7 @@ Callable Callable::bind(VarArgs... p_args) const {
 	for (uint32_t i = 0; i < sizeof...(p_args); i++) {
 		argptrs[i] = &args[i];
 	}
-	return bindp(sizeof...(p_args) == 0 ? nullptr : (const Variant **)argptrs, sizeof...(p_args));
+	return bindp(sizeof...(p_args) == 0 ? nullptr : argptrs, sizeof...(p_args));
 }
 
 Variant &Array::Iterator::operator*() const {

@@ -802,7 +802,7 @@ void EditorDebuggerNode::_breakpoints_cleared_in_tree(int p_debugger) {
 }
 
 // Remote inspector/edit.
-void EditorDebuggerNode::_methods_changed(void *p_ud, Object *p_base, const StringName &p_name, const Variant **p_args, int p_argcount) {
+void EditorDebuggerNode::_methods_changed(void *p_ud, Object *p_base, const StringName &p_name, const Variant *const *p_args, int p_argcount) {
 	if (!singleton) {
 		return;
 	}

@@ -54,7 +54,7 @@ public:
 
 	virtual int get_method_argument_count(const StringName &p_method, bool *r_is_valid = nullptr) const;
 
-	virtual Variant callp(const StringName &p_method, const Variant **p_args, int p_argcount, Callable::CallError &r_error) = 0;
+	virtual Variant callp(const StringName &p_method, const Variant *const *p_args, int p_argcount, Callable::CallError &r_error) = 0;
 
 	template <typename... VarArgs>
 	Variant call(const StringName &p_method, VarArgs... p_args) {
@@ -64,10 +64,10 @@ public:
 			argptrs[i] = &args[i];
 		}
 		Callable::CallError cerr;
-		return callp(p_method, sizeof...(p_args) == 0 ? nullptr : (const Variant **)argptrs, sizeof...(p_args), cerr);
+		return callp(p_method, sizeof...(p_args) == 0 ? nullptr : argptrs, sizeof...(p_args), cerr);
 	}
 
-	virtual Variant call_const(const StringName &p_method, const Variant **p_args, int p_argcount, Callable::CallError &r_error); // implement if language supports const functions
+	virtual Variant call_const(const StringName &p_method, const Variant *const *p_args, int p_argcount, Callable::CallError &r_error); // implement if language supports const functions
 	virtual void notification(int p_notification, bool p_reversed = false) = 0;
 	virtual String to_string(bool *r_valid) {
 		if (r_valid) {

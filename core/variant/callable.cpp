@@ -36,11 +36,11 @@
 #include "core/variant/callable_bind.h"
 #include "core/variant/variant_callable.h"
 
-void Callable::call_deferredp(const Variant **p_arguments, int p_argcount) const {
+void Callable::call_deferredp(const Variant *const *p_arguments, int p_argcount) const {
 	MessageQueue::get_singleton()->push_callablep(*this, p_arguments, p_argcount, true);
 }
 
-void Callable::callp(const Variant **p_arguments, int p_argcount, Variant &r_return_value, CallError &r_call_error) const {
+void Callable::callp(const Variant *const *p_arguments, int p_argcount, Variant &r_return_value, CallError &r_call_error) const {
 	if (is_null()) {
 		r_call_error.error = CallError::CALL_ERROR_INSTANCE_IS_NULL;
 		r_call_error.argument = 0;
@@ -85,7 +85,7 @@ Variant Callable::callv(const Array &p_arguments) const {
 	return ret;
 }
 
-Error Callable::rpcp(int p_id, const Variant **p_arguments, int p_argcount, CallError &r_call_error) const {
+Error Callable::rpcp(int p_id, const Variant *const *p_arguments, int p_argcount, CallError &r_call_error) const {
 	if (is_null()) {
 		r_call_error.error = CallError::CALL_ERROR_INSTANCE_IS_NULL;
 		r_call_error.argument = 0;
@@ -122,7 +122,7 @@ Error Callable::rpcp(int p_id, const Variant **p_arguments, int p_argcount, Call
 	}
 }
 
-Callable Callable::bindp(const Variant **p_arguments, int p_argcount) const {
+Callable Callable::bindp(const Variant *const *p_arguments, int p_argcount) const {
 	Vector<Variant> args;
 	args.resize(p_argcount);
 	for (int i = 0; i < p_argcount; i++) {
@@ -454,7 +454,7 @@ StringName CallableCustom::get_method() const {
 	ERR_FAIL_V_MSG(StringName(), vformat("Can't get method on CallableCustom \"%s\".", get_as_text()));
 }
 
-Error CallableCustom::rpc(int p_peer_id, const Variant **p_arguments, int p_argcount, Callable::CallError &r_call_error) const {
+Error CallableCustom::rpc(int p_peer_id, const Variant *const *p_arguments, int p_argcount, Callable::CallError &r_call_error) const {
 	r_call_error.error = Callable::CallError::CALL_ERROR_INVALID_METHOD;
 	r_call_error.argument = 0;
 	r_call_error.expected = 0;
@@ -530,7 +530,7 @@ Signal::operator String() const {
 	}
 }
 
-Error Signal::emit(const Variant **p_arguments, int p_argcount) const {
+Error Signal::emit(const Variant *const *p_arguments, int p_argcount) const {
 	Object *obj = ObjectDB::get_instance(object);
 	if (!obj) {
 		return ERR_INVALID_DATA;

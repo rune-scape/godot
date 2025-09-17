@@ -3486,11 +3486,11 @@ String Variant::get_construct_string() const {
 	return vars;
 }
 
-String Variant::get_call_error_text(const StringName &p_method, const Variant **p_argptrs, int p_argcount, const Callable::CallError &ce) {
+String Variant::get_call_error_text(const StringName &p_method, const Variant *const *p_argptrs, int p_argcount, const Callable::CallError &ce) {
 	return get_call_error_text(nullptr, p_method, p_argptrs, p_argcount, ce);
 }
 
-String Variant::get_call_error_text(Object *p_base, const StringName &p_method, const Variant **p_argptrs, int p_argcount, const Callable::CallError &ce) {
+String Variant::get_call_error_text(Object *p_base, const StringName &p_method, const Variant *const *p_argptrs, int p_argcount, const Callable::CallError &ce) {
 	String err_text;
 
 	if (ce.error == Callable::CallError::CALL_ERROR_INVALID_ARGUMENT) {
@@ -3526,7 +3526,7 @@ String Variant::get_call_error_text(Object *p_base, const StringName &p_method, 
 	return "'" + base_text + String(p_method) + "': " + err_text;
 }
 
-String Variant::get_callable_error_text(const Callable &p_callable, const Variant **p_argptrs, int p_argcount, const Callable::CallError &ce) {
+String Variant::get_callable_error_text(const Callable &p_callable, const Variant *const *p_argptrs, int p_argcount, const Callable::CallError &ce) {
 	Vector<Variant> binds;
 	p_callable.get_bound_arguments_ref(binds);
 
@@ -3543,7 +3543,7 @@ String Variant::get_callable_error_text(const Callable &p_callable, const Varian
 		for (int i = 0; i < binds.size(); i++) {
 			argptrs.write[i + p_argcount - args_unbound] = &binds[i];
 		}
-		return get_call_error_text(p_callable.get_object(), p_callable.get_method(), (const Variant **)argptrs.ptr(), argptrs.size(), ce);
+		return get_call_error_text(p_callable.get_object(), p_callable.get_method(), argptrs.ptr(), argptrs.size(), ce);
 	}
 }
 

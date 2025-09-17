@@ -109,7 +109,7 @@ public:
 		}
 		return 0;
 	}
-	Variant callp(const StringName &p_method, const Variant **p_args, int p_argcount, Callable::CallError &r_error) override {
+	Variant callp(const StringName &p_method, const Variant *const *p_args, int p_argcount, Callable::CallError &r_error) override {
 		return Variant();
 	}
 	void notification(int p_notification, bool p_reversed = false) override {
@@ -550,11 +550,11 @@ TEST_CASE("[Object] Destruction at the end of the call chain is safe") {
 		}
 
 	public:
-		Variant callp(const StringName &p_method, const Variant **p_args, int p_argcount, Callable::CallError &r_error) override {
+		Variant callp(const StringName &p_method, const Variant *const *p_args, int p_argcount, Callable::CallError &r_error) override {
 			free_self(self);
 			return Variant();
 		}
-		Variant call_const(const StringName &p_method, const Variant **p_args, int p_argcount, Callable::CallError &r_error) override {
+		Variant call_const(const StringName &p_method, const Variant *const *p_args, int p_argcount, Callable::CallError &r_error) override {
 			free_self(self);
 			return Variant();
 		}

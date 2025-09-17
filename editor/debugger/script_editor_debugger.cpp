@@ -1392,7 +1392,7 @@ int ScriptEditorDebugger::_get_res_path_cache(const String &p_path) {
 	return last_path_id;
 }
 
-void ScriptEditorDebugger::_method_changed(Object *p_base, const StringName &p_name, const Variant **p_args, int p_argcount) {
+void ScriptEditorDebugger::_method_changed(Object *p_base, const StringName &p_name, const Variant *const *p_args, int p_argcount) {
 	if (!p_base || !live_debug || !is_session_active() || !EditorNode::get_singleton()->get_edited_scene()) {
 		return;
 	}

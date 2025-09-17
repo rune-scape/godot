@@ -213,8 +213,8 @@ private:
 #endif
 	bool _update_exports(PlaceHolderScriptInstance *p_instance_to_update = nullptr);
 
-	CSharpInstance *_create_instance(const Variant **p_args, int p_argcount, Object *p_owner, bool p_is_ref_counted, Callable::CallError &r_error);
-	Variant _new(const Variant **p_args, int p_argcount, Callable::CallError &r_error);
+	CSharpInstance *_create_instance(const Variant *const *p_args, int p_argcount, Object *p_owner, bool p_is_ref_counted, Callable::CallError &r_error);
+	Variant _new(const Variant *const *p_args, int p_argcount, Callable::CallError &r_error);
 
 	// Do not use unless you know what you are doing
 	static void update_script_class_info(Ref<CSharpScript> p_script);
@@ -285,7 +285,7 @@ public:
 	bool has_method(const StringName &p_method) const override;
 	virtual int get_script_method_argument_count(const StringName &p_method, bool *r_is_valid = nullptr) const override;
 	MethodInfo get_method_info(const StringName &p_method) const override;
-	Variant callp(const StringName &p_method, const Variant **p_args, int p_argcount, Callable::CallError &r_error) override;
+	Variant callp(const StringName &p_method, const Variant *const *p_args, int p_argcount, Callable::CallError &r_error) override;
 
 	int get_member_line(const StringName &p_member) const override;
 
@@ -353,7 +353,7 @@ public:
 	void get_method_list(List<MethodInfo> *p_list) const override;
 	bool has_method(const StringName &p_method) const override;
 	virtual int get_method_argument_count(const StringName &p_method, bool *r_is_valid = nullptr) const override;
-	Variant callp(const StringName &p_method, const Variant **p_args, int p_argcount, Callable::CallError &r_error) override;
+	Variant callp(const StringName &p_method, const Variant *const *p_args, int p_argcount, Callable::CallError &r_error) override;
 
 	void mono_object_disposed(GCHandleIntPtr p_gchandle_to_free);
 

@@ -97,7 +97,7 @@ public:
 	}
 #endif // DEBUG_ENABLED
 
-	virtual Variant call(Object *p_object, const Variant **p_args, int p_arg_count, Callable::CallError &r_error) const override {
+	virtual Variant call(Object *p_object, const Variant *const *p_args, int p_arg_count, Callable::CallError &r_error) const override {
 #ifdef TOOLS_ENABLED
 		ERR_FAIL_COND_V_MSG(!valid, Variant(), vformat("Cannot call invalid GDExtension method bind '%s'. It's probably cached - you may need to restart Godot.", name));
 		ERR_FAIL_COND_V_MSG(p_object && p_object->is_extension_placeholder(), Variant(), vformat("Cannot call GDExtension method bind '%s' on placeholder instance.", name));
@@ -105,13 +105,13 @@ public:
 		Variant ret;
 		GDExtensionClassInstancePtr extension_instance = is_static() ? nullptr : p_object->_get_extension_instance();
 		GDExtensionCallError ce{ GDEXTENSION_CALL_OK, 0, 0 };
-		call_func(method_userdata, extension_instance, reinterpret_cast<GDExtensionConstVariantPtr *>(p_args), p_arg_count, (GDExtensionVariantPtr)&ret, &ce);
+		call_func(method_userdata, extension_instance, reinterpret_cast<const GDExtensionConstVariantPtr *>(p_args), p_arg_count, (GDExtensionVariantPtr)&ret, &ce);
 		r_error.error = Callable::CallError::Error(ce.error);
 		r_error.argument = ce.argument;
 		r_error.expected = ce.expected;
 		return ret;
 	}
-	virtual void validated_call(Object *p_object, const Variant **p_args, Variant *r_ret) const override {
+	virtual void validated_call(Object *p_object, const Variant *const *p_args, Variant *r_ret) const override {
 #ifdef TOOLS_ENABLED
 		ERR_FAIL_COND_MSG(!valid, vformat("Cannot call invalid GDExtension method bind '%s'. It's probably cached - you may need to restart Godot.", name));
 		ERR_FAIL_COND_MSG(p_object && p_object->is_extension_placeholder(), vformat("Cannot call GDExtension method bind '%s' on placeholder instance.", name));
@@ -121,7 +121,7 @@ public:
 
 		if (validated_call_func) {
 			// This is added here, but it's unlikely to be provided by most extensions.
-			validated_call_func(method_userdata, extension_instance, reinterpret_cast<GDExtensionConstVariantPtr *>(p_args), (GDExtensionVariantPtr)r_ret);
+			validated_call_func(method_userdata, extension_instance, reinterpret_cast<const GDExtensionConstVariantPtr *>(p_args), (GDExtensionVariantPtr)r_ret);
 		} else {
 			// If not provided, go via ptrcall, which is faster than resorting to regular call.
 			const void **argptrs = (const void **)alloca(argument_count * sizeof(void *));

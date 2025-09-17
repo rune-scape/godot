@@ -659,7 +659,7 @@ void Object::get_method_list(List<MethodInfo> *p_list) const {
 	}
 }
 
-Variant Object::_call_bind(const Variant **p_args, int p_argcount, Callable::CallError &r_error) {
+Variant Object::_call_bind(const Variant *const *p_args, int p_argcount, Callable::CallError &r_error) {
 	if (p_argcount < 1) {
 		r_error.error = Callable::CallError::CALL_ERROR_TOO_FEW_ARGUMENTS;
 		r_error.expected = 1;
@@ -678,7 +678,7 @@ Variant Object::_call_bind(const Variant **p_args, int p_argcount, Callable::Cal
 	return callp(method, &p_args[1], p_argcount - 1, r_error);
 }
 
-Variant Object::_call_deferred_bind(const Variant **p_args, int p_argcount, Callable::CallError &r_error) {
+Variant Object::_call_deferred_bind(const Variant *const *p_args, int p_argcount, Callable::CallError &r_error) {
 	if (p_argcount < 1) {
 		r_error.error = Callable::CallError::CALL_ERROR_TOO_FEW_ARGUMENTS;
 		r_error.expected = 1;
@@ -814,7 +814,7 @@ Variant Object::callv(const StringName &p_method, const Array &p_args) {
 	return ret;
 }
 
-Variant Object::callp(const StringName &p_method, const Variant **p_args, int p_argcount, Callable::CallError &r_error) {
+Variant Object::callp(const StringName &p_method, const Variant *const *p_args, int p_argcount, Callable::CallError &r_error) {
 	r_error.error = Callable::CallError::CALL_OK;
 
 	if (p_method == CoreStringName(free_)) {
@@ -877,7 +877,7 @@ Variant Object::callp(const StringName &p_method, const Variant **p_args, int p_
 	return ret;
 }
 
-Variant Object::call_const(const StringName &p_method, const Variant **p_args, int p_argcount, Callable::CallError &r_error) {
+Variant Object::call_const(const StringName &p_method, const Variant *const *p_args, int p_argcount, Callable::CallError &r_error) {
 	r_error.error = Callable::CallError::CALL_OK;
 
 	if (p_method == CoreStringName(free_)) {
@@ -1179,7 +1179,7 @@ void Object::_remove_user_signal(const StringName &p_name) {
 	signal_map.erase(p_name);
 }
 
-Error Object::_emit_signal(const Variant **p_args, int p_argcount, Callable::CallError &r_error) {
+Error Object::_emit_signal(const Variant *const *p_args, int p_argcount, Callable::CallError &r_error) {
 	if (unlikely(p_argcount < 1)) {
 		r_error.error = Callable::CallError::CALL_ERROR_TOO_FEW_ARGUMENTS;
 		r_error.expected = 1;
@@ -1197,7 +1197,7 @@ Error Object::_emit_signal(const Variant **p_args, int p_argcount, Callable::Cal
 
 	StringName signal = *p_args[0];
 
-	const Variant **args = nullptr;
+	const Variant *const *args = nullptr;
 
 	int argc = p_argcount - 1;
 	if (argc) {
@@ -1207,7 +1207,7 @@ Error Object::_emit_signal(const Variant **p_args, int p_argcount, Callable::Cal
 	return emit_signalp(signal, args, argc);
 }
 
-Error Object::emit_signalp(const StringName &p_name, const Variant **p_args, int p_argcount) {
+Error Object::emit_signalp(const StringName &p_name, const Variant *const *p_args, int p_argcount) {
 	if (_block_signals) {
 		return ERR_CANT_ACQUIRE_RESOURCE; //no emit, signals blocked
 	}
@@ -1285,7 +1285,7 @@ Error Object::emit_signalp(const StringName &p_name, const Variant **p_args, int
 			continue;
 		}
 
-		const Variant **args = p_args;
+		const Variant *const *args = p_args;
 		int argc = p_argcount;
 
 		if (flags & CONNECT_DEFERRED) {

@@ -78,7 +78,7 @@ public:
 		return wasp;
 	}
 
-	Wasp *create_wasps_error(const Variant **p_args, int p_argcount, Callable::CallError &r_error) {
+	Wasp *create_wasps_error(const Variant *const *p_args, int p_argcount, Callable::CallError &r_error) {
 		r_error.error = Callable::CallError::CALL_ERROR_INVALID_ARGUMENT;
 		return nullptr;
 	}

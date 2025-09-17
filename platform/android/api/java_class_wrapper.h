@@ -180,7 +180,7 @@ class JavaClass : public RefCounted {
 
 	_FORCE_INLINE_ static bool _convert_object_to_variant(JNIEnv *env, jobject obj, Variant &var, uint32_t p_sig);
 
-	bool _call_method(JavaObject *p_instance, const StringName &p_method, const Variant **p_args, int p_argcount, Callable::CallError &r_error, Variant &ret);
+	bool _call_method(JavaObject *p_instance, const StringName &p_method, const Variant *const *p_args, int p_argcount, Callable::CallError &r_error, Variant &ret);
 
 	friend class JavaClassWrapper;
 	friend class JavaObject;
@@ -195,7 +195,7 @@ protected:
 	bool _get(const StringName &p_name, Variant &r_ret) const;
 
 public:
-	virtual Variant callp(const StringName &p_method, const Variant **p_args, int p_argcount, Callable::CallError &r_error) override;
+	virtual Variant callp(const StringName &p_method, const Variant *const *p_args, int p_argcount, Callable::CallError &r_error) override;
 
 	String get_java_class_name() const;
 	TypedArray<Dictionary> get_java_method_list() const;
@@ -223,7 +223,7 @@ protected:
 	static void _bind_methods();
 
 public:
-	virtual Variant callp(const StringName &p_method, const Variant **p_args, int p_argcount, Callable::CallError &r_error) override;
+	virtual Variant callp(const StringName &p_method, const Variant *const *p_args, int p_argcount, Callable::CallError &r_error) override;
 
 	Ref<JavaClass> get_java_class() const;
 

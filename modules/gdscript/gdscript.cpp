@@ -104,7 +104,7 @@ Object *GDScriptNativeClass::instantiate() {
 	return ClassDB::instantiate_no_placeholders(name);
 }
 
-Variant GDScriptNativeClass::callp(const StringName &p_method, const Variant **p_args, int p_argcount, Callable::CallError &r_error) {
+Variant GDScriptNativeClass::callp(const StringName &p_method, const Variant *const *p_args, int p_argcount, Callable::CallError &r_error) {
 	if (p_method == SNAME("new")) {
 		// Constructor.
 		return Object::callp(p_method, p_args, p_argcount, r_error);
@@ -148,7 +148,7 @@ void GDScript::_super_implicit_constructor(GDScript *p_script, GDScriptInstance 
 	}
 }
 
-GDScriptInstance *GDScript::_create_instance(const Variant **p_args, int p_argcount, Object *p_owner, bool p_is_ref_counted, Callable::CallError &r_error) {
+GDScriptInstance *GDScript::_create_instance(const Variant *const *p_args, int p_argcount, Object *p_owner, bool p_is_ref_counted, Callable::CallError &r_error) {
 	/* STEP 1, CREATE */
 
 	GDScriptInstance *instance = memnew(GDScriptInstance);
@@ -205,7 +205,7 @@ GDScriptInstance *GDScript::_create_instance(const Variant **p_args, int p_argco
 	return instance;
 }
 
-Variant GDScript::_new(const Variant **p_args, int p_argcount, Callable::CallError &r_error) {
+Variant GDScript::_new(const Variant *const *p_args, int p_argcount, Callable::CallError &r_error) {
 	/* STEP 1, CREATE */
 
 	if (!valid) {
@@ -937,7 +937,7 @@ void GDScript::unload_static() const {
 	GDScriptCache::remove_script(fully_qualified_name);
 }
 
-Variant GDScript::callp(const StringName &p_method, const Variant **p_args, int p_argcount, Callable::CallError &r_error) {
+Variant GDScript::callp(const StringName &p_method, const Variant *const *p_args, int p_argcount, Callable::CallError &r_error) {
 	GDScript *top = this;
 	while (top) {
 		if (likely(top->valid)) {
@@ -1739,7 +1739,7 @@ bool GDScriptInstance::set(const StringName &p_name, const Variant &p_value) {
 				const Variant *args[2] = { &name, &p_value };
 
 				Callable::CallError err;
-				Variant ret = E->value->call(this, (const Variant **)args, 2, err);
+				Variant ret = E->value->call(this, args, 2, err);
 				if (err.error == Callable::CallError::CALL_OK && ret.get_type() == Variant::BOOL && ret.operator bool()) {
 					return true;
 				}
@@ -1826,7 +1826,7 @@ bool GDScriptInstance::get(const StringName &p_name, Variant &r_ret) const {
 				const Variant *args[1] = { &name };
 
 				Callable::CallError err;
-				Variant ret = E->value->call(const_cast<GDScriptInstance *>(this), (const Variant **)args, 1, err);
+				Variant ret = E->value->call(const_cast<GDScriptInstance *>(this), args, 1, err);
 				if (err.error == Callable::CallError::CALL_OK && ret.get_type() != Variant::NIL) {
 					r_ret = ret;
 					return true;
@@ -2052,7 +2052,7 @@ void GDScriptInstance::_call_implicit_ready_recursively(GDScript *p_script) {
 	}
 }
 
-Variant GDScriptInstance::callp(const StringName &p_method, const Variant **p_args, int p_argcount, Callable::CallError &r_error) {
+Variant GDScriptInstance::callp(const StringName &p_method, const Variant *const *p_args, int p_argcount, Callable::CallError &r_error) {
 	GDScript *sptr = script.ptr();
 	if (unlikely(p_method == SceneStringName(_ready))) {
 		// Call implicit ready first, including for the super classes recursively.

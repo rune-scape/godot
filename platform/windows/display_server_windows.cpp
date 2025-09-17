@@ -4892,7 +4892,7 @@ LRESULT DisplayServerWindows::WndProc(HWND hWnd, UINT uMsg, WPARAM wParam, LPARA
 						const Variant *v_args[2] = { &v_button, &v_pos };
 						Variant ret;
 						Callable::CallError ce;
-						indicators[iid].callback.callp((const Variant **)&v_args, 2, ret, ce);
+						indicators[iid].callback.callp(&v_args, 2, ret, ce);
 						if (ce.error != Callable::CallError::CALL_OK) {
 							ERR_PRINT(vformat("Failed to execute status indicator callback: %s.", Variant::get_callable_error_text(indicators[iid].callback, v_args, 2, ce)));
 						}

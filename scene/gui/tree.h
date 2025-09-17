@@ -234,7 +234,7 @@ protected:
 		return d;
 	}
 
-	void _call_recursive_bind(const Variant **p_args, int p_argcount, Callable::CallError &r_error);
+	void _call_recursive_bind(const Variant *const *p_args, int p_argcount, Callable::CallError &r_error);
 
 public:
 	// Cell mode.
@@ -435,7 +435,7 @@ public:
 	void move_before(TreeItem *p_item);
 	void move_after(TreeItem *p_item);
 
-	void call_recursive(const StringName &p_method, const Variant **p_args, int p_argcount, Callable::CallError &r_error);
+	void call_recursive(const StringName &p_method, const Variant *const *p_args, int p_argcount, Callable::CallError &r_error);
 
 	~TreeItem();
 };
