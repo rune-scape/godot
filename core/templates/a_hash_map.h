@@ -30,6 +30,7 @@
 
 #pragma once
 
+#include "core/string/ustring.h"
 #include "core/templates/hash_map.h"
 
 struct HashMapData {

@@ -32,6 +32,7 @@
 
 #include "core/math/vector3.h"
 #include "core/math/vector4.h"
+#include "core/templates/hashfuncs.h"
 
 template <typename T>
 class Vector;
@@ -193,3 +194,31 @@ Vector3 Projection::xform(const Vector3 &p_vec3) const {
 	real_t w = columns[0][3] * p_vec3.x + columns[1][3] * p_vec3.y + columns[2][3] * p_vec3.z + columns[3][3];
 	return ret / w;
 }
+
+uint32_t HashMapHasherDefault::hash(const Projection &p_proj) {
+	uint32_t h = HASH_MURMUR3_SEED;
+	h = hash_murmur3_one_real(p_proj.columns[0].x, h);
+	h = hash_murmur3_one_real(p_proj.columns[0].y, h);
+	h = hash_murmur3_one_real(p_proj.columns[0].z, h);
+	h = hash_murmur3_one_real(p_proj.columns[0].w, h);
+	h = hash_murmur3_one_real(p_proj.columns[1].x, h);
+	h = hash_murmur3_one_real(p_proj.columns[1].y, h);
+	h = hash_murmur3_one_real(p_proj.columns[1].z, h);
+	h = hash_murmur3_one_real(p_proj.columns[1].w, h);
+	h = hash_murmur3_one_real(p_proj.columns[2].x, h);
+	h = hash_murmur3_one_real(p_proj.columns[2].y, h);
+	h = hash_murmur3_one_real(p_proj.columns[2].z, h);
+	h = hash_murmur3_one_real(p_proj.columns[2].w, h);
+	h = hash_murmur3_one_real(p_proj.columns[3].x, h);
+	h = hash_murmur3_one_real(p_proj.columns[3].y, h);
+	h = hash_murmur3_one_real(p_proj.columns[3].z, h);
+	h = hash_murmur3_one_real(p_proj.columns[3].w, h);
+	return hash_fmix32(h);
+}
+
+template <>
+struct HashMapComparatorDefault<Projection> {
+	static bool compare(const Projection &p_lhs, const Projection &p_rhs) {
+		return p_lhs.is_same(p_rhs);
+	}
+};

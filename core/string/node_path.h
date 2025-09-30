@@ -32,6 +32,7 @@
 
 #include "core/string/string_name.h"
 #include "core/string/ustring.h"
+#include "core/templates/hashfuncs.h"
 
 class [[nodiscard]] NodePath {
 	struct Data {
@@ -99,3 +100,7 @@ public:
 // Zero-constructing NodePath initializes data to nullptr (and thus empty).
 template <>
 struct is_zero_constructible<NodePath> : std::true_type {};
+
+uint32_t HashMapHasherDefault::hash(const NodePath &p_nodepath) {
+	return p_nodepath.hash();
+}

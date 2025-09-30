@@ -30,6 +30,7 @@
 
 #pragma once
 
+#include "core/templates/hashfuncs.h"
 #include "core/typedefs.h"
 
 template <typename F, typename S>
@@ -59,6 +60,13 @@ struct PairSort {
 // Pair is zero-constructible if and only if both constrained types are zero-constructible.
 template <typename F, typename S>
 struct is_zero_constructible<Pair<F, S>> : std::conjunction<is_zero_constructible<F>, is_zero_constructible<S>> {};
+
+template <typename F, typename S>
+uint32_t HashMapHasherDefault::hash(const Pair<F, S> &p_pair) {
+	uint64_t h1 = HashMapHasherDefault::hash(p_pair.first);
+	uint64_t h2 = HashMapHasherDefault::hash(p_pair.second);
+	return hash_one_uint64((h1 << 32) | h2);
+}
 
 template <typename K, typename V>
 struct KeyValue {

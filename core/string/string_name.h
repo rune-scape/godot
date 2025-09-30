@@ -31,6 +31,7 @@
 #pragma once
 
 #include "core/string/ustring.h"
+#include "core/templates/hashfuncs.h"
 #include "core/templates/safe_refcount.h"
 
 #define UNIQUE_NODE_PREFIX "%"
@@ -197,6 +198,10 @@ bool operator==(const String &p_name, const StringName &p_string_name);
 bool operator!=(const String &p_name, const StringName &p_string_name);
 bool operator==(const char *p_name, const StringName &p_string_name);
 bool operator!=(const char *p_name, const StringName &p_string_name);
+
+uint32_t HashMapHasherDefault::hash(const StringName &p_string_name) {
+	return p_string_name.hash();
+}
 
 /*
  * The SNAME macro is used to speed up StringName creation, as it allows caching it after the first usage in a very efficient way.

@@ -31,6 +31,7 @@
 #pragma once
 
 #include "core/math/math_funcs.h"
+#include "core/templates/hashfuncs.h"
 
 class String;
 
@@ -394,3 +395,19 @@ constexpr bool Color::operator<(const Color &p_color) const {
 constexpr Color operator*(float p_scalar, const Color &p_color) {
 	return p_color * p_scalar;
 }
+
+uint32_t HashMapHasherDefault::hash(const Color &p_color) {
+	uint32_t h = HASH_MURMUR3_SEED;
+	h = hash_murmur3_one_float(p_color.r, h);
+	h = hash_murmur3_one_float(p_color.g, h);
+	h = hash_murmur3_one_float(p_color.b, h);
+	h = hash_murmur3_one_float(p_color.a, h);
+	return hash_fmix32(h);
+}
+
+template <>
+struct HashMapComparatorDefault<Color> {
+	static bool compare(const Color &p_lhs, const Color &p_rhs) {
+		return p_lhs.is_same(p_rhs);
+	}
+};

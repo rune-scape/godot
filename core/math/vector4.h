@@ -32,6 +32,7 @@
 
 #include "core/error/error_macros.h"
 #include "core/math/math_defs.h"
+#include "core/templates/hashfuncs.h"
 #include "core/typedefs.h"
 
 class String;
@@ -304,3 +305,18 @@ constexpr Vector4 operator*(int64_t p_scalar, const Vector4 &p_vec) {
 
 template <>
 struct is_zero_constructible<Vector4> : std::true_type {};
+
+uint32_t HashMapHasherDefault::hash(const Vector4 &p_vec) {
+	uint32_t h = hash_murmur3_one_real(p_vec.x);
+	h = hash_murmur3_one_real(p_vec.y, h);
+	h = hash_murmur3_one_real(p_vec.z, h);
+	h = hash_murmur3_one_real(p_vec.w, h);
+	return hash_fmix32(h);
+}
+
+template <>
+struct HashMapComparatorDefault<Vector4> {
+	static bool compare(const Vector4 &p_lhs, const Vector4 &p_rhs) {
+		return p_lhs.is_same(p_rhs);
+	}
+};

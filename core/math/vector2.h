@@ -32,6 +32,7 @@
 
 #include "core/error/error_macros.h"
 #include "core/math/math_funcs.h"
+#include "core/templates/hashfuncs.h"
 
 class String;
 struct Vector2i;
@@ -341,3 +342,16 @@ typedef Vector2 Point2;
 
 template <>
 struct is_zero_constructible<Vector2> : std::true_type {};
+
+uint32_t HashMapHasherDefault::hash(const Vector2 &p_vec) {
+	uint32_t h = hash_murmur3_one_real(p_vec.x);
+	h = hash_murmur3_one_real(p_vec.y, h);
+	return hash_fmix32(h);
+}
+
+template <>
+struct HashMapComparatorDefault<Vector2> {
+	static bool compare(const Vector2 &p_lhs, const Vector2 &p_rhs) {
+		return p_lhs.is_same(p_rhs);
+	}
+};

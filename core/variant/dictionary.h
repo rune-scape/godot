@@ -43,7 +43,6 @@ struct ContainerType;
 struct ContainerTypeValidate;
 struct DictionaryPrivate;
 struct StringLikeVariantComparator;
-struct VariantHasher;
 
 class Dictionary {
 	mutable DictionaryPrivate *_p;
@@ -52,7 +51,7 @@ class Dictionary {
 	void _unref() const;
 
 public:
-	using ConstIterator = HashMap<Variant, Variant, VariantHasher, StringLikeVariantComparator>::ConstIterator;
+	using ConstIterator = HashMap<Variant, Variant, HashMapHasherDefault, StringLikeVariantComparator>::ConstIterator;
 
 	ConstIterator begin() const;
 	ConstIterator end() const;
@@ -136,3 +135,7 @@ public:
 	Dictionary();
 	~Dictionary();
 };
+
+uint32_t HashMapHasherDefault::hash(const Dictionary &p_dict) {
+	return p_dict.hash();
+}

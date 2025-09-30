@@ -33,6 +33,7 @@
 #include "core/math/math_funcs.h"
 #include "core/math/vector3.h"
 #include "core/string/ustring.h"
+#include "core/templates/hashfuncs.h"
 
 struct [[nodiscard]] Quaternion {
 	union {
@@ -253,3 +254,19 @@ constexpr Quaternion Quaternion::operator*(const Quaternion &p_q) const {
 constexpr Quaternion operator*(real_t p_real, const Quaternion &p_quaternion) {
 	return p_quaternion * p_real;
 }
+
+uint32_t HashMapHasherDefault::hash(const Quaternion &p_quat) {
+	uint32_t h = HASH_MURMUR3_SEED;
+	h = hash_murmur3_one_real(p_quat.x, h);
+	h = hash_murmur3_one_real(p_quat.y, h);
+	h = hash_murmur3_one_real(p_quat.z, h);
+	h = hash_murmur3_one_real(p_quat.w, h);
+	return hash_fmix32(h);
+}
+
+template <>
+struct HashMapComparatorDefault<Quaternion> {
+	static bool compare(const Quaternion &p_lhs, const Quaternion &p_rhs) {
+		return p_lhs.is_same(p_rhs);
+	}
+};

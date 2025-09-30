@@ -34,6 +34,7 @@
 
 #include "core/string/char_utils.h" // IWYU pragma: export
 #include "core/templates/cowdata.h"
+#include "core/templates/hashfuncs.h"
 #include "core/templates/vector.h"
 #include "core/typedefs.h"
 #include "core/variant/array.h"
@@ -790,4 +791,24 @@ _FORCE_INLINE_ String ETRN(const String &p_text, const String &p_text_plural, in
 template <typename... P>
 _FORCE_INLINE_ Vector<String> sarray(P... p_args) {
 	return Vector<String>({ String(p_args)... });
+}
+
+uint32_t HashMapHasherDefault::hash(const String &p_string) {
+	return p_string.hash();
+}
+
+uint32_t HashMapHasherDefault::hash(const CharStringT<char> &p_char_string) {
+	return hash_djb2_cstr(p_char_string.get_data());
+}
+
+uint32_t HashMapHasherDefault::hash(const CharStringT<wchar_t> &p_char_string) {
+	return hash_djb2_cstr(p_char_string.get_data());
+}
+
+uint32_t HashMapHasherDefault::hash(const CharStringT<char16_t> &p_char_string) {
+	return hash_djb2_cstr(p_char_string.get_data());
+}
+
+uint32_t HashMapHasherDefault::hash(const CharStringT<char32_t> &p_char_string) {
+	return hash_djb2_cstr(p_char_string.get_data());
 }

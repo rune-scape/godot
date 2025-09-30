@@ -34,6 +34,7 @@
 #include "core/math/vector2.h"
 #include "core/math/vector3i.h"
 #include "core/string/ustring.h"
+#include "core/variant/variant.h"
 
 void Vector3::rotate(const Vector3 &p_axis, real_t p_angle) {
 	*this = Basis(p_axis, p_angle).xform(*this);
@@ -150,6 +151,25 @@ Basis Vector3::outer(const Vector3 &p_with) const {
 	basis.rows[1] = Vector3(y * p_with.x, y * p_with.y, y * p_with.z);
 	basis.rows[2] = Vector3(z * p_with.x, z * p_with.y, z * p_with.z);
 	return basis;
+}
+
+// slide returns the component of the vector along the given plane, specified by its normal vector.
+Vector3 Vector3::slide(const Vector3 &p_normal) const {
+#ifdef MATH_CHECKS
+	ERR_FAIL_COND_V_MSG(!p_normal.is_normalized(), Vector3(), vformat("The normal Vector3 %s must be normalized.", p_normal));
+#endif
+	return *this - p_normal * dot(p_normal);
+}
+
+Vector3 Vector3::bounce(const Vector3 &p_normal) const {
+	return -reflect(p_normal);
+}
+
+Vector3 Vector3::reflect(const Vector3 &p_normal) const {
+#ifdef MATH_CHECKS
+	ERR_FAIL_COND_V_MSG(!p_normal.is_normalized(), Vector3(), vformat("The normal Vector3 %s must be normalized.", p_normal));
+#endif
+	return 2.0f * p_normal * dot(p_normal) - *this;
 }
 
 bool Vector3::is_equal_approx(const Vector3 &p_v) const {

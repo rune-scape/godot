@@ -30,6 +30,7 @@
 
 #pragma once
 
+#include "core/templates/hashfuncs.h"
 #include "core/typedefs.h"
 
 // Class to store an object ID (int64)
@@ -61,3 +62,7 @@ public:
 
 template <>
 struct is_zero_constructible<ObjectID> : std::true_type {};
+
+uint32_t HashMapHasherDefault::hash(const ObjectID &p_id) {
+	return hash_one_uint64(p_id);
+}

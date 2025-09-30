@@ -30,6 +30,7 @@
 
 #pragma once
 
+#include "core/templates/hashfuncs.h"
 #include "core/typedefs.h"
 #include "core/variant/variant_deep_duplicate.h"
 
@@ -207,3 +208,7 @@ public:
 	Array();
 	~Array();
 };
+
+uint32_t HashMapHasherDefault::hash(const Array &p_array) {
+	return p_array.hash();
+}

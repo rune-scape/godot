@@ -30,6 +30,7 @@
 
 #pragma once
 
+#include "core/templates/hashfuncs.h"
 #include "core/typedefs.h"
 
 class RID_AllocBase;
@@ -74,3 +75,8 @@ public:
 
 template <>
 struct is_zero_constructible<RID> : std::true_type {};
+
+uint32_t HashMapHasherDefault::hash(const RID &p_rid) {
+	return hash_one_uint64(p_rid.get_id());
+}
+

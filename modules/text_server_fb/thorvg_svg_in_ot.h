@@ -36,6 +36,8 @@
 #include <godot_cpp/core/mutex_lock.hpp>
 #include <godot_cpp/godot.hpp>
 #include <godot_cpp/templates/hash_map.hpp>
+#include <godot_cpp/variant/char_string.hpp>
+#include <godot_cpp/variant/string.hpp>
 
 using namespace godot;
 
@@ -43,6 +45,7 @@ using namespace godot;
 // Headers for building as built-in module.
 
 #include "core/os/mutex.h"
+#include "core/string/ustring.h"
 #include "core/templates/hash_map.h"
 #include "core/typedefs.h"
 

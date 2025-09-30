@@ -31,6 +31,7 @@
 #pragma once
 
 #include "core/math/vector3.h"
+#include "core/templates/hashfuncs.h"
 
 class Variant;
 
@@ -143,3 +144,19 @@ constexpr bool Plane::operator!=(const Plane &p_plane) const {
 
 template <>
 struct is_zero_constructible<Plane> : std::true_type {};
+
+uint32_t HashMapHasherDefault::hash(const Plane &p_plane) {
+	uint32_t h = HASH_MURMUR3_SEED;
+	h = hash_murmur3_one_real(p_plane.normal.x, h);
+	h = hash_murmur3_one_real(p_plane.normal.y, h);
+	h = hash_murmur3_one_real(p_plane.normal.z, h);
+	h = hash_murmur3_one_real(p_plane.d, h);
+	return hash_fmix32(h);
+}
+
+template <>
+struct HashMapComparatorDefault<Plane> {
+	static bool compare(const Plane &p_lhs, const Plane &p_rhs) {
+		return p_lhs.is_same(p_rhs);
+	}
+};
