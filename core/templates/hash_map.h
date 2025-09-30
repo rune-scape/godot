@@ -80,8 +80,9 @@ private:
 	uint32_t capacity_index = 0;
 	uint32_t num_elements = 0;
 
-	_FORCE_INLINE_ static uint32_t _hash(const TKey &p_key) {
-		uint32_t hash = Hasher::hash(p_key);
+	template <typename TKeyParam>
+	_FORCE_INLINE_ static uint32_t _hash(TKeyParam &&p_key) {
+		uint32_t hash = Hasher::hash(static_cast<TKeyParam &&>(p_key));
 
 		if (unlikely(hash == EMPTY_HASH)) {
 			hash = EMPTY_HASH + 1;
@@ -105,12 +106,14 @@ private:
 		return distance_pos >= p_capacity ? distance_pos - p_capacity : distance_pos;
 	}
 
-	bool _lookup_pos(const TKey &p_key, uint32_t &r_pos) const {
-		return elements != nullptr && num_elements > 0 && _lookup_pos_unchecked(p_key, _hash(p_key), r_pos);
+	template <typename TKeyParam>
+	bool _lookup_pos(TKeyParam &&p_key, uint32_t &r_pos) const {
+		return elements != nullptr && num_elements > 0 && _lookup_pos_unchecked(static_cast<TKeyParam &&>(p_key), _hash(static_cast<TKeyParam &&>(p_key)), r_pos);
 	}
 
 	/// Note: Assumes that elements != nullptr
-	bool _lookup_pos_unchecked(const TKey &p_key, uint32_t p_hash, uint32_t &r_pos) const {
+	template <typename TKeyParam>
+	bool _lookup_pos_unchecked(TKeyParam &&p_key, uint32_t p_hash, uint32_t &r_pos) const {
 		const uint32_t capacity = hash_table_size_primes[capacity_index];
 		const uint64_t capacity_inv = hash_table_size_primes_inv[capacity_index];
 		uint32_t pos = fastmod(p_hash, capacity_inv, capacity);
@@ -125,7 +128,7 @@ private:
 				return false;
 			}
 
-			if (hashes[pos] == p_hash && Comparator::compare(elements[pos]->data.key, p_key)) {
+			if (hashes[pos] == p_hash && Comparator::compare(elements[pos]->data.key, static_cast<TKeyParam &&>(p_key))) {
 				r_pos = pos;
 				return true;
 			}
@@ -199,7 +202,8 @@ private:
 		Memory::free_static(old_hashes);
 	}
 
-	_FORCE_INLINE_ HashMapElement<TKey, TValue> *_insert(const TKey &p_key, const TValue &p_value, uint32_t p_hash, bool p_front_insert = false) {
+	template <typename TKeyParam, typename TValueParam>
+	_FORCE_INLINE_ HashMapElement<TKey, TValue> *_insert(TKeyParam &&p_key, TValueParam &&p_value, uint32_t p_hash, bool p_front_insert = false) {
 		uint32_t capacity = hash_table_size_primes[capacity_index];
 		if (unlikely(elements == nullptr)) {
 			// Allocate on demand to save memory.
@@ -214,7 +218,7 @@ private:
 			_resize_and_rehash(capacity_index + 1);
 		}
 
-		HashMapElement<TKey, TValue> *elem = Allocator::new_allocation(HashMapElement<TKey, TValue>(p_key, p_value));
+		HashMapElement<TKey, TValue> *elem = Allocator::new_allocation(HashMapElement<TKey, TValue>(static_cast<TKeyParam &&>(p_key), static_cast<TValueParam &&>(p_value)));
 
 		if (tail_element == nullptr) {
 			head_element = elem;
@@ -278,23 +282,26 @@ public:
 		sorter.sort(head_element, tail_element);
 	}
 
-	TValue &get(const TKey &p_key) {
+	template <typename TKeyParam>
+	TValue &get(TKeyParam &&p_key) {
 		uint32_t pos = 0;
-		bool exists = _lookup_pos(p_key, pos);
+		bool exists = _lookup_pos(static_cast<TKeyParam &&>(p_key), pos);
 		CRASH_COND_MSG(!exists, "HashMap key not found.");
 		return elements[pos]->data.value;
 	}
 
-	const TValue &get(const TKey &p_key) const {
+	template <typename TKeyParam>
+	const TValue &get(TKeyParam &&p_key) const {
 		uint32_t pos = 0;
-		bool exists = _lookup_pos(p_key, pos);
+		bool exists = _lookup_pos(static_cast<TKeyParam &&>(p_key), pos);
 		CRASH_COND_MSG(!exists, "HashMap key not found.");
 		return elements[pos]->data.value;
 	}
 
-	const TValue *getptr(const TKey &p_key) const {
+	template <typename TKeyParam>
+	const TValue *getptr(TKeyParam &&p_key) const {
 		uint32_t pos = 0;
-		bool exists = _lookup_pos(p_key, pos);
+		bool exists = _lookup_pos(static_cast<TKeyParam &&>(p_key), pos);
 
 		if (exists) {
 			return &elements[pos]->data.value;
@@ -302,9 +309,10 @@ public:
 		return nullptr;
 	}
 
-	TValue *getptr(const TKey &p_key) {
+	template <typename TKeyParam>
+	TValue *getptr(TKeyParam &&p_key) {
 		uint32_t pos = 0;
-		bool exists = _lookup_pos(p_key, pos);
+		bool exists = _lookup_pos(static_cast<TKeyParam &&>(p_key), pos);
 
 		if (exists) {
 			return &elements[pos]->data.value;
@@ -312,14 +320,16 @@ public:
 		return nullptr;
 	}
 
-	_FORCE_INLINE_ bool has(const TKey &p_key) const {
+	template <typename TKeyParam>
+	_FORCE_INLINE_ bool has(TKeyParam &&p_key) const {
 		uint32_t _pos = 0;
-		return _lookup_pos(p_key, _pos);
+		return _lookup_pos(static_cast<TKeyParam &&>(p_key), _pos);
 	}
 
-	bool erase(const TKey &p_key) {
+	template <typename TKeyParam>
+	bool erase(TKeyParam &&p_key) {
 		uint32_t pos = 0;
-		bool exists = _lookup_pos(p_key, pos);
+		bool exists = _lookup_pos(static_cast<TKeyParam &&>(p_key), pos);
 
 		if (!exists) {
 			return false;
@@ -362,15 +372,16 @@ public:
 
 	// Replace the key of an entry in-place, without invalidating iterators or changing the entries position during iteration.
 	// p_old_key must exist in the map and p_new_key must not, unless it is equal to p_old_key.
-	bool replace_key(const TKey &p_old_key, const TKey &p_new_key) {
+	template <typename TKeyParamOld, typename TKeyParamNew>
+	bool replace_key(TKeyParamOld &&p_old_key, TKeyParamNew &&p_new_key) {
 		ERR_FAIL_COND_V(elements == nullptr || num_elements == 0, false);
 		if (p_old_key == p_new_key) {
 			return true;
 		}
-		const uint32_t new_hash = _hash(p_new_key);
+		const uint32_t new_hash = _hash(static_cast<TKeyParamNew &&>(p_new_key));
 		uint32_t pos = 0;
-		ERR_FAIL_COND_V(_lookup_pos_unchecked(p_new_key, new_hash, pos), false);
-		ERR_FAIL_COND_V(!_lookup_pos(p_old_key, pos), false);
+		ERR_FAIL_COND_V(_lookup_pos_unchecked(static_cast<TKeyParamNew &&>(p_new_key), new_hash, pos), false);
+		ERR_FAIL_COND_V(!_lookup_pos(static_cast<TKeyParamOld &&>(p_old_key), pos), false);
 		HashMapElement<TKey, TValue> *element = elements[pos];
 
 		// Delete the old entries in hashes and elements.
@@ -389,7 +400,7 @@ public:
 		num_elements--;
 
 		// Update the HashMapElement with the new key and reinsert it.
-		const_cast<TKey &>(element->data.key) = p_new_key;
+		const_cast<TKey &>(element->data.key) = static_cast<TKeyParamNew &&>(p_new_key);
 		_insert_element(new_hash, element);
 
 		return true;
@@ -505,9 +516,10 @@ public:
 		return Iterator(tail_element);
 	}
 
-	_FORCE_INLINE_ Iterator find(const TKey &p_key) {
+	template <typename TKeyParam>
+	_FORCE_INLINE_ Iterator find(TKeyParam &&p_key) {
 		uint32_t pos = 0;
-		bool exists = _lookup_pos(p_key, pos);
+		bool exists = _lookup_pos(static_cast<TKeyParam &&>(p_key), pos);
 		if (!exists) {
 			return end();
 		}
@@ -530,9 +542,10 @@ public:
 		return ConstIterator(tail_element);
 	}
 
-	_FORCE_INLINE_ ConstIterator find(const TKey &p_key) const {
+	template <typename TKeyParam>
+	_FORCE_INLINE_ ConstIterator find(TKeyParam &&p_key) const {
 		uint32_t pos = 0;
-		bool exists = _lookup_pos(p_key, pos);
+		bool exists = _lookup_pos(static_cast<TKeyParam &&>(p_key), pos);
 		if (!exists) {
 			return end();
 		}
@@ -541,19 +554,21 @@ public:
 
 	/* Indexing */
 
-	const TValue &operator[](const TKey &p_key) const {
+	template <typename TKeyParam>
+	const TValue &operator[](TKeyParam &&p_key) const {
 		uint32_t pos = 0;
-		bool exists = _lookup_pos(p_key, pos);
+		bool exists = _lookup_pos(static_cast<TKeyParam &&>(p_key), pos);
 		CRASH_COND(!exists);
 		return elements[pos]->data.value;
 	}
 
-	TValue &operator[](const TKey &p_key) {
-		const uint32_t hash = _hash(p_key);
+	template <typename TKeyParam>
+	TValue &operator[](TKeyParam &&p_key) {
+		const uint32_t hash = _hash(static_cast<TKeyParam &&>(p_key));
 		uint32_t pos = 0;
-		bool exists = elements && num_elements > 0 && _lookup_pos_unchecked(p_key, hash, pos);
+		bool exists = elements && num_elements > 0 && _lookup_pos_unchecked(static_cast<TKeyParam &&>(p_key), hash, pos);
 		if (!exists) {
-			return _insert(p_key, TValue(), hash)->data.value;
+			return _insert(static_cast<TKeyParam &&>(p_key), TValue(), hash)->data.value;
 		} else {
 			return elements[pos]->data.value;
 		}
@@ -561,16 +576,33 @@ public:
 
 	/* Insert */
 
-	Iterator insert(const TKey &p_key, const TValue &p_value, bool p_front_insert = false) {
-		const uint32_t hash = _hash(p_key);
+	template <typename TKeyParam, typename TValueParam>
+	Iterator _insert_or_assign(TKeyParam &&p_key, TValueParam &&p_value, bool p_front_insert) {
+		const uint32_t hash = _hash(static_cast<TKeyParam &&>(p_key));
 		uint32_t pos = 0;
-		bool exists = elements && num_elements > 0 && _lookup_pos_unchecked(p_key, hash, pos);
+		bool exists = elements && num_elements > 0 && _lookup_pos_unchecked(static_cast<TKeyParam &&>(p_key), hash, pos);
 		if (!exists) {
-			return Iterator(_insert(p_key, p_value, hash, p_front_insert));
+			return Iterator(_insert(static_cast<TKeyParam &&>(p_key), static_cast<TValueParam &&>(p_value), hash, p_front_insert));
 		} else {
-			elements[pos]->data.value = p_value;
+			elements[pos]->data.value = static_cast<TValueParam &&>(p_value);
 			return Iterator(elements[pos]);
 		}
+	}
+
+	_ALWAYS_INLINE_ Iterator insert(const TKey &p_key, const TValue &p_value, bool p_front_insert = false) {
+		return _insert_or_assign(p_key, p_value, p_front_insert);
+	}
+
+	_ALWAYS_INLINE_ Iterator insert(const TKey &p_key, TValue &&p_value, bool p_front_insert = false) {
+		return _insert_or_assign(p_key, static_cast<TValue &&>(p_value), p_front_insert);
+	}
+
+	_ALWAYS_INLINE_ Iterator insert(TKey &&p_key, const TValue &p_value, bool p_front_insert = false) {
+		return _insert_or_assign(static_cast<TKey &&>(p_key), p_value, p_front_insert);
+	}
+
+	_ALWAYS_INLINE_ Iterator insert(TKey &&p_key, TValue &&p_value, bool p_front_insert = false) {
+		return _insert_or_assign(static_cast<TKey &&>(p_key), static_cast<TValue &&>(p_value), p_front_insert);
 	}
 
 	/* Constructors */
@@ -587,9 +619,18 @@ public:
 		}
 	}
 
-	void operator=(const HashMap &p_other) {
+	HashMap(HashMap &&p_other) {
+		SWAP(elements, p_other.elements);
+		SWAP(hashes, p_other.hashes);
+		SWAP(head_element, p_other.head_element);
+		SWAP(tail_element, p_other.tail_element);
+		SWAP(capacity_index, p_other.capacity_index);
+		SWAP(num_elements, p_other.num_elements);
+	}
+
+	HashMap &operator=(const HashMap &p_other) {
 		if (this == &p_other) {
-			return; // Ignore self assignment.
+			return *this; // Ignore self assignment.
 		}
 		if (num_elements != 0) {
 			clear();
@@ -598,12 +639,24 @@ public:
 		reserve(hash_table_size_primes[p_other.capacity_index]);
 
 		if (p_other.elements == nullptr) {
-			return; // Nothing to copy.
+			return *this; // Nothing to copy.
 		}
 
 		for (const KeyValue<TKey, TValue> &E : p_other) {
 			insert(E.key, E.value);
 		}
+
+		return *this;
+	}
+
+	HashMap &operator=(HashMap &&p_other) {
+		SWAP(elements, p_other.elements);
+		SWAP(hashes, p_other.hashes);
+		SWAP(head_element, p_other.head_element);
+		SWAP(tail_element, p_other.tail_element);
+		SWAP(capacity_index, p_other.capacity_index);
+		SWAP(num_elements, p_other.num_elements);
+		return *this;
 	}
 
 	HashMap(uint32_t p_initial_capacity) {
