@@ -43,11 +43,13 @@ class DropTargetWindows : public IDropTarget {
 	CLIPFORMAT cf_filedescriptor = 0;
 	CLIPFORMAT cf_filecontents = 0;
 	String tmp_path;
+	Vector2 last_drag_mouse_pos;
 
 	bool is_valid_filedescriptor();
 	HRESULT handle_hdrop_format(Vector<String> *p_files, IDataObject *pDataObj);
 	HRESULT handle_filedescriptor_format(Vector<String> *p_files, IDataObject *pDataObj);
 	HRESULT save_as_file(const String &p_out_dir, FILEDESCRIPTORW *p_file_desc, IDataObject *pDataObj, int p_file_idx);
+	void populate_mouse_event(const Ref<InputEventMouseMotion> &p_event, DWORD grfKeyState, Vector2 p_pos);
 
 public:
 	DropTargetWindows(DisplayServerWindows::WindowData *p_window_data);

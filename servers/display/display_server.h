@@ -460,12 +460,21 @@ public:
 		WINDOW_EVENT_DPI_CHANGE,
 		WINDOW_EVENT_TITLEBAR_CHANGE,
 		WINDOW_EVENT_FORCE_CLOSE,
+		WINDOW_EVENT_DRAG_ENTER,
+		WINDOW_EVENT_DRAG_EXIT,
 	};
 	virtual void window_set_window_event_callback(const Callable &p_callable, WindowID p_window = MAIN_WINDOW_ID) = 0;
 	virtual void window_set_input_event_callback(const Callable &p_callable, WindowID p_window = MAIN_WINDOW_ID) = 0;
 	virtual void window_set_input_text_callback(const Callable &p_callable, WindowID p_window = MAIN_WINDOW_ID) = 0;
 
+	enum DropEffect {
+		NONE,
+		COPY,
+		MOVE,
+		LINK,
+	};
 	virtual void window_set_drop_files_callback(const Callable &p_callable, WindowID p_window = MAIN_WINDOW_ID) = 0;
+	//virtual void window_set_drop_data_callback(const Callable &p_callable, WindowID p_window = MAIN_WINDOW_ID) = 0;
 
 	virtual void window_set_title(const String &p_title, WindowID p_window = MAIN_WINDOW_ID) = 0;
 	virtual Size2i window_get_title_size(const String &p_title, WindowID p_window = MAIN_WINDOW_ID) const { return Size2i(); }
@@ -1000,6 +1009,7 @@ VARIANT_ENUM_CAST(DisplayServer::AccessibilityScrollUnit)
 VARIANT_ENUM_CAST(DisplayServer::AccessibilityScrollHint)
 
 VARIANT_ENUM_CAST(DisplayServer::WindowEvent)
+VARIANT_ENUM_CAST(DisplayServer::DropEffect)
 VARIANT_ENUM_CAST(DisplayServer::Feature)
 VARIANT_ENUM_CAST(DisplayServer::MouseMode)
 VARIANT_ENUM_CAST(DisplayServer::ScreenOrientation)

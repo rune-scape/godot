@@ -769,6 +769,7 @@ void Window::_propagate_window_notification(Node *p_node, int p_notification) {
 
 void Window::_event_callback(DisplayServer::WindowEvent p_event) {
 	switch (p_event) {
+		case DisplayServer::WINDOW_EVENT_DRAG_ENTER: [[fallthrough]];
 		case DisplayServer::WINDOW_EVENT_MOUSE_ENTER: {
 			if (!is_inside_tree()) {
 				return;
@@ -789,7 +790,21 @@ void Window::_event_callback(DisplayServer::WindowEvent p_event) {
 			if (DisplayServer::get_singleton()->has_feature(DisplayServer::FEATURE_CURSOR_SHAPE)) {
 				DisplayServer::get_singleton()->cursor_set_shape(DisplayServer::CURSOR_ARROW); //restore cursor shape
 			}
+
+			if (p_event == DisplayServer::WINDOW_EVENT_DRAG_ENTER) {
+				// Start drag and drop.
+				if (root->gui.global_dragging || root->gui.dragging) {
+	#ifdef DEV_ENABLED
+					WARN_PRINT_ONCE("Drag enter should never happen while already dragging in DisplayServer.");
+	#endif // DEV_ENABLED
+				}
+				root->gui.global_dragging = true;
+				root->gui.dragging = true;
+				root->gui.is_system_drag = true;
+				Viewport::_propagate_drag_notification(root, NOTIFICATION_DRAG_BEGIN);
+			}
 		} break;
+		case DisplayServer::WINDOW_EVENT_DRAG_EXIT: [[fallthrough]];
 		case DisplayServer::WINDOW_EVENT_MOUSE_EXIT: {
 			if (!is_inside_tree()) {
 				return;
@@ -798,6 +813,15 @@ void Window::_event_callback(DisplayServer::WindowEvent p_event) {
 			Input::get_singleton()->flush_buffered_events();
 
 			Window *root = get_tree()->get_root();
+			if (p_event == DisplayServer::WINDOW_EVENT_DRAG_EXIT) {
+				// End drag and drop.
+				if (!root->gui.global_dragging || !root->gui.dragging) {
+	#ifdef DEV_ENABLED
+					WARN_PRINT_ONCE("Drag exit should never happen unless already dragging in DisplayServer.");
+	#endif // DEV_ENABLED
+				}
+				root->_perform_drop();
+			}
 			if (!root->gui.windowmanager_window_over) {
 #ifdef DEV_ENABLED
 				WARN_PRINT_ONCE("Exiting a window while no window is hovered should never happen in DisplayServer.");

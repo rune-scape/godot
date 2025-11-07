@@ -29,6 +29,7 @@
 /**************************************************************************/
 
 #include "display_server_x11.h"
+#include "servers/display/display_server.h"
 
 #ifdef X11_ENABLED
 
@@ -336,6 +337,68 @@ bool DisplayServerX11::_refresh_device_info() {
 #endif
 
 	return true;
+}
+
+void DisplayServerX11::_handle_mouse_motion(WindowID p_window, Point2i p_mouse_pos, Point2i p_relative, unsigned int p_x11_mod_state, unsigned int p_x11_ptr_buttons_state) {
+	const WindowData &wd = windows[p_window];
+
+	Ref<InputEventMouseMotion> mm;
+	mm.instantiate();
+
+	mm->set_window_id(p_window);
+
+	_get_key_modifier_state(p_x11_mod_state, mm);
+	_get_mouse_button_mask_state(p_x11_ptr_buttons_state, mm);
+	if (xi.pressure_supported) {
+		mm->set_pressure(xi.pressure);
+	} else {
+		mm->set_pressure(bool(mm->get_button_mask().has_flag(MouseButtonMask::LEFT)) ? 1.0f : 0.0f);
+	}
+	mm->set_tilt(xi.tilt);
+	mm->set_pen_inverted(xi.pen_inverted);
+
+	mm->set_position(p_mouse_pos);
+	mm->set_global_position(p_mouse_pos);
+	mm->set_velocity(Input::get_singleton()->get_last_mouse_velocity());
+	mm->set_screen_velocity(mm->get_velocity());
+
+	mm->set_relative(p_relative);
+	mm->set_relative_screen_position(p_relative);
+
+	last_mouse_pos = p_mouse_pos;
+
+	// printf("rel: %d,%d\n", rel.x, rel.y );
+	// Don't propagate the motion event unless we have focus
+	// this is so that the relative motion doesn't get messed up
+	// after we regain focus.
+	// Adjusted to parse the input event if the window is not focused allowing mouse hovering on the editor
+	// the embedding process has focus.
+	if (!wd.focused) {
+		// Propagate the event to the focused window,
+		// because it's received only on the topmost window.
+		// Note: This is needed for drag & drop to work between windows,
+		// because the engine expects events to keep being processed
+		// on the same window dragging started.
+		for (const KeyValue<WindowID, WindowData> &E : windows) {
+			const WindowData &wd_other = E.value;
+			if (wd_other.focused) {
+				int x, y;
+				Window child;
+				XTranslateCoordinates(x11_display, wd.x11_window, wd_other.x11_window, p_mouse_pos.x, p_mouse_pos.y, &x, &y, &child);
+
+				Point2i pos_focused(x, y);
+
+				mm->set_window_id(E.key);
+				mm->set_position(pos_focused);
+				mm->set_global_position(pos_focused);
+				mm->set_velocity(Input::get_singleton()->get_last_mouse_velocity());
+
+				break;
+			}
+		}
+	}
+
+	Input::get_singleton()->parse_input_event(mm);
 }
 
 void DisplayServerX11::_flush_mouse_motion() {
@@ -3757,17 +3820,17 @@ DisplayServerX11::Property DisplayServerX11::_read_property(Display *p_display, 
 
 	// Keep trying to read the property until there are no bytes unread.
 	if (p_property != None) {
-		int read_bytes = 1024;
+		int long_length = 1024;
 		do {
 			if (ret != nullptr) {
 				XFree(ret);
 			}
 
-			XGetWindowProperty(p_display, p_window, p_property, 0, read_bytes, False, AnyPropertyType,
+			XGetWindowProperty(p_display, p_window, p_property, 0, long_length, False, AnyPropertyType,
 					&actual_type, &actual_format, &nitems, &bytes_after,
 					&ret);
 
-			read_bytes *= 2;
+			long_length *= 2;
 
 		} while (bytes_after != 0);
 	}
@@ -3807,11 +3870,32 @@ static Atom pick_target_from_atoms(Display *p_disp, Atom p_t1, Atom p_t2, Atom p
 	return None;
 }
 
-void DisplayServerX11::_get_key_modifier_state(unsigned int p_x11_state, Ref<InputEventWithModifiers> state) {
-	state->set_shift_pressed((p_x11_state & ShiftMask));
-	state->set_ctrl_pressed((p_x11_state & ControlMask));
-	state->set_alt_pressed((p_x11_state & Mod1Mask /*|| p_x11_state&Mod5Mask*/)); //altgr should not count as alt
-	state->set_meta_pressed((p_x11_state & Mod4Mask));
+void DisplayServerX11::_get_key_modifier_state(unsigned int p_x11_mod_state, Ref<InputEventWithModifiers> p_event) {
+	p_event->set_shift_pressed((p_x11_mod_state & ShiftMask));
+	p_event->set_ctrl_pressed((p_x11_mod_state & ControlMask));
+	p_event->set_alt_pressed((p_x11_mod_state & Mod1Mask /*|| p_x11_mod_state & Mod5Mask*/)); //altgr should not count as alt
+	p_event->set_meta_pressed((p_x11_mod_state & Mod4Mask));
+}
+
+void DisplayServerX11::_get_mouse_button_mask_state(unsigned int p_x11_ptr_buttons_state, Ref<InputEventMouse> p_event) {
+	BitField<MouseButtonMask> mbstate = MouseButtonMask::NONE;
+	if (p_x11_ptr_buttons_state & Button1Mask) {
+		mbstate.set_flag(MouseButtonMask::LEFT);
+	}
+	if (p_x11_ptr_buttons_state & Button2Mask) {
+		mbstate.set_flag(MouseButtonMask::MIDDLE);
+	}
+	if (p_x11_ptr_buttons_state & Button3Mask) {
+		mbstate.set_flag(MouseButtonMask::RIGHT);
+	}
+	if (p_x11_ptr_buttons_state & Button4Mask) {
+		mbstate.set_flag(MouseButtonMask::MB_XBUTTON1);
+	}
+	if (p_x11_ptr_buttons_state & Button5Mask) {
+		mbstate.set_flag(MouseButtonMask::MB_XBUTTON2);
+	}
+
+	p_event->set_button_mask(mbstate);
 }
 
 void DisplayServerX11::_handle_key_event(WindowID p_window, XKeyEvent *p_event, LocalVector<XEvent> &p_events, uint32_t &p_event_index, bool p_echo) {
@@ -5405,80 +5489,7 @@ void DisplayServerX11::process_events() {
 					pos = Point2i(windows[focused_window_id].size.width / 2, windows[focused_window_id].size.height / 2);
 				}
 
-				BitField<MouseButtonMask> last_button_state = MouseButtonMask::NONE;
-				if (event.xmotion.state & Button1Mask) {
-					last_button_state.set_flag(MouseButtonMask::LEFT);
-				}
-				if (event.xmotion.state & Button2Mask) {
-					last_button_state.set_flag(MouseButtonMask::MIDDLE);
-				}
-				if (event.xmotion.state & Button3Mask) {
-					last_button_state.set_flag(MouseButtonMask::RIGHT);
-				}
-				if (event.xmotion.state & Button4Mask) {
-					last_button_state.set_flag(MouseButtonMask::MB_XBUTTON1);
-				}
-				if (event.xmotion.state & Button5Mask) {
-					last_button_state.set_flag(MouseButtonMask::MB_XBUTTON2);
-				}
-
-				Ref<InputEventMouseMotion> mm;
-				mm.instantiate();
-
-				mm->set_window_id(window_id);
-				if (xi.pressure_supported) {
-					mm->set_pressure(xi.pressure);
-				} else {
-					mm->set_pressure(bool(last_button_state.has_flag(MouseButtonMask::LEFT)) ? 1.0f : 0.0f);
-				}
-				mm->set_tilt(xi.tilt);
-				mm->set_pen_inverted(xi.pen_inverted);
-
-				_get_key_modifier_state(event.xmotion.state, mm);
-				mm->set_button_mask(last_button_state);
-				mm->set_position(pos);
-				mm->set_global_position(pos);
-				mm->set_velocity(Input::get_singleton()->get_last_mouse_velocity());
-				mm->set_screen_velocity(mm->get_velocity());
-
-				mm->set_relative(rel);
-				mm->set_relative_screen_position(rel);
-
-				last_mouse_pos = pos;
-
-				// printf("rel: %d,%d\n", rel.x, rel.y );
-				// Don't propagate the motion event unless we have focus
-				// this is so that the relative motion doesn't get messed up
-				// after we regain focus.
-				// Adjusted to parse the input event if the window is not focused allowing mouse hovering on the editor
-				// the embedding process has focus.
-				if (!focused) {
-					// Propagate the event to the focused window,
-					// because it's received only on the topmost window.
-					// Note: This is needed for drag & drop to work between windows,
-					// because the engine expects events to keep being processed
-					// on the same window dragging started.
-					for (const KeyValue<WindowID, WindowData> &E : windows) {
-						const WindowData &wd_other = E.value;
-						if (wd_other.focused) {
-							int x, y;
-							Window child;
-							XTranslateCoordinates(x11_display, wd.x11_window, wd_other.x11_window, event.xmotion.x, event.xmotion.y, &x, &y, &child);
-
-							Point2i pos_focused(x, y);
-
-							mm->set_window_id(E.key);
-							mm->set_position(pos_focused);
-							mm->set_global_position(pos_focused);
-							mm->set_velocity(Input::get_singleton()->get_last_mouse_velocity());
-
-							break;
-						}
-					}
-				}
-
-				Input::get_singleton()->parse_input_event(mm);
-
+				_handle_mouse_motion(window_id, pos, rel, event.xmotion.state, event.xmotion.state);
 			} break;
 			case KeyPress:
 			case KeyRelease: {
@@ -5504,7 +5515,7 @@ void DisplayServerX11::process_events() {
 					break;
 				}
 				if (event.xselection.target == requested) {
-					Property p = _read_property(x11_display, windows[window_id].x11_window, XInternAtom(x11_display, "PRIMARY", 0));
+					Property p = _read_MotionNotifyproperty(x11_display, windows[window_id].x11_window, XInternAtom(x11_display, "PRIMARY", 0));
 
 					Vector<String> files = String((char *)p.data).split("\r\n", false);
 					XFree(p.data);
@@ -5543,23 +5554,43 @@ void DisplayServerX11::process_events() {
 				if (ime_window_event) {
 					break;
 				}
-				if ((unsigned int)event.xclient.data.l[0] == (unsigned int)wm_delete) {
+				if ((Atom)event.xclient.data.l[0] == wm_delete) {
 					_send_window_event(windows[window_id], WINDOW_EVENT_CLOSE_REQUEST);
-				}
-
-				else if ((unsigned int)event.xclient.message_type == (unsigned int)xdnd_enter) {
+				} else if (event.xclient.message_type == xdnd_enter) {
 					//File(s) have been dragged over the window, check for supported target (text/uri-list)
 					xdnd_version = (event.xclient.data.l[1] >> 24);
 					Window source = event.xclient.data.l[0];
 					bool more_than_3 = event.xclient.data.l[1] & 1;
 					if (more_than_3) {
-						Property p = _read_property(x11_display, source, XInternAtom(x11_display, "XdndTypeList", False));
+						Property p = _read_property(x11_display, source, xdnd_type_list);
 						requested = pick_target_from_list(x11_display, (Atom *)p.data, p.nitems);
 						XFree(p.data);
 					} else {
 						requested = pick_target_from_atoms(x11_display, event.xclient.data.l[2], event.xclient.data.l[3], event.xclient.data.l[4]);
 					}
-				} else if ((unsigned int)event.xclient.message_type == (unsigned int)xdnd_position) {
+					_send_window_event(windows[window_id], WINDOW_EVENT_DRAG_ENTER);
+					last_mouse_pos_valid = false;
+				} else if (event.xclient.message_type == xdnd_leave) {
+					_send_window_event(windows[window_id], WINDOW_EVENT_DRAG_EXIT);
+				} else if (event.xclient.message_type == xdnd_position) {
+					{
+						XkbStateRec xkb_state;
+						XkbGetState(x11_display, XkbUseCoreKbd, &xkb_state);
+
+						int mouse_x = event.xclient.data.l[2] >> 16;
+						int mouse_y = event.xclient.data.l[2] & 0xffff;
+
+						Point2i pos{mouse_x, mouse_y};
+						Point2i rel = pos - last_mouse_pos;
+
+						if (!last_mouse_pos_valid) {
+							last_mouse_pos = pos;
+							last_mouse_pos_valid = true;
+						}
+
+						_handle_mouse_motion(window_id, pos, rel, xkb_state.mods, xkb_state.ptr_buttons);
+					}
+
 					//xdnd position event, reply with an XDND status message
 					//just depending on type of data for now
 					XClientMessageEvent m;
@@ -5573,11 +5604,11 @@ void DisplayServerX11::process_events() {
 					m.data.l[1] = (requested != None);
 					m.data.l[2] = 0; //empty rectangle
 					m.data.l[3] = 0;
+					// todo: allow changing drop effect
 					m.data.l[4] = xdnd_action_copy;
 
 					XSendEvent(x11_display, event.xclient.data.l[0], False, NoEventMask, (XEvent *)&m);
-					XFlush(x11_display);
-				} else if ((unsigned int)event.xclient.message_type == (unsigned int)xdnd_drop) {
+				} else if (event.xclient.message_type == xdnd_drop) {
 					if (requested != None) {
 						xdnd_source_window = event.xclient.data.l[0];
 						if (xdnd_version >= 1) {
@@ -7001,12 +7032,18 @@ DisplayServerX11::DisplayServerX11(const String &p_rendering_driver, WindowMode 
 	// Set Xdnd (drag & drop) support.
 	xdnd_aware = XInternAtom(x11_display, "XdndAware", False);
 	xdnd_enter = XInternAtom(x11_display, "XdndEnter", False);
+	xdnd_leave = XInternAtom(x11_display, "XdndLeave", False);
 	xdnd_position = XInternAtom(x11_display, "XdndPosition", False);
 	xdnd_status = XInternAtom(x11_display, "XdndStatus", False);
 	xdnd_action_copy = XInternAtom(x11_display, "XdndActionCopy", False);
+	xdnd_action_move = XInternAtom(x11_display, "XdndActionMove", False);
+	xdnd_action_link = XInternAtom(x11_display, "XdndActionLink", False);
+	xdnd_action_ask = XInternAtom(x11_display, "XdndActionAsk", False);
+	xdnd_action_private = XInternAtom(x11_display, "XdndActionPrivate", False);
 	xdnd_drop = XInternAtom(x11_display, "XdndDrop", False);
 	xdnd_finished = XInternAtom(x11_display, "XdndFinished", False);
 	xdnd_selection = XInternAtom(x11_display, "XdndSelection", False);
+	xdnd_type_list = XInternAtom(x11_display, "XdndTypeList", False);
 
 #ifdef SPEECHD_ENABLED
 	// Init TTS

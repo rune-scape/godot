@@ -2402,6 +2402,7 @@ void Viewport::_perform_drop(Control *p_control) {
 }
 
 void Viewport::gui_perform_drop_at(const Point2 &p_pos, Control *p_control) {
+	// todo: edit for drag n drop
 	// Without any arguments, simply cancel Drag and Drop.
 	if (p_control) {
 		gui.drag_successful = _gui_drop(p_control, p_pos, false);
@@ -2418,6 +2419,7 @@ void Viewport::gui_perform_drop_at(const Point2 &p_pos, Control *p_control) {
 	Viewport *section_root = get_section_root_viewport();
 	section_root->gui.drag_data = Variant();
 	gui.dragging = false;
+	gui.is_system_drag = false;
 	gui.drag_description = String();
 	section_root->gui.global_dragging = false;
 	gui.drag_mouse_over = nullptr;

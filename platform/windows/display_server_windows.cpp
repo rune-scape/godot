@@ -1907,6 +1907,20 @@ void DisplayServerWindows::window_set_drop_files_callback(const Callable &p_call
 	}
 }
 
+/*void DisplayServerWindows::window_set_drop_data_callback(const Callable &p_callable, WindowID p_window) {
+	_THREAD_SAFE_METHOD_
+
+	ERR_FAIL_COND(!windows.has(p_window));
+	WindowData &window_data = windows[p_window];
+
+	window_data.drop_data_callback = p_callable;
+
+	if (window_data.drop_target == nullptr) {
+		window_data.drop_target = memnew(DropTargetWindows(&window_data));
+		ERR_FAIL_COND(RegisterDragDrop(window_data.hWnd, window_data.drop_target) != S_OK);
+	}
+}*/
+
 void DisplayServerWindows::window_set_title(const String &p_title, WindowID p_window) {
 	_THREAD_SAFE_METHOD_
 

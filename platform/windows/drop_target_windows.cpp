@@ -263,6 +263,36 @@ cleanup:
 	return res;
 }
 
+void DropTargetWindows::populate_mouse_event(const Ref<InputEventMouseMotion> &p_event, DWORD grfKeyState, Vector2 p_pos) {
+	p_event->set_window_id(window_data->id);
+	p_event->set_ctrl_pressed((grfKeyState & MK_CONTROL) == MK_CONTROL);
+	p_event->set_shift_pressed((grfKeyState & MK_SHIFT) == MK_SHIFT);
+	p_event->set_alt_pressed((grfKeyState & MK_ALT) == MK_ALT);
+	// No flag for meta key.
+
+	BitField<MouseButtonMask> mbmask;
+	// Supposedly MK_BUTTON is also a valid flag for grfKeyState, but I can't find any information about it. 
+	if ((grfKeyState & MK_LBUTTON) == MK_LBUTTON) {
+		mbmask.set_flag(MouseButtonMask::LEFT);
+	}
+	if ((grfKeyState & MK_MBUTTON) == MK_MBUTTON) {
+		mbmask.set_flag(MouseButtonMask::MIDDLE);
+	}
+	if ((grfKeyState & MK_RBUTTON) == MK_RBUTTON) {
+		mbmask.set_flag(MouseButtonMask::RIGHT);
+	}
+	p_event->set_button_mask(mbmask);
+
+	p_event->set_position(mouse_pos);
+	p_event->set_global_position(mouse_pos);
+
+	p_event->set_velocity(Input::get_singleton()->get_last_mouse_velocity());
+	p_event->set_screen_velocity(p_event->get_velocity());
+
+	p_event->set_relative(Vector2(mouse_pos - last_drag_mouse_pos));
+	p_event->set_relative_screen_position(p_event->get_relative());
+}
+
 DropTargetWindows::DropTargetWindows(DisplayServerWindows::WindowData *p_window_data) :
 		ref_count(1), window_data(p_window_data) {
 	cf_filedescriptor = RegisterClipboardFormat(CFSTR_FILEDESCRIPTORW);
@@ -292,12 +322,10 @@ ULONG STDMETHODCALLTYPE DropTargetWindows::Release() {
 }
 
 HRESULT STDMETHODCALLTYPE DropTargetWindows::DragEnter(IDataObject *pDataObj, DWORD grfKeyState, POINTL pt, DWORD *pdwEffect) {
-	(void)grfKeyState;
-	(void)pt;
-
 	FORMATETC hdrop_fmt = { CF_HDROP, nullptr, DVASPECT_CONTENT, -1, TYMED_HGLOBAL };
 	FORMATETC filedesc_fmt = { cf_filedescriptor, nullptr, DVASPECT_CONTENT, -1, TYMED_HGLOBAL };
 
+	// todo: allow editing of drop effect, keeping defaults
 	if (!window_data->drop_files_callback.is_valid()) {
 		*pdwEffect = DROPEFFECT_NONE;
 	} else if (pDataObj->QueryGetData(&hdrop_fmt) == S_OK) {
@@ -308,18 +336,39 @@ HRESULT STDMETHODCALLTYPE DropTargetWindows::DragEnter(IDataObject *pDataObj, DW
 		*pdwEffect = DROPEFFECT_NONE;
 	}
 
+	if (window_data->event_callback.is_valid()) {
+		window_data->event_callback.call(static_cast<int>(WINDOW_EVENT_DRAG_ENTER));
+	}
+
+	Vector2 mouse_pos{pt.x, pt.y};
+	last_drag_mouse_pos = mouse_pos;
+
+	Ref<InputEventMouseMotion> mm;
+	mm.instantiate();
+	populate_mouse_event(mm, grfKeyState, mouse_pos);
+	Input::get_singleton()->parse_input_event(mm);
+
 	return S_OK;
 }
 
 HRESULT STDMETHODCALLTYPE DropTargetWindows::DragOver(DWORD grfKeyState, POINTL pt, DWORD *pdwEffect) {
-	(void)grfKeyState;
-	(void)pt;
+	Vector2 mouse_pos{pt.x, pt.y};
+	Ref<InputEventMouseMotion> mm;
+	mm.instantiate();
+	populate_mouse_event(mm, grfKeyState, mouse_pos);
+	Input::get_singleton()->parse_input_event(mm);
+	last_drag_mouse_pos = mouse_pos;
 
+	// todo: allow editing of drop effect, keeping defaults
 	*pdwEffect = DROPEFFECT_COPY;
 	return S_OK;
 }
 
 HRESULT STDMETHODCALLTYPE DropTargetWindows::DragLeave() {
+	if (window_data->event_callback.is_valid()) {
+		window_data->event_callback.call(static_cast<int>(WINDOW_EVENT_DRAG_EXIT));
+	}
+
 	return S_OK;
 }
 
@@ -327,6 +376,7 @@ HRESULT STDMETHODCALLTYPE DropTargetWindows::Drop(IDataObject *pDataObj, DWORD g
 	(void)grfKeyState;
 	(void)pt;
 
+	// todo: allow editing of drop effect, keeping defaults
 	*pdwEffect = DROPEFFECT_NONE;
 
 	if (!window_data->drop_files_callback.is_valid()) {

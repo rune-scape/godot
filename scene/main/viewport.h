@@ -398,6 +398,7 @@ private:
 		int canvas_sort_index = 0; //for sorting items with canvas as root
 		bool dragging = false; // Is true in the viewport in which dragging started while dragging is active.
 		bool global_dragging = false; // Is true while dragging is active. Only used in root-Viewport and SubViewports that are not children of a SubViewportContainer.
+		bool is_system_drag = false; // Is true if the current drag operation came from the DisplayServer drag and drop api.
 		bool drag_successful = false;
 		Control *target_control = nullptr; // Control that the mouse is over in the innermost nested Viewport. Only used in root-Viewport and SubViewports, that are not children of a SubViewportContainer.
 		bool embed_subwindows_hint = false;

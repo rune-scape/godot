@@ -30,6 +30,7 @@
 
 #pragma once
 
+#include "core/input/input_event.h"
 #ifdef X11_ENABLED
 
 #include "core/input/input.h"
@@ -127,12 +128,18 @@ class DisplayServerX11 : public DisplayServer {
 
 	Atom wm_delete;
 	Atom xdnd_enter;
+	Atom xdnd_leave;
 	Atom xdnd_position;
 	Atom xdnd_status;
 	Atom xdnd_action_copy;
+	Atom xdnd_action_move;
+	Atom xdnd_action_link;
+	Atom xdnd_action_ask;
+	Atom xdnd_action_private;
 	Atom xdnd_drop;
 	Atom xdnd_finished;
 	Atom xdnd_selection;
+	Atom xdnd_type_list;
 	Atom xdnd_aware;
 	Atom requested = None;
 	int xdnd_version = 5;
@@ -292,7 +299,9 @@ class DisplayServerX11 : public DisplayServer {
 
 	Rect2i _screen_get_rect(int p_screen) const;
 
-	void _get_key_modifier_state(unsigned int p_x11_state, Ref<InputEventWithModifiers> state);
+	static void _get_key_modifier_state(unsigned int p_x11_mod_state, Ref<InputEventWithModifiers> p_event);
+	static void _get_mouse_button_mask_state(unsigned int p_x11_ptr_buttons_state, Ref<InputEventMouse> p_event);
+	void _handle_mouse_motion(WindowID p_window, Point2i p_mouse_pos, Point2i p_relative, unsigned int p_x11_mod_state, unsigned int p_x11_ptr_buttons_state);
 	void _flush_mouse_motion();
 
 	MouseMode mouse_mode = MOUSE_MODE_VISIBLE;
