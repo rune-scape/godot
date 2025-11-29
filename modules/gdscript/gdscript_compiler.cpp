@@ -3056,6 +3056,10 @@ Error GDScriptCompiler::_compile_class(GDScript *p_script, const GDScriptParser:
 		}
 	}
 
+	p_script->_static_default_init();
+
+	p_script->valid = true;
+
 #ifdef DEBUG_ENABLED
 
 	//validate instances if keeping state
@@ -3123,9 +3127,6 @@ Error GDScriptCompiler::_compile_class(GDScript *p_script, const GDScriptParser:
 		has_static_data = has_static_data || inner_class->has_static_data;
 	}
 
-	p_script->_static_default_init();
-
-	p_script->valid = true;
 	return OK;
 }
 
