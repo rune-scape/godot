@@ -938,6 +938,11 @@ void GDScript::unload_static() const {
 }
 
 Variant GDScript::callp(const StringName &p_method, const Variant **p_args, int p_argcount, Callable::CallError &r_error) {
+	if (p_method == SNAME("new")) {
+		// Constructor.
+		return _new(p_args, p_argcount, r_error);
+	}
+
 	GDScript *top = this;
 	while (top) {
 		if (likely(top->valid)) {
@@ -949,6 +954,14 @@ Variant GDScript::callp(const StringName &p_method, const Variant **p_args, int 
 			}
 		}
 		top = top->_base;
+	}
+
+	if (likely(valid)) {
+		MethodBind *method = ClassDB::get_method(native->get_name(), p_method);
+		if (method && method->is_static()) {
+			// Native static method.
+			return method->call(nullptr, p_args, p_argcount, r_error);
+		}
 	}
 
 	//none found, regular
