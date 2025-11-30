@@ -14,6 +14,12 @@ func test():
 	print("Concat: ", &"abc" + "def")
 	print("Concat: ", &"abc" + &"def")
 
+	for c in sn:
+		print(c)
+
+	print(sn[1])
+	print(sn[-1])
+
 	match "abc":
 		&"abc":
 			print("String matched StringName literal")
