@@ -96,6 +96,7 @@ public:
 	struct TypeTestNode;
 	struct UnaryOpNode;
 	struct VariableNode;
+	struct WhenNode;
 	struct WhileNode;
 
 	class DataType {
@@ -334,6 +335,7 @@ public:
 			TYPE_TEST,
 			UNARY_OPERATOR,
 			VARIABLE,
+			WHEN,
 			WHILE,
 		};
 
@@ -563,6 +565,7 @@ public:
 				CONSTANT,
 				FUNCTION,
 				SIGNAL,
+				WHEN,
 				VARIABLE,
 				ENUM,
 				ENUM_VALUE, // For unnamed enums.
@@ -576,6 +579,7 @@ public:
 				ConstantNode *constant;
 				FunctionNode *function;
 				SignalNode *signal;
+				WhenNode *when;
 				VariableNode *variable;
 				EnumNode *m_enum;
 				AnnotationNode *annotation;
@@ -595,6 +599,8 @@ public:
 						return function->identifier->name;
 					case SIGNAL:
 						return signal->identifier->name;
+					case WHEN:
+						return when->function->identifier->name;
 					case VARIABLE:
 						return variable->identifier->name;
 					case ENUM:
@@ -620,6 +626,8 @@ public:
 						return "function";
 					case SIGNAL:
 						return "signal";
+					case WHEN:
+						return "when declaration";
 					case VARIABLE:
 						return "variable";
 					case ENUM:
@@ -648,6 +656,8 @@ public:
 						return m_enum->start_line;
 					case SIGNAL:
 						return signal->start_line;
+					case WHEN:
+						return when->start_line;
 					case GROUP:
 						return annotation->start_line;
 					case UNDEFINED:
@@ -672,6 +682,8 @@ public:
 						return enum_value.identifier->get_datatype();
 					case SIGNAL:
 						return signal->get_datatype();
+					case WHEN:
+						return when->get_datatype();
 					case GROUP:
 						return DataType();
 					case UNDEFINED:
@@ -696,6 +708,8 @@ public:
 						return enum_value.identifier;
 					case SIGNAL:
 						return signal;
+					case WHEN:
+						return when;
 					case GROUP:
 						return annotation;
 					case UNDEFINED:
@@ -721,6 +735,10 @@ public:
 			Member(SignalNode *p_signal) {
 				type = SIGNAL;
 				signal = p_signal;
+			}
+			Member(WhenNode *p_when) {
+				type = WHEN;
+				when = p_when;
 			}
 			Member(FunctionNode *p_function) {
 				type = FUNCTION;
@@ -1274,6 +1292,27 @@ public:
 		}
 	};
 
+	struct WhenNode : public Node {
+		IdentifierNode *identifier = nullptr; // always empty, needed for parse_class_member
+		ExpressionNode *expression = nullptr;
+		FunctionNode *function = nullptr;
+
+		FunctionNode *get_signal_function = nullptr;
+		uint32_t connect_flags = 0;
+		bool onready = false;
+		bool has_parameters = false;
+
+		bool resolved_signature = false;
+		bool resolved_body = false;
+#ifdef TOOLS_ENABLED
+		MemberDocData doc_data; // unused, needed for parse_class_member
+#endif // TOOLS_ENABLED
+
+		WhenNode() {
+			type = WHEN;
+		}
+	};
+
 	struct WhileNode : public Node {
 		ExpressionNode *condition = nullptr;
 		SuiteNode *loop = nullptr;
@@ -1392,7 +1431,8 @@ private:
 			FUNCTION = 1 << 5,
 			STATEMENT = 1 << 6,
 			STANDALONE = 1 << 7,
-			CLASS_LEVEL = CLASS | VARIABLE | CONSTANT | SIGNAL | FUNCTION,
+			WHEN = 1 << 8,
+			CLASS_LEVEL = CLASS | VARIABLE | CONSTANT | SIGNAL | FUNCTION | WHEN,
 		};
 		uint32_t target_kind = 0; // Flags.
 		AnnotationAction apply = nullptr;
@@ -1516,7 +1556,9 @@ private:
 	void parse_class_body(bool p_is_multiline);
 	template <typename T>
 	void parse_class_member(T *(GDScriptParser::*p_parse_function)(bool), AnnotationInfo::TargetKind p_target, const String &p_member_kind, bool p_is_static = false);
+	bool parse_signal_parameters(Vector<ParameterNode *> &p_parameters, HashMap<StringName, int> &p_parameters_indices);
 	SignalNode *parse_signal(bool p_is_static);
+	WhenNode *parse_when(bool p_is_static);
 	EnumNode *parse_enum(bool p_is_static);
 	ParameterNode *parse_parameter();
 	FunctionNode *parse_function(bool p_is_static);
@@ -1542,6 +1584,8 @@ private:
 	bool warning_ignore_annotation(AnnotationNode *p_annotation, Node *p_target, ClassNode *p_class);
 	bool warning_ignore_region_annotations(AnnotationNode *p_annotation, Node *p_target, ClassNode *p_class);
 	bool rpc_annotation(AnnotationNode *p_annotation, Node *p_target, ClassNode *p_class);
+	template <uint32_t t_connect_flags>
+	bool when_decl_annotation(AnnotationNode *p_annotation, Node *p_target, ClassNode *p_class);
 	// Statements.
 	Node *parse_statement();
 	VariableNode *parse_variable(bool p_is_static);
@@ -1634,6 +1678,8 @@ public:
 
 #ifdef DEBUG_ENABLED
 	class TreePrinter {
+		friend class GDScriptParser;
+
 		int indent_level = 0;
 		String indent;
 		StringBuilder printed;
@@ -1680,6 +1726,7 @@ public:
 		void print_type_test(TypeTestNode *p_type_test);
 		void print_unary_op(UnaryOpNode *p_unary_op);
 		void print_variable(VariableNode *p_variable);
+		void print_when(WhenNode *p_when);
 		void print_while(WhileNode *p_while);
 
 	public:

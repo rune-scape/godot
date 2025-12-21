@@ -70,6 +70,8 @@ Dictionary GDScriptSyntaxHighlighter::_get_line_syntax_highlighting_impl(int p_l
 	bool is_after_func_signal_declaration = false;
 	bool in_var_const_declaration = false;
 	bool is_after_var_const_declaration = false;
+	bool in_when_declaration = false;
+	int when_grouping_end = 0;
 	bool expect_type = false;
 
 	int in_declaration_params = 0; // The number of opened `(` after func/signal name.
@@ -326,7 +328,7 @@ Dictionary GDScriptSyntaxHighlighter::_get_line_syntax_highlighting_impl(int p_l
 				to--;
 			}
 			int from = to;
-			while (from > 0 && !is_symbol(str[from])) {
+			while (from >= 0 && !is_symbol(str[from])) {
 				from--;
 			}
 			String word = str.substr(from + 1, to - from);
@@ -451,7 +453,7 @@ Dictionary GDScriptSyntaxHighlighter::_get_line_syntax_highlighting_impl(int p_l
 			}
 		}
 
-		if (!in_function_name && in_word && !in_keyword) {
+		if (!in_function_name && in_word && !in_keyword && (!in_when_declaration || (j < when_grouping_end))) {
 			if (prev_text == GDScriptTokenizer::get_token_name(GDScriptTokenizer::Token::SIGNAL)) {
 				in_signal_declaration = true;
 			} else {
@@ -523,6 +525,12 @@ Dictionary GDScriptSyntaxHighlighter::_get_line_syntax_highlighting_impl(int p_l
 						break;
 				}
 			} else if ((is_after_func_signal_declaration || prev_text == GDScriptTokenizer::get_token_name(GDScriptTokenizer::Token::FUNC)) && str[j] == '(') {
+				in_declaration_params = 1;
+				in_declaration_param_dicts = 0;
+			}
+
+			if (in_when_declaration && (j >= when_grouping_end) && str[j] == '(') {
+				in_when_declaration = false;
 				in_declaration_params = 1;
 				in_declaration_param_dicts = 0;
 			}
@@ -671,6 +679,34 @@ Dictionary GDScriptSyntaxHighlighter::_get_line_syntax_highlighting_impl(int p_l
 					// Ignore if just whitespace.
 					if (!text.is_empty()) {
 						prev_text = text;
+					}
+				}
+
+				if (prev_type == KEYWORD && prev_text == GDScriptTokenizer::get_token_name(GDScriptTokenizer::Token::WHEN)) {
+					in_when_declaration = true;
+					int k = j;
+					// Skip space
+					while (k < line_length && is_whitespace(str[k])) {
+						k++;
+					}
+
+					if (str[k] == '(') {
+						// starts with a grouping expression
+						k++;
+						int paren_depth = 1;
+						for (; k < line_length; ++k) {
+							// keep track of depth
+							if (str[k] == '(') {
+								paren_depth++;
+							}
+							if (str[k] == ')') {
+								paren_depth--;
+							}
+							if (paren_depth == 0) {
+								break;
+							}
+						}
+						when_grouping_end = k;
 					}
 				}
 			}
